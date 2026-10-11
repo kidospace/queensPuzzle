@@ -35,6 +35,41 @@ namespace qp {
 
         public TimeSpan EndingSoonTime => TimeSpan.FromMinutes(endingSoonMinutes);
 
+        // ---- prizes ---------------------------------------------------------------------
+
+        [Tooltip("What each place wins, best first: element 0 is 1st place. Uses the same Reward " +
+                 "as the daily streak, so a gift granted here is granted the same way.")]
+        public Prize[] prizes;
+
+        /// <summary>What <paramref name="place"/> (1-based) wins, or null for a place that pays
+        /// nothing. Shorter than <see cref="prizePlaces"/> is fine — it just means fewer winners.</summary>
+        public Prize PrizeFor(int place) =>
+            prizes != null && place >= 1 && place <= prizes.Length ? prizes[place - 1] : null;
+
+        [Tooltip("Sprite shown for each boost type in the prize UI — swap here to change dynamically.")]
+        public BoostSprite[] boostSprites;
+
+        /// <summary>The configured sprite for a boost type, or null if none is set.</summary>
+        public Sprite SpriteFor(EBoostType type) {
+            if (boostSprites != null)
+                foreach (var b in boostSprites)
+                    if (b.type == type) return b.sprite;
+            return null;
+        }
+
+        /// <summary>One place's winnings. A class and not a bare array because Unity will not
+        /// serialize an array of arrays, and a place can pay more than one thing.</summary>
+        [Serializable]
+        public class Prize {
+            public Reward[] rewards;
+        }
+
+        [Serializable]
+        public class BoostSprite {
+            public EBoostType type;
+            public Sprite sprite;
+        }
+
         // ---- singleton ------------------------------------------------------------------
 
         static TournamentConfig _instance;

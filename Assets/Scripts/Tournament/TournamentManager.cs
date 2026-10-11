@@ -147,6 +147,29 @@ namespace qp {
             }
         }
 
+        /// <summary>Where the player finished in the CLOSED tournament, 1-based; 0 when they were
+        /// not in that table. Here and not in a screen because three callers switch on it — the
+        /// lobby card's face, the lobby choosing an end screen, and that screen's contents — and a
+        /// tournament that pays on one and not the other would be a bug nobody could see.</summary>
+        public static int ClosedPlace {
+            get {
+                if (_state == null || !_state.lastSyncClosed.Exists) return 0;
+                return _state.lastSyncClosed.standings.myIndex + 1;
+            }
+        }
+
+        /// <summary>The closed tournament finished in a place that actually pays — so the result is
+        /// a Claim and not just a result. A place inside <see cref="TournamentConfig.prizePlaces"/>
+        /// with nothing configured for it pays nothing: a claim screen that grants air is worse
+        /// than the plain one.</summary>
+        public static bool ClosedWonPrize {
+            get {
+                var cfg = TournamentConfig.Instance;
+                int place = ClosedPlace;
+                return cfg != null && place >= 1 && place <= cfg.prizePlaces && cfg.PrizeFor(place) != null;
+            }
+        }
+
         // ---- what the game calls ---------------------------------------------------------
 
         /// <summary>A campaign level was won with <paramref name="score"/> left. Counted locally at
@@ -192,12 +215,18 @@ namespace qp {
 
         /// <summary>The Tournament Ended popup's button (Claim / Continue). The rank was already
         /// confirmed during sync, so the prize is granted here and nothing is sent. Marks the result
-        /// as shown, so it never pops again — the server keeps returning that closed tournament.</summary>
+        /// as shown, so it never pops again — the server keeps returning that closed tournament.
+        ///
+        /// The grant sits INSIDE the same guard that marks it shown, and both happen before any
+        /// animation: a prize cannot be handed out twice however the screen is opened, and a player
+        /// who closes the app mid-effect has still been paid. A place that pays nothing lands here
+        /// too — it just has no prize to grant.</summary>
         public static void CompleteEnded() {
             if (_state == null || !_state.lastSyncClosed.Exists || _state.closedShown) return;
 
-            // TODO (step 5): grant the prize for _state.lastSyncClosed.standings.myIndex + 1
-            //                (TournamentConfig.Instance.prizePlaces decides who wins).
+            var prize = TournamentConfig.Instance?.PrizeFor(ClosedPlace);
+            if (prize?.rewards != null)
+                foreach (var reward in prize.rewards) reward?.Grant();
 
             _state.closedShown = true;
             _state.Save();

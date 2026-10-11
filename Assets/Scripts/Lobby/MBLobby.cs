@@ -9,6 +9,8 @@ namespace qp {
         MBSettingsPopup _settings;   // inactive in the scene by default (its OUT state)
         MBTournamentLeaderboard _leaderboard;
         MBTournamentEndNoClaim _endScreen;
+        MBTournamentEndClaim _claimScreen;
+        MBTournamentCard _card;
 
         private void Awake() {
             var lvlBtn = transform.RecursiveFindChild<MBLevelButton>("$LvlButton");
@@ -30,10 +32,14 @@ namespace qp {
             if (_endScreen != null) _endScreen.gameObject.SetActive(true);
             else Debug.LogError("[MBLobby] MBTournamentEndNoClaim missing in the scene");
 
-            var card = FindAnyObjectByType<MBTournamentCard>(FindObjectsInactive.Include);
-            if (card != null) {
-                card.Tapped += OnTournamentTapped;
-                card.PlayTapped += PlayCurrentLevel;
+            _claimScreen = FindAnyObjectByType<MBTournamentEndClaim>(FindObjectsInactive.Include);
+            if (_claimScreen != null) _claimScreen.gameObject.SetActive(true);
+            else Debug.LogError("[MBLobby] MBTournamentEndClaim missing in the scene");
+
+            _card = FindAnyObjectByType<MBTournamentCard>(FindObjectsInactive.Include);
+            if (_card != null) {
+                _card.Tapped += OnTournamentTapped;
+                _card.PlayTapped += PlayCurrentLevel;
             }
             else Debug.LogError("[MBLobby] MBTournamentCard missing in the scene");
         }
@@ -63,18 +69,30 @@ namespace qp {
                     break;
 
                 case ETournamentStatus.Ended:
-                    // TODO: a finish inside the paying places opens the claim screen instead;
-                    // that one is not built yet, so everyone gets the result screen for now.
                     StartCoroutine(ShowEnded());
                     break;
             }
         }
 
-        /// <summary>The result of a tournament that closed. It marks itself as seen on the way
-        /// out, so the card stops offering it.</summary>
+        /// <summary>
+        /// The result of a tournament that closed. Two screens, one question: a finish inside the
+        /// paying places has something to collect, so it opens the claim screen; everyone else gets
+        /// the plain result. The card asks <see cref="TournamentManager.ClosedWonPrize"/> the same
+        /// question for its own face, so a card that promises a prize always opens the screen that
+        /// gives one.
+        ///
+        /// Either screen marks the result as seen on the way through, so the card stops offering it.
+        /// </summary>
         IEnumerator ShowEnded() {
-            if (_endScreen == null) yield break;
-            yield return _endScreen.Show();
+            if (TournamentManager.ClosedWonPrize) {
+                if (_claimScreen != null) yield return _claimScreen.Show();
+            }
+            else if (_endScreen != null) yield return _endScreen.Show();
+
+            // The result has been seen, so this is no longer an Ended card. Drawn now rather than
+            // on the card's next tick, which could leave the old one on screen for a second after
+            // the screen over it is gone.
+            if (_card != null) _card.Redraw();
         }
 
         IEnumerator ShowLeaderboard() {

@@ -105,6 +105,11 @@ namespace qp {
 
         void OnDisable() => CancelInvoke(nameof(_draw));
 
+        /// <summary>Draw now instead of on the next tick. For the caller that just changed
+        /// something the card cannot see coming — closing the Ended screen stops the card being
+        /// an Ended card, and waiting out the second would show the old one after it is gone.</summary>
+        public void Redraw() => _draw();
+
         void _draw() {
             var status = TournamentManager.Status;
             var wanted = _stateFor(status);
@@ -113,6 +118,13 @@ namespace qp {
                 foreach (var state in _all)
                     if (state != null) state.root.SetActive(state == wanted);
                 _shown = wanted;
+
+                // Each state owns its own labels, so what was written into the last one says
+                // nothing about what this one is holding. Without forgetting it here, a value
+                // that happens to be unchanged across the switch is never written — and the new
+                // state keeps the placeholder text the prefab shipped with.
+                _clockShown = _placeShown = null;
+                _pendingShown = -1;
             }
 
             if (wanted == null) return;   // None — the card is hidden, nothing to fill in
@@ -123,7 +135,7 @@ namespace qp {
             // stand right now, pending wins included, so a win moves the card before the server
             // has heard about it.
             bool ended = status == ETournamentStatus.Ended || status == ETournamentStatus.Calculating;
-            int rank = ended ? _closedRank : TournamentManager.MyIndexWithPending + 1;
+            int rank = ended ? TournamentManager.ClosedPlace : TournamentManager.MyIndexWithPending + 1;
             _set(wanted.place, rank > 0 ? rank.ToString() : "-", ref _placeShown);
 
             // Offline only: what is waiting to be sent. Hidden entirely at zero rather than shown
@@ -157,25 +169,8 @@ namespace qp {
                 case ETournamentStatus.Active:      return _active;
                 case ETournamentStatus.EndingSoon:  return _endingSoon;
                 case ETournamentStatus.Calculating: return _calculating;
-                case ETournamentStatus.Ended:       return _won ? _claim : _results;
+                case ETournamentStatus.Ended:       return TournamentManager.ClosedWonPrize ? _claim : _results;
                 default:                            return null;   // None — the card is hidden
-            }
-        }
-
-        /// <summary>The closed tournament finished in a paying place.</summary>
-        bool _won {
-            get {
-                var cfg = TournamentConfig.Instance;
-                int rank = _closedRank;
-                return cfg != null && rank > 0 && rank <= cfg.prizePlaces;
-            }
-        }
-
-        /// <summary>1-based, or 0 when the player was not in that table.</summary>
-        int _closedRank {
-            get {
-                var closed = TournamentManager.State?.lastSyncClosed;
-                return closed != null && closed.Exists ? closed.standings.myIndex + 1 : 0;
             }
         }
 

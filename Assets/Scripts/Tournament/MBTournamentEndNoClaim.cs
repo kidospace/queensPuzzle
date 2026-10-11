@@ -25,7 +25,7 @@ namespace qp {
     /// </summary>
     public sealed class MBTournamentEndNoClaim : MonoBehaviour {
 
-        const float FadeIn = 0.2f, FadeOut = 0.15f;
+        const float FadeOut = 0.15f;
 
         /// <summary>How many places the podium shows — $1, $2, $3 in the prefab.</summary>
         const int PodiumPlaces = 3;
@@ -34,6 +34,7 @@ namespace qp {
         TMP_Text _topText;
         MBTournamentRow[] _podium;
         MBTournamentRow _myRow;
+        IPopupAnim _anim;           // the reskin's opening — absent in a skin without one
 
         bool _closing, _laidOut, _opened;
 
@@ -42,6 +43,7 @@ namespace qp {
             if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
 
             _topText = Label("$TopText");
+            _anim = GetComponent<IPopupAnim>();
 
             var panel = transform.RecursiveFindChild("$RowsPannel");
             if (panel == null) { Debug.LogError("[EndNoClaim] $RowsPannel is missing from the prefab"); return; }
@@ -78,11 +80,10 @@ namespace qp {
 
             while (!_laidOut) yield return null;   // a first Show can beat the layout pass
 
-            for (float e = 0f; e < FadeIn; e += Time.unscaledDeltaTime) {
-                _group.alpha = Mathf.Clamp01(e / FadeIn);
-                yield return null;
-            }
+            // Filled before the first frame of the opening: the clip plays over a screen that is
+            // already right, never one still settling behind it.
             _group.alpha = 1f;
+            _anim?.PlayIn();
 
             while (_opened) yield return null;     // until Close finishes
         }
