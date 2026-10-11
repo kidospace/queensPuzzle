@@ -22,7 +22,7 @@ namespace qp {
     /// ten hours or not open the app, and the table moves identically — which is the real reason
     /// it reads as other people. There is nothing to notice, because there is nothing responding.
     /// </summary>
-    public sealed class LocalTournamentBackend : ITournamentBackend {
+    public sealed class LocalTournamentBackend : ITournamentBackend, ITournamentDebug {
 
         /// <summary>
         /// A tournament lasts this long, counted from the player's FIRST WIN in it.
@@ -77,6 +77,78 @@ namespace qp {
                 current = _currentSnapshot(now),
                 lastClosed = _closedSnapshot(),
             };
+        }
+
+        // ---- ITournamentDebug (see that interface; all of it writes the server's state) ----
+
+        /// <summary>Everything below needs a loaded state, which only exists after a first sync.</summary>
+        bool _ready {
+            get {
+                if (_state != null) return true;
+                Debug.LogWarning("[LocalTournament] nothing to debug yet — let it sync once");
+                return false;
+            }
+        }
+
+        public void SkipTime(TimeSpan by) {
+            if (!_ready) return;
+            // The window moves back, not the clock forward: the rivals' recordings are measured
+            // from the start, so dragging that earlier is what makes them appear to have played.
+            _state.startTicks -= by.Ticks;
+            _state.endTicks -= by.Ticks;
+            _state.Save();
+            Debug.Log($"[LocalTournament] skipped {by.TotalHours:0.0}h");
+        }
+
+        public void SetScore(int score) {
+            if (!_ready) return;
+            _state.myScore = Mathf.Max(0, score);
+            _state.Save();
+            Debug.Log($"[LocalTournament] score = {_state.myScore}");
+        }
+
+        public void SetFinalPlace(int place) {
+            if (!_ready) return;
+            if (_state.rivals.Count == 0) { Debug.LogWarning("[LocalTournament] no rivals to place against"); return; }
+
+            // Their finals, best first. Landing in Nth means sitting between the rival who ends
+            // above and the one who ends below.
+            var finals = new List<int>();
+            foreach (var r in _state.rivals) finals.Add(r.total);
+            finals.Sort((a, b) => b.CompareTo(a));
+
+            place = Mathf.Clamp(place, 1, finals.Count + 1);
+            int above = place >= 2 ? finals[place - 2] : int.MaxValue;   // 1st has nobody above
+            int below = place - 1 < finals.Count ? finals[place - 1] : 0;
+
+            // Strictly between, so a tie cannot push them off the place they asked for.
+            int score = above == int.MaxValue ? below + 1 : (above + below) / 2;
+            if (score <= below) score = below + 1;
+
+            SetScore(score);
+            Debug.Log($"[LocalTournament] {score} finishes {place} (between {below} and {above})");
+        }
+
+        public void EndNow() {
+            if (!_ready) return;
+            _state.endTicks = MBServerTimeManagerV2.UTCNow.Ticks;
+            _state.Save();
+            Debug.Log("[LocalTournament] ending on the next sync");
+        }
+
+        public void Restart() {
+            if (!_ready) return;
+            _state.currentId = "";           // _open runs on the next sync
+            _state.rivals.Clear();
+            _state.Save();
+            Debug.Log("[LocalTournament] restarting on the next sync");
+        }
+
+        public void Clear() {
+            LocalServerState.Delete();
+            TournamentState.Delete();
+            _state = null;                   // the next sync loads a fresh one and opens
+            Debug.Log("[LocalTournament] cleared, both sides");
         }
 
         // ---- the schedule ----------------------------------------------------------------

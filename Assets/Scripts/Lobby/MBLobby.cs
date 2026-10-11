@@ -8,6 +8,7 @@ namespace qp {
 
         MBSettingsPopup _settings;   // inactive in the scene by default (its OUT state)
         MBTournamentLeaderboard _leaderboard;
+        MBTournamentEndNoClaim _endScreen;
 
         private void Awake() {
             var lvlBtn = transform.RecursiveFindChild<MBLevelButton>("$LvlButton");
@@ -24,6 +25,10 @@ namespace qp {
             _leaderboard = FindAnyObjectByType<MBTournamentLeaderboard>(FindObjectsInactive.Include);
             if (_leaderboard != null) _leaderboard.gameObject.SetActive(true);
             else Debug.LogError("[MBLobby] MBTournamentLeaderboard missing in the scene");
+
+            _endScreen = FindAnyObjectByType<MBTournamentEndNoClaim>(FindObjectsInactive.Include);
+            if (_endScreen != null) _endScreen.gameObject.SetActive(true);
+            else Debug.LogError("[MBLobby] MBTournamentEndNoClaim missing in the scene");
 
             var card = FindAnyObjectByType<MBTournamentCard>(FindObjectsInactive.Include);
             if (card != null) {
@@ -58,10 +63,18 @@ namespace qp {
                     break;
 
                 case ETournamentStatus.Ended:
-                    // TODO: collect the prize first, then show the final table.
-                    StartCoroutine(ShowLeaderboard());
+                    // TODO: a finish inside the paying places opens the claim screen instead;
+                    // that one is not built yet, so everyone gets the result screen for now.
+                    StartCoroutine(ShowEnded());
                     break;
             }
+        }
+
+        /// <summary>The result of a tournament that closed. It marks itself as seen on the way
+        /// out, so the card stops offering it.</summary>
+        IEnumerator ShowEnded() {
+            if (_endScreen == null) yield break;
+            yield return _endScreen.Show();
         }
 
         IEnumerator ShowLeaderboard() {

@@ -94,6 +94,9 @@ namespace qp {
         public static LocalServerState Load() => _holder.Value ?? new LocalServerState();
 
         public void Save() => _holder.Save(this);
+
+        /// <summary>Forget everything — see <see cref="ITournamentDebug.Clear"/>.</summary>
+        public static void Delete() => _holder.Delete();
     }
 
     /// <summary>One opponent: a real player's recorded 48 hours, under a generated name.</summary>

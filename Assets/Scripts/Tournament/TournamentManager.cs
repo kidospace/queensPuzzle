@@ -35,6 +35,12 @@ namespace qp {
 
         static TournamentState _state;
         static TournamentSyncer _syncer;
+        static ITournamentBackend _backend;
+
+        /// <summary>Developer tools for whatever backend is in use, or null when it offers none —
+        /// which is the honest answer for an HTTP server without debug endpoints. Everything it
+        /// does is server-side, so follow a call with <see cref="Sync"/> to see it.</summary>
+        public static ITournamentDebug Debug => _backend as ITournamentDebug;
 
         /// <summary>Boot (MBStartup). Loads the blob, builds the syncer and starts the background
         /// runner. Main thread, instant: it never waits on the network — the runner holds its first
@@ -42,7 +48,8 @@ namespace qp {
         public static void Init() {
             if (_state != null) return;
             _state = TournamentState.Load();
-            _syncer = new TournamentSyncer(new LocalTournamentBackend(UserID.GetUserIDLocal()), _state);
+            _backend = new LocalTournamentBackend(UserID.GetUserIDLocal());
+            _syncer = new TournamentSyncer(_backend, _state);
             MBTournamentSyncRunner.Create(_syncer);
         }
 
