@@ -40,7 +40,7 @@ namespace qp {
             public override bool keepWaiting => Result == ETournamentScreenResult.None;
         }
 
-        const float FadeIn = 0.2f, FadeOut = 0.15f;
+        const float FadeOut = 0.15f;
         const float ClockSeconds = 1f;
 
         CanvasGroup _group;
@@ -48,6 +48,7 @@ namespace qp {
         RectTransform _content;
         ScrollRect _scroll;
         TMP_Text _clock;
+        IPopupAnim _anim;           // the reskin's opening — absent in a skin without one
 
         Showing _showing;
         ETournamentScreenResult _pending;
@@ -63,6 +64,7 @@ namespace qp {
             _rows    = _content != null ? _content.GetComponentsInChildren<MBTournamentRow>(true)
                                         : new MBTournamentRow[0];
             _clock = Label("$StopWatchText");
+            _anim = GetComponent<IPopupAnim>();
 
             // Play answers at once: the caller is leaving for the gameplay scene, and making it
             // wait out a fade on a screen that is about to be unloaded only delays the level.
@@ -117,14 +119,13 @@ namespace qp {
             // rows are still zero high and the scroll jumps once they are not.
             while (!_laidOut) yield return null;
 
+            // Filled, scrolled and ticking BEFORE the first frame of the opening — the clip plays
+            // over a screen that is already right, never one still settling behind it.
             ScrollToMe();
             InvokeRepeating(nameof(Tick), 0f, ClockSeconds);
 
-            for (float e = 0f; e < FadeIn; e += Time.unscaledDeltaTime) {
-                _group.alpha = Mathf.Clamp01(e / FadeIn);
-                yield return null;
-            }
             _group.alpha = 1f;
+            _anim?.PlayIn();
         }
 
         // Nothing is disabled on the way out: _pending already refuses a second button, and
