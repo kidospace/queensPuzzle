@@ -15,6 +15,10 @@ namespace qp {
         public AudioClip ButtonDown;
         public AudioClip ButtonUp;
 
+        /// <summary>A gift opening. Here and not in GPSFX because gifts are handed out in the
+        /// lobby too (the tournament's prize), and GPSFX is released on the way out of Gameplay.</summary>
+        public AudioClip RewordOpen;
+
         const string ResourcePath = "CommonSFX";
         static CommonSFX _instance;
 

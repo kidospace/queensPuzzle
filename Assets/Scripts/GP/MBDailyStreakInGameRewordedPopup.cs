@@ -101,7 +101,7 @@ namespace qp {
         }
 
         void _playPoof() {
-            var sfx = GPSFX.Instance.RewordOpen;
+            var sfx = CommonSFX.Instance.RewordOpen;
             if (sfx != null) CommonSFX.Play(sfx);
 
             if (_poof == null) return;

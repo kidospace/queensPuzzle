@@ -15,3 +15,4 @@ MonoBehaviour:
   Click: {fileID: 8300000, guid: bc3876e2b088641459ca7ac99cfd0aee, type: 3}
   ButtonDown: {fileID: 8300000, guid: 94e35c2ce4d5cec458c97ac8c88c2ace, type: 3}
   ButtonUp: {fileID: 8300000, guid: bc3876e2b088641459ca7ac99cfd0aee, type: 3}
+  RewordOpen: {fileID: 8300000, guid: e5eabe9e79393274ba76bf2b4f722a97, type: 3}
