@@ -170,6 +170,11 @@ namespace qp {
             }
         }
 
+        /// <summary>A prize is sitting there uncollected. The one question both auto-openings ask
+        /// — the lobby as it opens, the win flow before the celebration — so neither has to work
+        /// it out and they can never disagree about whether to interrupt the player.</summary>
+        public static bool PrizeWaiting => Status == ETournamentStatus.Ended && ClosedWonPrize;
+
         // ---- what the game calls ---------------------------------------------------------
 
         /// <summary>A campaign level was won with <paramref name="score"/> left. Counted locally at

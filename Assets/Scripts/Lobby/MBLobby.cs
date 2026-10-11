@@ -1,10 +1,16 @@
 using System.Collections;
 using Common;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace qp {
     public class MBLobby : MonoBehaviour {
+
+        /// <summary>How long the player gets to look at the lobby before a finished tournament
+        /// lands on top of it. Landing on the first frame reads as the lobby never having been
+        /// there at all.</summary>
+        const float ResultDelay = 1f;
 
         MBSettingsPopup _settings;   // inactive in the scene by default (its OUT state)
         MBTournamentLeaderboard _leaderboard;
@@ -42,6 +48,38 @@ namespace qp {
                 _card.PlayTapped += PlayCurrentLevel;
             }
             else Debug.LogError("[MBLobby] MBTournamentCard missing in the scene");
+        }
+
+        /// <summary>
+        /// A prize waiting to be collected opens itself — but only here, at the moment the lobby
+        /// does. A tournament that ends while the player is already sitting in the lobby turns the
+        /// card into a Claim card and waits to be tapped; nothing drops on top of a screen
+        /// somebody is using.
+        ///
+        /// A result with nothing to collect is never forced at all. It sits on the card for this
+        /// visit, and <see cref="OnDestroy"/> spends it.
+        /// </summary>
+        IEnumerator Start() {
+            if (!TournamentManager.PrizeWaiting) yield break;
+
+            // Locked, so that second is a look at the lobby and not a chance to open something
+            // about to be covered. The screen's own full-screen cover takes over from here.
+            var events = EventSystem.current;
+            if (events != null) events.enabled = false;
+            yield return new WaitForSecondsRealtime(ResultDelay);
+            if (events != null) events.enabled = true;
+
+            yield return ShowEnded();
+        }
+
+        /// <summary>Leaving spends the one look the player gets at a result that pays nothing.
+        ///
+        /// Only that case — a prize is marked by the screen that hands it over, and marking it
+        /// here would pay the player with no idea what for. And only if the card really showed
+        /// it: a visit spent offline showed an Offline card and owes them the chance again.</summary>
+        void OnDestroy() {
+            if (_card == null || !_card.ShowedResult || TournamentManager.ClosedWonPrize) return;
+            TournamentManager.CompleteEnded();
         }
 
         // Open plays the in animation; the popup closes itself (X / BG tap → out animation).

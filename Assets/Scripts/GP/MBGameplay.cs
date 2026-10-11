@@ -38,6 +38,7 @@ namespace qp {
         MBFirstTryPopup _firstTryPopup;   // level-start "XX% pass on their first try" toast (optional)
         MBDailyStreakInfoPopup _streakProgressPopup;          // shown when the streak advanced
         MBDailyStreakInGameRewordedPopup _streakRewardPopup;    // shown when a milestone was hit
+        MBTournamentEndClaim _tournamentEndPopup;               // a finished tournament that pays
         MBFailPopup _failPopup;      // same pattern as the win popup — shows when the bones run out
         MBTopBar _topBar;            // "queens placed / total" HUD
         Coroutine _shake;            // board shake on a wrong queen
@@ -122,6 +123,12 @@ namespace qp {
             _streakRewardPopup = FindAnyObjectByType<MBDailyStreakInGameRewordedPopup>(FindObjectsInactive.Include);
             if (_streakRewardPopup != null) _streakRewardPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBDailyStreakInGameRewordedPopup missing in the scene");
+
+            // A tournament the player won can close while they are mid-level, so the prize is
+            // handed over here as well as in the lobby — whichever they reach first.
+            _tournamentEndPopup = FindAnyObjectByType<MBTournamentEndClaim>(FindObjectsInactive.Include);
+            if (_tournamentEndPopup != null) _tournamentEndPopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBGameplay] MBTournamentEndClaim missing in the scene");
 
             _topBar = FindAnyObjectByType<MBTopBar>(FindObjectsInactive.Include);
 
@@ -933,6 +940,17 @@ namespace qp {
 
             float happyLen = _cells[0, 0] != null ? _cells[0, 0].GetStateLength(MBCell.QueenState.HAPPY) : 0f;
             yield return new WaitForSecondsRealtime(happyLen > 0f ? happyLen : 3f);
+
+            // A tournament the player won goes first — it is the end of two days, and everything
+            // after it belongs to the level that was just finished. The board is locked under it
+            // the same way the first-try popup locks it: the dismissing tap must not reach a cell.
+            // TODO: the climb in the tournament now running belongs between this and the streak,
+            //       and has nowhere to be shown yet (_tournamentWin is filled and read by nobody).
+            if (_tournamentEndPopup != null && TournamentManager.PrizeWaiting) {
+                InputLocks++;
+                yield return _tournamentEndPopup.Show();
+                InputLocks--;
+            }
 
             // Reward popup when a milestone was hit, progress popup when the streak just advanced,
             // otherwise (offline / already won today) nothing. Show it and wait until it closes,

@@ -110,6 +110,12 @@ namespace qp {
         /// an Ended card, and waiting out the second would show the old one after it is gone.</summary>
         public void Redraw() => _draw();
 
+        /// <summary>The "see results" face has actually been on screen at some point. A result
+        /// with nothing to collect is never forced on the player — it sits here and is spent by
+        /// the visit, so the lobby needs to know the player was really offered it. A visit spent
+        /// offline showed an Offline card and owes them the chance again.</summary>
+        public bool ShowedResult { get; private set; }
+
         void _draw() {
             var status = TournamentManager.Status;
             var wanted = _stateFor(status);
@@ -128,6 +134,8 @@ namespace qp {
             }
 
             if (wanted == null) return;   // None — the card is hidden, nothing to fill in
+
+            if (wanted == _results) ShowedResult = true;
 
             _set(wanted.stopwatch, TournamentManager.TimeLeftText, ref _clockShown);
 
