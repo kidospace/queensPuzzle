@@ -51,6 +51,15 @@ namespace qp {
         /// showing buttons that quietly do nothing.
         /// </summary>
         void TournamentPanel() {
+            // Outside the backend check: pulling the network is the device's business, not the
+            // tournament's, and it is worth having whatever is behind this window.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(InternetConnection.ForceOffline ? "OFFLINE (forced)" : "online",
+                            GUILayout.Width(160));
+            if (Button(InternetConnection.ForceOffline ? "Go online" : "Go OFFLINE"))
+                InternetConnection.ForceOffline = !InternetConnection.ForceOffline;
+            GUILayout.EndHorizontal();
+
             var dbg = TournamentManager.Debug;
             if (dbg == null) { GUILayout.Label("Tournament — this backend has no debug hooks"); return; }
 
