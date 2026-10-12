@@ -103,7 +103,20 @@ namespace qp {
 
         // ---- helpers --------------------------------------------------------------------
 
-        static bool IsOnline => MBServerTimeManagerV2.IsTimeSynced;
+        /// <summary>
+        /// A trusted clock AND a live connection.
+        ///
+        /// The clock is what stops the streak being farmed by moving the device date. The
+        /// connection is a product call: nothing is monetisable without one, so days are not
+        /// handed out — and rewards not granted — while there is no line.
+        ///
+        /// Both are checked everywhere: advancing, breaking a lapsed streak, and the face the
+        /// button shows. A rule applied in one of the three and not the others is how a streak
+        /// ends up broken offline and never rebuilt.
+        /// </summary>
+        static bool IsOnline => MBServerTimeManagerV2.IsTimeSynced
+                             && InternetConnection.Instance != null
+                             && InternetConnection.Instance.HasInternet;
 
         // The gift for a given streak day: a random reward every Nth day (7, 14, 21, …), null otherwise.
         static Reward _milestoneRewardFor(int streak) =>
