@@ -109,6 +109,13 @@ namespace qp {
         static void Show(TMP_Text label, bool on) { if (label != null) Show(label.gameObject, on); }
         static void SetText(TMP_Text label, string value) { if (label != null) label.text = value; }
 
+        public TMP_Text ScoreLabel => _meShown ? _scoreMe : _score;
+
+        public void SetScore(int score) {
+            SetText(ScoreLabel, score.ToString());
+            _scoreShown = score;
+        }
+
         /// <summary>
         /// Change the score behind a dip to nothing and back, instead of swapping the digits
         /// where the player is looking. The row owns this because the row is the only thing that

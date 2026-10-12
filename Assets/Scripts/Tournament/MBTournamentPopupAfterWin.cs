@@ -62,6 +62,7 @@ namespace qp {
         Transform _overlay;                 // Container — outside the scroll view, over the mask
         Transform _arrows;                  // $RankUpPS — ridden by the card on its way up
         MBTournamentPopupAfterWinAnim _anim;
+        [SerializeField] MBTournamentBonesEffect _bonesEffect;
 
         /// <summary>
         /// The shape of the list, in code, because nothing else holds it any more.
@@ -184,7 +185,12 @@ namespace qp {
         /// else that hides it - a scene tearing down, a debug tool, a future caller - locks it
         /// shut, and every later Show returns at once having shown nothing.
         /// </summary>
+        void OnEnable() {
+            if (_bonesEffect != null) _bonesEffect.Stop();
+        }
+
         void OnDisable() {
+            if (_bonesEffect != null) _bonesEffect.Stop();
             CancelInvoke(nameof(Tick));
             _open = false;
             _closing = false;
@@ -278,7 +284,7 @@ namespace qp {
             // is where it puts them, and that is what comes after.
             // Standing still: nowhere to carry the change, so it happens here.
             if (to >= from) {
-                if (from < _rows.Length) yield return _rows[from].FadeScoreTo(win.newScore, ScoreFade);
+                if (from < _rows.Length) yield return ChangeScore(_rows[from], win.newScore);
                 Draw(win.newScore, to);
                 ScrollToMe(to);
                 yield break;
@@ -345,7 +351,7 @@ namespace qp {
 
             // The score changes on the way up rather than before it. One movement instead of a
             // punch followed by a journey.
-            StartCoroutine(_rows[from].FadeScoreTo(score, ScoreFade));
+            StartCoroutine(ChangeScore(_rows[from], score));
 
             // Where the list can actually end up: the slot the player is heading for, put where
             // ScrollToMe would put it, and then clamped to the ends of the list.
@@ -383,6 +389,18 @@ namespace qp {
             me.SetParent(_content, true);
             yield return Scale(me, LiftScale, 1f, SettleSeconds);
             Place(me, to);
+        }
+
+        IEnumerator ChangeScore(MBTournamentRow row, int score) {
+            if (_bonesEffect == null || row.ScoreLabel == null) {
+                yield return row.FadeScoreTo(score, ScoreFade);
+                yield break;
+            }
+            _bonesEffect.Attach(row.ScoreLabel);
+            _bonesEffect.Play();
+            yield return new WaitForSecondsRealtime(_bonesEffect.RevealDelay);
+            row.SetScore(score);
+            while (_bonesEffect.IsPlaying) yield return null;
         }
 
         static IEnumerator Scale(RectTransform t, float from, float to, float dur) {
