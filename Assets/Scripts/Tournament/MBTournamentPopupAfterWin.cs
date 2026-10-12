@@ -150,15 +150,20 @@ namespace qp {
 
             // The decision point, taken HERE and not when the screen opened: a player who came
             // back online while the opening played has earned the climb.
-            if (Offline) {
-                yield return WaitOffline();
+            bool panelWasUp = _offlineShown;
 
-                // Back on the line, and the table is not the one this screen opened with: the
-                // sync that reconnecting triggers sends the pending win, and the server answers
-                // with standings that may already contain it. Rebuilt from what is true now.
-                if (_open && !_closing) Fill(win);
-                if (Counted(win)) { Draw(win.newScore, Place(win.newScore)); ScrollToMe(Place(win.newScore)); yield break; }
-            }
+            if (Offline) yield return WaitOffline();
+
+            // Online by the time we got here, but the panel went up with the opening — the line
+            // came back during those few tenths. Nothing else takes it down, so without this it
+            // stays on screen for good, over a screen that is otherwise working perfectly.
+            else if (_offlineShown) yield return HideOffline();
+
+            // One rebuild for both routes. Reconnecting triggers a sync that moves the table,
+            // and the climb below is drawn from it; a route that skipped this would animate
+            // against standings that are already out of date, which is how the two paths came to
+            // disagree in the first place.
+            if (panelWasUp && _open && !_closing) Fill(win);
 
             // And from here it is settled. Losing the line again mid-climb does not undo a win
             // that has already been counted, so nothing below asks a second time.
@@ -232,6 +237,18 @@ namespace qp {
             yield return new WaitUntil(() => !Offline || !_open || _closing);
             if (!_open || _closing) yield break;
 
+            yield return HideOffline();
+        }
+
+        /// <summary>
+        /// Take the panel away. The only way it ever leaves, so both routes to a live connection
+        /// come through here — the one that waited for it, and the one where it arrived during
+        /// the opening.
+        ///
+        /// Its own animator state, because the opening state holds its last frame for as long as
+        /// it is the current one, and that frame has this panel at full.
+        /// </summary>
+        IEnumerator HideOffline() {
             _anim?.PlayOfflineGone();
             if (_anim != null) yield return new WaitUntil(() => _anim.IsOfflineGone());
             _offline.SetActive(false);
@@ -247,12 +264,6 @@ namespace qp {
             _offline.SetActive(true);
             Tick();
         }
-
-        /// <summary>The server has already applied this win, so there is nothing left to
-        /// animate — it would be the same climb a second time. Only possible after a wait
-        /// offline, which ends in exactly the sync that delivers it.</summary>
-        static bool Counted(TournamentWinResult win) =>
-            (TournamentManager.State?.lastSyncCurrent?.standings?.Me?.score ?? 0) >= win.newScore;
 
         /// <summary>There is a live tournament for the climb to happen in. Checked again after a
         /// wait offline: the one the player won in can have closed while they were away, and
