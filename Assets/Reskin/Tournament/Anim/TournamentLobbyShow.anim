@@ -29,16 +29,16 @@ AnimationClip:
         inWeight: {x: 0, y: 0, z: 0}
         outWeight: {x: 0, y: 0, z: 0}
       - serializedVersion: 3
-        time: 0.05
+        time: 0.08
         value: {x: 0.9, y: 0.9, z: 0.9}
         inSlope: {x: 0, y: 0, z: 0}
-        outSlope: {x: 0.63200015, y: 0.63200015, z: 0.63200015}
+        outSlope: {x: 0, y: 0, z: 0}
         tangentMode: 0
         weightedMode: 0
         inWeight: {x: 0, y: 0, z: 0}
         outWeight: {x: 0, y: 0, z: 0}
       - serializedVersion: 3
-        time: 0.3
+        time: 0.4
         value: {x: 1, y: 1, z: 1}
         inSlope: {x: 0, y: 0, z: 0}
         outSlope: {x: 0, y: 0, z: 0}
@@ -49,7 +49,7 @@ AnimationClip:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
   m_FloatCurves:
   - serializedVersion: 2
     curve:
@@ -59,13 +59,13 @@ AnimationClip:
         time: 0
         value: 0
         inSlope: 0
-        outSlope: 10.533333
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.15
+        time: 0.2
         value: 1
         inSlope: 0
         outSlope: 0
@@ -89,13 +89,22 @@ AnimationClip:
         time: 0
         value: 0
         inSlope: 0
-        outSlope: 10.533333
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.15
+        time: 0.02
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.26
         value: 1
         inSlope: 0
         outSlope: 0
@@ -107,46 +116,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/BackUp
-    classID: 114
-    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-    flags: 16
-  - serializedVersion: 2
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.05
-        value: 0
-        inSlope: 0
-        outSlope: 6.32
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.3
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -167,13 +137,13 @@ AnimationClip:
         time: 0.1
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.44
         value: 1
         inSlope: 0
         outSlope: 0
@@ -185,7 +155,8 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive (1)
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+      (1)
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -206,13 +177,13 @@ AnimationClip:
         time: 0.1
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.44
         value: 1
         inSlope: 0
         outSlope: 0
@@ -224,7 +195,47 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive (2)
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+      (2)
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.36
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -245,13 +256,13 @@ AnimationClip:
         time: 0.2
         value: 0
         inSlope: 0
-        outSlope: 7.9
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 1
         inSlope: 0
         outSlope: 0
@@ -263,7 +274,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/TimePannel
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -273,7 +284,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -252
+        value: -261
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -282,16 +293,16 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.2
-        value: -252
+        value: -261
         inSlope: 0
-        outSlope: 94.8
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
-        value: -240
+        time: 0.5
+        value: -249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -302,7 +313,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/TimePannel
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -320,16 +331,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.2
+        time: 0.14
         value: 0
         inSlope: 0
-        outSlope: 7.9
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 1
         inSlope: 0
         outSlope: 0
@@ -359,16 +370,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.2
+        time: 0.14
         value: -12
         inSlope: 0
-        outSlope: 94.8
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 0
         inSlope: 0
         outSlope: 0
@@ -398,16 +409,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.25
+        time: 0.22
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.55
+        time: 0.62
         value: 1
         inSlope: 0
         outSlope: 0
@@ -437,16 +448,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.25
+        time: 0.22
         value: -12
         inSlope: 0
-        outSlope: 80
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.55
+        time: 0.62
         value: 0
         inSlope: 0
         outSlope: 0
@@ -476,16 +487,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.38
+        time: 0.32
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.68
+        time: 0.74
         value: 1
         inSlope: 0
         outSlope: 0
@@ -515,16 +526,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.38
+        time: 0.32
         value: -16.179483
         inSlope: 0
-        outSlope: 80
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.68
+        time: 0.74
         value: -4.1794834
         inSlope: 0
         outSlope: 0
@@ -549,7 +560,7 @@ AnimationClip:
   m_ClipBindingConstant:
     genericBindings:
     - serializedVersion: 2
-      path: 725793076
+      path: 1396742899
       attribute: 3
       script: {fileID: 0}
       typeID: 4
@@ -567,7 +578,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1164568909
+      path: 114925176
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -576,7 +587,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1823925459
+      path: 1435186048
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -585,7 +596,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1599517410
+      path: 2124832835
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -594,7 +605,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1954275617
+      path: 1396742899
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -603,7 +614,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1076760816
+      path: 2148539485
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -612,7 +623,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1076760816
+      path: 2148539485
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -680,7 +691,7 @@ AnimationClip:
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.68
+    m_StopTime: 0.74
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -704,13 +715,13 @@ AnimationClip:
         time: 0
         value: 0
         inSlope: 0
-        outSlope: 10.533333
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.15
+        time: 0.2
         value: 1
         inSlope: 0
         outSlope: 0
@@ -734,13 +745,22 @@ AnimationClip:
         time: 0
         value: 0
         inSlope: 0
-        outSlope: 10.533333
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.15
+        time: 0.02
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.26
         value: 1
         inSlope: 0
         outSlope: 0
@@ -752,7 +772,126 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/BackUp
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.44
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+      (1)
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.44
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+      (2)
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.36
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -770,16 +909,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.05
+        time: 0.08
         value: 0.9
         inSlope: 0
-        outSlope: 0.63200015
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.3
+        time: 0.4
         value: 1
         inSlope: 0
         outSlope: 0
@@ -791,7 +930,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.x
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -809,16 +948,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.05
+        time: 0.08
         value: 0.9
         inSlope: 0
-        outSlope: 0.63200015
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.3
+        time: 0.4
         value: 1
         inSlope: 0
         outSlope: 0
@@ -830,7 +969,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -848,16 +987,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.05
+        time: 0.08
         value: 0.9
         inSlope: 0
-        outSlope: 0.63200015
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.3
+        time: 0.4
         value: 1
         inSlope: 0
         outSlope: 0
@@ -869,126 +1008,9 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.z
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
-    flags: 16
-  - serializedVersion: 2
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.05
-        value: 0
-        inSlope: 0
-        outSlope: 6.32
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.3
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive
-    classID: 114
-    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-    flags: 16
-  - serializedVersion: 2
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.1
-        value: 0
-        inSlope: 0
-        outSlope: 6.6666665
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.4
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive (1)
-    classID: 114
-    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-    flags: 16
-  - serializedVersion: 2
-    curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.1
-        value: 0
-        inSlope: 0
-        outSlope: 6.6666665
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.4
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/CupGroup/CupActive (2)
-    classID: 114
-    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
   - serializedVersion: 2
     curve:
@@ -1007,13 +1029,13 @@ AnimationClip:
         time: 0.2
         value: 0
         inSlope: 0
-        outSlope: 7.9
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 1
         inSlope: 0
         outSlope: 0
@@ -1025,7 +1047,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/TimePannel
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -1035,7 +1057,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -252
+        value: -261
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1044,16 +1066,16 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.2
-        value: -252
+        value: -261
         inSlope: 0
-        outSlope: 94.8
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
-        value: -240
+        time: 0.5
+        value: -249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -1064,7 +1086,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/TimePannel
+    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1082,16 +1104,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.2
+        time: 0.14
         value: 0
         inSlope: 0
-        outSlope: 7.9
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 1
         inSlope: 0
         outSlope: 0
@@ -1121,16 +1143,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.2
+        time: 0.14
         value: -12
         inSlope: 0
-        outSlope: 94.8
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.4
+        time: 0.5
         value: 0
         inSlope: 0
         outSlope: 0
@@ -1160,16 +1182,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.25
+        time: 0.22
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.55
+        time: 0.62
         value: 1
         inSlope: 0
         outSlope: 0
@@ -1199,16 +1221,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.25
+        time: 0.22
         value: -12
         inSlope: 0
-        outSlope: 80
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.55
+        time: 0.62
         value: 0
         inSlope: 0
         outSlope: 0
@@ -1238,16 +1260,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.38
+        time: 0.32
         value: 0
         inSlope: 0
-        outSlope: 6.6666665
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.68
+        time: 0.74
         value: 1
         inSlope: 0
         outSlope: 0
@@ -1277,16 +1299,16 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.38
+        time: 0.32
         value: -16.179483
         inSlope: 0
-        outSlope: 80
+        outSlope: 0
         tangentMode: 0
         weightedMode: 0
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.68
+        time: 0.74
         value: -4.1794834
         inSlope: 0
         outSlope: 0
