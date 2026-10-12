@@ -57,7 +57,7 @@ namespace qp {
         /// somebody is using.
         ///
         /// A result with nothing to collect is never forced at all. It sits on the card for this
-        /// visit, and <see cref="OnDestroy"/> spends it.
+        /// visit, and the card spends it when it goes away.
         /// </summary>
         IEnumerator Start() {
             if (!TournamentManager.PrizeWaiting) yield break;
@@ -70,16 +70,6 @@ namespace qp {
             if (events != null) events.enabled = true;
 
             yield return ShowEnded();
-        }
-
-        /// <summary>Leaving spends the one look the player gets at a result that pays nothing.
-        ///
-        /// Only that case — a prize is marked by the screen that hands it over, and marking it
-        /// here would pay the player with no idea what for. And only if the card really showed
-        /// it: a visit spent offline showed an Offline card and owes them the chance again.</summary>
-        void OnDestroy() {
-            if (_card == null || !_card.ShowedResult || TournamentManager.ClosedWonPrize) return;
-            TournamentManager.CompleteEnded();
         }
 
         // Open plays the in animation; the popup closes itself (X / BG tap → out animation).

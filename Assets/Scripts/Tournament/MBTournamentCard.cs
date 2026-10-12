@@ -112,9 +112,25 @@ namespace qp {
 
         /// <summary>The "see results" face has actually been on screen at some point. A result
         /// with nothing to collect is never forced on the player — it sits here and is spent by
-        /// the visit, so the lobby needs to know the player was really offered it. A visit spent
-        /// offline showed an Offline card and owes them the chance again.</summary>
-        public bool ShowedResult { get; private set; }
+        /// the visit. A visit spent offline showed an Offline card and owes them the chance
+        /// again.</summary>
+        bool _showedResult;
+
+        /// <summary>
+        /// Going away spends the one look the player gets at a result that pays nothing.
+        ///
+        /// Marked here and not by the lobby because scene teardown destroys in no particular
+        /// order: a lobby reaching for a card that went first would read Unity's fake null, skip
+        /// the mark, and hand the player the same result again — sometimes. The card knows it
+        /// showed it, so the card is what says so.
+        ///
+        /// Only when there is nothing to collect. A prize is marked by the screen that hands it
+        /// over, and marking it here would pay the player with no idea what for.
+        /// </summary>
+        void OnDestroy() {
+            if (!_showedResult || TournamentManager.ClosedWonPrize) return;
+            TournamentManager.CompleteEnded();
+        }
 
         void _draw() {
             var status = TournamentManager.Status;
@@ -135,7 +151,7 @@ namespace qp {
 
             if (wanted == null) return;   // None — the card is hidden, nothing to fill in
 
-            if (wanted == _results) ShowedResult = true;
+            if (wanted == _results) _showedResult = true;
 
             _set(wanted.stopwatch, TournamentManager.TimeLeftText, ref _clockShown);
 

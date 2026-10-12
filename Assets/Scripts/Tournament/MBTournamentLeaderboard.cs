@@ -144,6 +144,16 @@ namespace qp {
             if (!answerAtOnce) Answer(result);
         }
 
+        /// <summary>
+        /// Switched off by any route at all, not just a button: the caller is yielding on the
+        /// handle and would yield for ever otherwise, and <see cref="Show"/> would keep handing
+        /// that same dead handle to everyone after them.
+        /// </summary>
+        void OnDisable() {
+            _pending = ETournamentScreenResult.None;
+            Answer(ETournamentScreenResult.Closed);
+        }
+
         /// <summary>Wake the caller up. Once — the handle is dropped with it.</summary>
         void Answer(ETournamentScreenResult result) {
             var showing = _showing;

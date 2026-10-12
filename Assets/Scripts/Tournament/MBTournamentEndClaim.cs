@@ -202,6 +202,17 @@ namespace qp {
             _opened = false;                       // releases Show()
         }
 
+        /// <summary>
+        /// Switched off by any route at all, not just the one out: the caller is waiting on this
+        /// screen and would wait for ever otherwise. Only Close() releases it today, so anything
+        /// else that hides it - a scene tearing down, a debug tool, a future caller - locks it
+        /// shut, and every later Show returns at once having shown nothing.
+        /// </summary>
+        void OnDisable() {
+            _opened = false;
+            _closing = false;
+        }
+
         // ---- contents ---------------------------------------------------------------------
 
         /// <summary>Where the player finished, 1-based; 0 when there is no closed table. The same
