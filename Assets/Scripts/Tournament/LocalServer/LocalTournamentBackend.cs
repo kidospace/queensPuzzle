@@ -185,10 +185,12 @@ namespace qp {
             _state.endTicks = now.AddHours(WindowHours).Ticks;
             _state.myScore = 0;
             _state.acceptedIds.Clear();
-            _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name);
+            _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
+                                             _state.setKind, out var kind);
+            _state.setKind = kind;
 
             Debug.Log($"[LocalTournament] {_state.currentId} opened with {_state.rivals.Count} rivals " +
-                      $"(built around {usual} points)");
+                      $"(built around {usual} points, {kind})");
         }
 
         /// <summary>
@@ -205,6 +207,7 @@ namespace qp {
             _state.closedStartTicks = _state.startTicks;
             _state.closedEndTicks = _state.endTicks;
             _state.closedMyScore = _state.myScore;
+            _state.closedSetKind = _state.setKind;   // the result event is sent after this
             _state.closedTable = _table(WindowMinutes, _state.myScore);
             _state.RecordScore(_state.myScore);   // what the next groups are sized against
         }
@@ -269,19 +272,21 @@ namespace qp {
             int minutes = Mathf.Clamp((int)(now - start).TotalMinutes, 0, WindowMinutes);
             var rows = _table(minutes, _state.myScore);
 
-            return _snapshot(_state.currentId, _state.startTicks, _state.endTicks, rows, false);
+            return _snapshot(_state.currentId, _state.startTicks, _state.endTicks, rows, false,
+                             _state.setKind);
         }
 
         TournamentSnapshot _closedSnapshot() {
             if (string.IsNullOrEmpty(_state.closedId)) return _noTournament();
             return _snapshot(_state.closedId, _state.closedStartTicks, _state.closedEndTicks,
-                             _state.closedTable, true);
+                             _state.closedTable, true, _state.closedSetKind);
         }
 
         static TournamentSnapshot _noTournament() => new TournamentSnapshot { etag = "none" };
 
         TournamentSnapshot _snapshot(
-            string id, long startTicks, long endTicks, List<LocalEntry> rows, bool isFinal) {
+            string id, long startTicks, long endTicks, List<LocalEntry> rows, bool isFinal,
+            RivalGroup.Kind kind) {
 
             var entries = new TournamentEntry[rows.Count];
             int myIndex = -1;
@@ -298,6 +303,8 @@ namespace qp {
                     endTicks = endTicks,
                     groupSize = RivalGroup.Size + 1,
                     isFinal = isFinal,
+                    // Unknown travels as empty, and the event turns that into "?".
+                    difficulty = kind == RivalGroup.Kind.Unknown ? "" : kind.ToString(),
                 },
                 standings = new TournamentStandings { myIndex = myIndex, entries = entries },
             };

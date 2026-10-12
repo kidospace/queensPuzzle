@@ -259,7 +259,8 @@ namespace qp {
             // the four routes in. Reported however it ended - a result nobody looked at counts
             // for the spread of places exactly as much as one that was celebrated.
             Analytics.TournamentEnd(ClosedDay, ClosedPlace,
-                                    _state.lastSyncClosed.standings.Me?.score ?? 0, ClosedWonPrize);
+                                    _state.lastSyncClosed.standings.Me?.score ?? 0, ClosedWonPrize,
+                                    _state.lastSyncClosed.info?.difficulty);
         }
 
 

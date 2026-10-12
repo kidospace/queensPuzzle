@@ -28,6 +28,17 @@ namespace qp {
     /// </summary>
     public static class RivalGroup {
 
+        /// <summary>Which difficulty a group was drawn from. Worth a name because it is the one
+        /// thing about a tournament that decides the outcome before the player touches it, so it
+        /// has to be remembered (no two Hards in a row) and reported (was the extra play real?).
+        ///
+        /// Unknown is first so it is the DEFAULT, and that is deliberate: a save written before
+        /// this field existed comes back with whatever the initializer says, and a player who
+        /// updates mid-tournament would otherwise report a confident "Normal" for a group that
+        /// was drawn as something else. A missing answer is harmless; a wrong one quietly ruins
+        /// the only comparison the field was added for.</summary>
+        public enum Kind { Unknown, Easy, Normal, Hard }
+
         /// <summary>Rivals per group — the player makes twenty.</summary>
         public const int Size = 19;
 
@@ -121,15 +132,20 @@ namespace qp {
         /// <paramref name="myOwner"/> keeps the player's own recordings out of their group, and
         /// <paramref name="myName"/> keeps a rival from arriving under their name.
         /// </summary>
-        public static List<LocalRival> Build(int myScore, uint myOwner, string myName) {
-            try { return _build(myScore, myOwner, myName); }
+        /// <param name="last">The kind the player got last time, so the draw can avoid repeating
+        /// an extreme. <paramref name="chosen"/> reports what this group actually is.</param>
+        public static List<LocalRival> Build(int myScore, uint myOwner, string myName,
+                                             Kind last, out Kind chosen) {
+            try { return _build(myScore, myOwner, myName, last, out chosen); }
             // The recordings are read here and nowhere else, so this is where they stop being
             // worth holding: everything chosen is copied out below, and the ~280 KB behind it is
             // not wanted again for another 48 hours.
             finally { RivalsBlob.Unload(); }
         }
 
-        static List<LocalRival> _build(int myScore, uint myOwner, string myName) {
+        static List<LocalRival> _build(int myScore, uint myOwner, string myName,
+                                       Kind last, out Kind chosen) {
+            chosen = Kind.Unknown;   // nothing was drawn unless the group is actually built
             var rivals = new List<LocalRival>(Size);
             if (RivalsBlob.Count == 0) {
                 Debug.LogWarning("[RivalGroup] no recordings available — the tournament has no rivals");
@@ -137,7 +153,8 @@ namespace qp {
             }
 
             var rnd = new System.Random(Guid.NewGuid().GetHashCode());
-            float[] set = _pickSet(rnd);
+            chosen = _pickKind(rnd, last);
+            float[] set = chosen == Kind.Easy ? Easy : chosen == Kind.Hard ? Hard : Normal;
             var usedRecordings = new HashSet<int>();
             var usedNames = new HashSet<string> { myName ?? "" };
 
@@ -161,11 +178,26 @@ namespace qp {
             return rivals;
         }
 
-        static float[] _pickSet(System.Random rnd) {
+        /// <summary>
+        /// The draw, with one rule on top of it: never the same EXTREME twice running.
+        ///
+        /// The roll is independent every time, which is the point — a prize that cannot be
+        /// predicted is what makes winning one mean anything. But independence also produces runs,
+        /// and a run of two reads as a verdict rather than as luck: two Hards means a player
+        /// spends four days nowhere near a prize with nothing on screen to explain it, and two
+        /// Easys teaches them the prize was never worth playing for. Both are rare — 2.25% and
+        /// 6.25% — and both are the worst thing the feature can do to the player it happens to.
+        /// A repeat is turned into Normal, which costs the long-run mix about a point and a half
+        /// of each extreme and is well worth it.
+        /// </summary>
+        /// <remarks>An Unknown <paramref name="last"/> — a first tournament, or one that predates
+        /// the field — suppresses nothing, which is right: there is no repeat to avoid.</remarks>
+        static Kind _pickKind(System.Random rnd, Kind last) {
             double roll = rnd.NextDouble();
-            if (roll < EasyChance) return Easy;
-            if (roll < EasyChance + HardChance) return Hard;
-            return Normal;
+            Kind k = roll < EasyChance ? Kind.Easy
+                   : roll < EasyChance + HardChance ? Kind.Hard
+                   : Kind.Normal;
+            return k != Kind.Normal && k == last ? Kind.Normal : k;
         }
 
         static float _jitter(System.Random rnd) => 1f + (float)(rnd.NextDouble() * 2 - 1) * Jitter;

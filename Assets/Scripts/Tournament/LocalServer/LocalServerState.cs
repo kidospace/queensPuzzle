@@ -43,6 +43,15 @@ namespace qp {
         // Frozen at the moment it ended, names and final scores only: the recordings have done
         // their job and the table must never disagree with what the player saw a minute earlier.
 
+        /// <summary>Which difficulty the open tournament was drawn from, and which the closed one
+        /// was. The first stops two extremes landing in a row (see <see cref="RivalGroup"/>); the
+        /// second is what the end-of-tournament event reports, and it has to survive the close
+        /// because that is when the event is sent.</summary>
+        /// Unknown by default so a save from before these existed says so, instead of claiming
+        /// a difficulty nobody drew.
+        public RivalGroup.Kind setKind = RivalGroup.Kind.Unknown;
+        public RivalGroup.Kind closedSetKind = RivalGroup.Kind.Unknown;
+
         public string closedId = "";
         public long closedStartTicks;
         public long closedEndTicks;

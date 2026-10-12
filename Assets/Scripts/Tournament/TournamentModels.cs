@@ -12,6 +12,12 @@ namespace qp {
         public long startTicks;
         public long endTicks;
         public int groupSize;     // players per group, set by the server
+        /// <summary>Which difficulty the group was drawn from ("Easy"/"Normal"/"Hard"), as the
+        /// server labels it — reported with the result so the one thing that decides the outcome
+        /// before the player touches it can be measured against what they then did. Empty when
+        /// the server does not say. Named in full because `set` is a keyword in C# and a reserved
+        /// word in SQL, and this value ends up in both.</summary>
+        public string difficulty = "";
         public bool isFinal;      // the server closed it — its table is the final ranking. Closing is
                                   // instant at end time, so there is no "results are being calculated"
 

@@ -30,8 +30,8 @@ MonoBehaviour:
   - rewards:
     - type: 1
       amount: 3
-    - type: 0
-      amount: 5
+    - type: 2
+      amount: 2
   boostSprites:
   - type: 0
     sprite: {fileID: -8001076275147396791, guid: 5ba001d2d4f08ca42a7362d999bcd143, type: 3}
