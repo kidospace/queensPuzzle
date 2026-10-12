@@ -39,6 +39,7 @@ namespace qp {
         MBDailyStreakInfoPopup _streakProgressPopup;          // shown when the streak advanced
         MBDailyStreakInGameRewordedPopup _streakRewardPopup;    // shown when a milestone was hit
         MBTournamentEndClaim _tournamentEndPopup;               // a finished tournament that pays
+        MBTournamentPopupAfterWin _tournamentAfterWin;          // what this win did to the live one
         MBFailPopup _failPopup;      // same pattern as the win popup — shows when the bones run out
         MBTopBar _topBar;            // "queens placed / total" HUD
         Coroutine _shake;            // board shake on a wrong queen
@@ -129,6 +130,10 @@ namespace qp {
             _tournamentEndPopup = FindAnyObjectByType<MBTournamentEndClaim>(FindObjectsInactive.Include);
             if (_tournamentEndPopup != null) _tournamentEndPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBTournamentEndClaim missing in the scene");
+
+            _tournamentAfterWin = FindAnyObjectByType<MBTournamentPopupAfterWin>(FindObjectsInactive.Include);
+            if (_tournamentAfterWin != null) _tournamentAfterWin.gameObject.SetActive(true);
+            else Debug.LogError("[MBGameplay] MBTournamentPopupAfterWin missing in the scene");
 
             _topBar = FindAnyObjectByType<MBTopBar>(FindObjectsInactive.Include);
 
@@ -934,6 +939,21 @@ namespace qp {
         // tournament popup once it exists (a closed tournament's result comes first, then the climb).
         TournamentWinResult _tournamentWin;
 
+        /// <summary>There is a tournament for this win to have landed in. Active and EndingSoon
+        /// climb; Offline shows what is waiting to be sent. Everything else — no tournament, the
+        /// feature locked, or a clock that has already run out — means the win belongs to a
+        /// tournament that is not on screen yet, and there is nothing to draw it on.</summary>
+        static bool _showsClimb {
+            get {
+                switch (TournamentManager.Status) {
+                    case ETournamentStatus.Active:
+                    case ETournamentStatus.EndingSoon:
+                    case ETournamentStatus.Offline: return true;
+                    default: return false;
+                }
+            }
+        }
+
         IEnumerator WinFlow() {
             var streak = DailyStreakManager.RegisterWin();
             if (streak.reward != null) MBBoostButton.SuppressUpdate = true;
@@ -942,13 +962,30 @@ namespace qp {
             yield return new WaitForSecondsRealtime(happyLen > 0f ? happyLen : 3f);
 
             // A tournament the player won goes first — it is the end of two days, and everything
-            // after it belongs to the level that was just finished. The board is locked under it
-            // the same way the first-try popup locks it: the dismissing tap must not reach a cell.
-            // TODO: the climb in the tournament now running belongs between this and the streak,
-            //       and has nowhere to be shown yet (_tournamentWin is filled and read by nobody).
+            // after it belongs to the level that was just finished. Then what this win did to the
+            // tournament running now, and only then the streak.
+            //
+            // The board is locked under both, the same way the first-try popup locks it: the tap
+            // that dismisses a popup must not land on a cell.
             if (_tournamentEndPopup != null && TournamentManager.PrizeWaiting) {
                 InputLocks++;
                 yield return _tournamentEndPopup.Show();
+                InputLocks--;
+            }
+            else if (TournamentManager.Status == ETournamentStatus.Ended) {
+                // It ended while they were playing and it pays them nothing. Closed quietly,
+                // exactly as leaving the lobby closes it: a result nobody is owed is not worth
+                // stopping a level win for, and holding it back would only have it ambush them
+                // in the lobby later, long after they had moved on to the next tournament.
+                TournamentManager.CompleteEnded();
+            }
+
+            // Marking that result seen reopens the question, so the status is read HERE and not
+            // above: a player who just cleared an Ended card is now looking at a running
+            // tournament, and this win landed in it.
+            if (_tournamentAfterWin != null && _showsClimb) {
+                InputLocks++;
+                yield return _tournamentAfterWin.Show(_tournamentWin);
                 InputLocks--;
             }
 
