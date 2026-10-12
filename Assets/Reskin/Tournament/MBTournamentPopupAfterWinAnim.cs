@@ -17,9 +17,10 @@ namespace qp {
     [RequireComponent(typeof(Animator))]
     public class MBTournamentPopupAfterWinAnim : MonoBehaviour, IPopupAnim {
 
-        const string Show = "Show", RankUp = "RankUp";
+        const string Show = "Show", RankUp = "RankUp", OfflineGone = "OfflineGone";
         static readonly int ShowState = Animator.StringToHash(Show);
         static readonly int RankUpState = Animator.StringToHash(RankUp);
+        static readonly int OfflineGoneState = Animator.StringToHash(OfflineGone);
 
         Animator _animator;
 
@@ -43,6 +44,20 @@ namespace qp {
         public void PlayRankUp() {
             _animator.Play(RankUpState, 0, 0f);
             if (_animator.isInitialized) _animator.Update(0f);
+        }
+
+        /// <summary>The no-connection panel leaving, once the line is back. Its own state
+        /// because Show holds its last frame for as long as it is the current one — anything
+        /// fading this from code would be overwritten on the very next frame.</summary>
+        public void PlayOfflineGone() {
+            _animator.Play(OfflineGoneState, 0, 0f);
+            if (_animator.isInitialized) _animator.Update(0f);
+        }
+
+        public bool IsOfflineGone() {
+            if (_animator == null || !_animator.isInitialized) return true;
+            var st = _animator.GetCurrentAnimatorStateInfo(0);
+            return !st.IsName(OfflineGone) || st.normalizedTime >= 1f;
         }
 
         /// <summary>

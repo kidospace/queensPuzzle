@@ -30,22 +30,28 @@ namespace qp {
 
         const float FadeOut = 0.15f;
 
-        /// <summary>The beat between the score landing and the table reacting to it.</summary>
-        const float MoveLead = 0.2f;
+        /// <summary>The pause before the table reacts, so the win registers first.</summary>
+        const float MoveLead = 0.25f;
 
         /// <summary>The countdown moves once a second, so there is no point asking faster.</summary>
         const float ClockSeconds = 1f;
 
-        /// <summary>Out of the list, up, and back in.</summary>
-        const float LiftSeconds = 0.18f, TravelSeconds = 0.55f, SettleSeconds = 0.22f;
+        /// <summary>Out of the list, up, and back in. Long on purpose: this is the one thing on
+        /// the screen worth watching, and every version of it that hurried felt cheap.</summary>
+        const float LiftSeconds = 0.32f, TravelSeconds = 1.1f, SettleSeconds = 0.4f;
 
-        /// <summary>Raised while it is out, so it reads as held above the list rather than as a
-        /// row that grew.</summary>
-        const float LiftScale = 1.08f;
+        /// <summary>How much of the trip the rivals have to be clear in. The card covers the
+        /// whole climb while they each step aside by one place, so at equal speed it is always
+        /// ahead of the space it is heading for and lands on somebody. They go first.</summary>
+        const float ClearBy = 0.55f;
 
-        /// <summary>The points landing on the row: taken, given, and sprung back.</summary>
-        const float ImpactSquash = 0.95f, ImpactIn = 0.05f;
-        const float ImpactPeak = 1.08f, ImpactOut = 0.09f, ImpactSettle = 0.18f;
+        /// <summary>The score changes while the row is on its way up, not as a beat of its own —
+        /// a separate punch on the number is what made the whole thing feel hard.</summary>
+        const float ScoreFade = 0.55f;
+
+        /// <summary>Barely raised. Enough to read as held above the list, not enough to read as
+        /// a row that changed size.</summary>
+        const float LiftScale = 1.04f;
 
         CanvasGroup _group;
         MBTournamentRow[] _rows;
@@ -54,6 +60,7 @@ namespace qp {
         TMP_Text _clock, _rankUp, _pendingBones;
         GameObject _rankUpRoot, _offline;
         Transform _overlay;                 // Container — outside the scroll view, over the mask
+        Transform _arrows;                  // $RankUpPS — ridden by the card on its way up
         MBTournamentPopupAfterWinAnim _anim;
 
         /// <summary>
@@ -71,7 +78,7 @@ namespace qp {
         readonly List<TournamentEntry> _rivals = new List<TournamentEntry>();
 
         string _clockShown;
-        bool _laidOut, _open, _closing;
+        bool _laidOut, _open, _closing, _offlineShown;
 
         void Awake() {
             _group = GetComponent<CanvasGroup>();
@@ -83,6 +90,7 @@ namespace qp {
                                         : new MBTournamentRow[0];
 
             _overlay = _scroll != null ? _scroll.transform.parent : transform;
+            _arrows = transform.RecursiveFindChild("$RankUpPS");
 
             _clock = Label("$StopWatchText");
             _rankUp = Label("$RankUP");
@@ -126,13 +134,34 @@ namespace qp {
             while (!_laidOut) yield return null;
 
             _group.alpha = 1f;
+
+            // The opening clip brings the panel in along with everything else; all this decides
+            // is whether it is there to be brought in. A curve on an inactive object draws
+            // nothing, so online it simply does not appear.
+            //
+            // Still only a presentation choice - the decision that matters is taken after the
+            // opening, so a line that comes back while it plays earns the climb anyway.
+            if (_offline != null) { _offline.SetActive(Offline); _offlineShown = Offline; }
+            if (_offlineShown) Tick();                 // the pending count, before it is seen
+
             _anim?.PlayIn();
             if (_anim != null) yield return new WaitUntil(() => _anim.IsFinished());
 
             // The decision point, taken HERE and not when the screen opened: a player who came
             // back online while the opening played has earned the climb.
-            if (Offline) ShowOffline();
-            else yield return Climb(win);
+            if (Offline) {
+                yield return WaitOffline();
+
+                // Back on the line, and the table is not the one this screen opened with: the
+                // sync that reconnecting triggers sends the pending win, and the server answers
+                // with standings that may already contain it. Rebuilt from what is true now.
+                if (_open && !_closing) Fill(win);
+                if (Counted(win)) { Draw(win.newScore, Place(win.newScore)); ScrollToMe(Place(win.newScore)); yield break; }
+            }
+
+            // And from here it is settled. Losing the line again mid-climb does not undo a win
+            // that has already been counted, so nothing below asks a second time.
+            if (Climbable) yield return Climb(win);
 
             while (_open) yield return null;   // until the player taps out
         }
@@ -166,6 +195,9 @@ namespace qp {
         /// it actually changes — a TMP label assigned the string it already holds still rebuilds
         /// its mesh.</summary>
         void Tick() {
+            if (_pendingBones != null && _offline != null && _offline.activeSelf)
+                _pendingBones.text = "+" + (TournamentManager.State?.PendingScore ?? 0);
+
             string now = TournamentManager.TimeLeftText;
             if (now == _clockShown) return;
             if (_clock != null) _clock.text = now;
@@ -176,13 +208,52 @@ namespace qp {
 
         // ---- offline: nothing happened -----------------------------------------------------
 
-        /// <summary>The panel is translucent and the table stays behind it — there IS a tournament
-        /// there, it just cannot be joined from here. All it adds is what is waiting to be sent.</summary>
-        void ShowOffline() {
-            if (_offline != null) _offline.SetActive(true);
-            if (_pendingBones != null)
-                _pendingBones.text = "+" + (TournamentManager.State?.PendingScore ?? 0);
+        /// <summary>
+        /// Hold here while there is no line, and let go the moment there is one.
+        ///
+        /// The panel is translucent and the table stays behind it — there IS a tournament there,
+        /// it just cannot be reached from here. All the panel adds is what is waiting to be sent.
+        ///
+        /// It fades, both ways. A player who reconnects while reading it sees it clear and then
+        /// gets the climb they would have had at the open, rather than a panel vanishing on a
+        /// frame boundary.
+        /// </summary>
+        IEnumerator WaitOffline() {
+            ShowOfflinePanel();
+
+            // Closing the screen releases this too — the player does not have to wait for a
+            // connection to get out.
+            yield return new WaitUntil(() => !Offline || !_open || _closing);
+            if (!_open || _closing) yield break;
+
+            _anim?.PlayOfflineGone();
+            if (_anim != null) yield return new WaitUntil(() => _anim.IsOfflineGone());
+            _offline.SetActive(false);
+            _offlineShown = false;
         }
+
+        /// <summary>Bring the panel up for a line that dropped AFTER the opening. The Show state
+        /// is still the current one and still holding its last frame, which has this at full —
+        /// so it only has to exist again.</summary>
+        void ShowOfflinePanel() {
+            if (_offline == null || _offlineShown) return;
+            _offlineShown = true;
+            _offline.SetActive(true);
+            Tick();
+        }
+
+        /// <summary>The server has already applied this win, so there is nothing left to
+        /// animate — it would be the same climb a second time. Only possible after a wait
+        /// offline, which ends in exactly the sync that delivers it.</summary>
+        static bool Counted(TournamentWinResult win) =>
+            (TournamentManager.State?.lastSyncCurrent?.standings?.Me?.score ?? 0) >= win.newScore;
+
+        /// <summary>There is a live tournament for the climb to happen in. Checked again after a
+        /// wait offline: the one the player won in can have closed while they were away, and
+        /// animating a table that is already finished would be a lie.</summary>
+        static bool Climbable =>
+            TournamentManager.Status == ETournamentStatus.Active ||
+            TournamentManager.Status == ETournamentStatus.EndingSoon;
 
         // ---- online: the climb --------------------------------------------------------------
 
@@ -205,15 +276,9 @@ namespace qp {
             // The score becomes the new one and the row takes the hit for it. There is nothing
             // to count up to — the player knows what they just won; what they have not seen yet
             // is where it puts them, and that is what comes after.
-            if (from < _rows.Length) {
-                // The badge stays the one it opened with — where the player ENDS UP. Writing the
-                // row with its current place here is what made it flip off the medal and collide
-                // with the rival already wearing that number.
-                _rows[from].Set(to + 1, ProfileManager.Name, win.newScore, true);
-                yield return Impact((RectTransform)_rows[from].transform);
-            }
-
+            // Standing still: nowhere to carry the change, so it happens here.
             if (to >= from) {
+                if (from < _rows.Length) yield return _rows[from].FadeScoreTo(win.newScore, ScoreFade);
                 Draw(win.newScore, to);
                 ScrollToMe(to);
                 yield break;
@@ -221,7 +286,7 @@ namespace qp {
 
             ShowRankUp(from - to);
             yield return new WaitForSecondsRealtime(MoveLead);
-            yield return MakeRoom(from, to);
+            yield return MakeRoom(from, to, win.newScore);
 
             // Everyone is now standing under the number they have been wearing since it opened,
             // so this settles the positions and changes nothing anybody can see.
@@ -246,7 +311,7 @@ namespace qp {
         /// view in draw order and outside the mask, so it is never clipped at the edge of the
         /// viewport — which is exactly where a row about to move usually sits.
         /// </summary>
-        IEnumerator MakeRoom(int from, int to) {
+        IEnumerator MakeRoom(int from, int to, int score) {
             if (_content == null || _scroll == null || from >= _rows.Length || to >= _rows.Length) yield break;
 
             float step = RowHeight + RowSpacing;
@@ -266,7 +331,21 @@ namespace qp {
             me.SetAsLastSibling();
             me.position = world;
 
+            // The arrows belong on the card, not on a badge in the corner — the card is what
+            // the eye is following. Carried with it, so they keep rising out of it the whole way.
+            if (_arrows != null) {
+                _arrows.SetParent(me, false);
+                _arrows.localPosition = Vector3.zero;
+                _arrows.gameObject.SetActive(true);
+                var ui = _arrows.GetComponent<Coffee.UIExtensions.UIParticle>();
+                if (ui != null) ui.Play(); else _arrows.GetComponent<ParticleSystem>()?.Play();
+            }
+
             yield return Scale(me, 1f, LiftScale, LiftSeconds);
+
+            // The score changes on the way up rather than before it. One movement instead of a
+            // punch followed by a journey.
+            StartCoroutine(_rows[from].FadeScoreTo(score, ScoreFade));
 
             // Where the list can actually end up: the slot the player is heading for, put where
             // ScrollToMe would put it, and then clamped to the ends of the list.
@@ -286,26 +365,24 @@ namespace qp {
 
             for (float e = 0f; e < TravelSeconds; e += Time.unscaledDeltaTime) {
                 float p = Ease(Mathf.Clamp01(e / TravelSeconds));
+                float cleared = Ease(Mathf.Clamp01(e / (TravelSeconds * ClearBy)));
+
                 me.position = Vector3.Lerp(start, end, p);
                 _content.anchoredPosition = new Vector2(_content.anchoredPosition.x, Mathf.Lerp(c0, c1, p));
                 for (int i = to; i < from; i++)
                     ((RectTransform)_rows[i].transform).anchoredPosition =
-                        new Vector2(home[i].x, home[i].y - step * p);
+                        new Vector2(home[i].x, home[i].y - step * cleared);
                 yield return null;
             }
 
             // Back in, into the place that opened up.
+            if (_arrows != null) {
+                _arrows.SetParent(_overlay, false);
+                _arrows.gameObject.SetActive(false);
+            }
             me.SetParent(_content, true);
             yield return Scale(me, LiftScale, 1f, SettleSeconds);
             Place(me, to);
-        }
-
-        /// <summary>Struck: driven in, thrown back past its size, settled. Motion only — a spray
-        /// of anything over the row buries the one thing the player is reading.</summary>
-        static IEnumerator Impact(RectTransform row) {
-            yield return Scale(row, 1f, ImpactSquash, ImpactIn);
-            yield return Scale(row, ImpactSquash, ImpactPeak, ImpactOut);
-            yield return Scale(row, ImpactPeak, 1f, ImpactSettle);
         }
 
         static IEnumerator Scale(RectTransform t, float from, float to, float dur) {
@@ -316,7 +393,9 @@ namespace qp {
             t.localScale = Vector3.one * to;
         }
 
-        static float Ease(float p) => 1f - (1f - p) * (1f - p);
+        /// <summary>Soft at both ends. An ease-out alone still leaves hard: it starts at full
+        /// speed, and the eye catches the start of a movement more than the end of it.</summary>
+        static float Ease(float p) => Mathf.SmoothStep(0f, 1f, p);
 
         /// <summary>Switch the arrow on with how far the player came, and let the reskin make
         /// something of it. The number is this screen's; everything that moves is the clip's.</summary>
@@ -336,7 +415,7 @@ namespace qp {
                 for (int i = 0; i < entries.Length; i++)
                     if (!standings.IsMe(i)) _rivals.Add(entries[i]);
 
-            if (_offline != null) _offline.SetActive(false);
+            if (_offline != null && !_offlineShown) _offline.SetActive(false);
             if (_rankUpRoot != null) _rankUpRoot.SetActive(false);
             _clockShown = null;          // reopened later, the time it last showed is wrong
             Tick();

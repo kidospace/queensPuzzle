@@ -1,3 +1,4 @@
+using System.Collections;
 using Common;
 using TMPro;
 using UnityEngine;
@@ -107,5 +108,37 @@ namespace qp {
         static void Show(GameObject go, bool on) { if (go != null && go.activeSelf != on) go.SetActive(on); }
         static void Show(TMP_Text label, bool on) { if (label != null) Show(label.gameObject, on); }
         static void SetText(TMP_Text label, string value) { if (label != null) label.text = value; }
+
+        /// <summary>
+        /// Change the score behind a dip to nothing and back, instead of swapping the digits
+        /// where the player is looking. The row owns this because the row is the only thing that
+        /// knows which of its two pills is showing.
+        ///
+        /// Out and back in rather than a dissolve: there is one label, and a number cannot cross
+        /// over itself. Half the time going, half coming back.
+        /// </summary>
+        public IEnumerator FadeScoreTo(int score, float seconds) {
+            var pill = _meShown ? _pillMe : _pill;
+            if (pill == null) { _scoreShown = score; SetText(_meShown ? _scoreMe : _score, score.ToString()); yield break; }
+
+            var group = pill.GetComponent<CanvasGroup>();
+            if (group == null) group = pill.AddComponent<CanvasGroup>();
+
+            float half = seconds * 0.5f;
+            for (float e = 0f; e < half; e += Time.unscaledDeltaTime) {
+                group.alpha = 1f - Mathf.SmoothStep(0f, 1f, e / half);
+                yield return null;
+            }
+
+            group.alpha = 0f;
+            SetText(_meShown ? _scoreMe : _score, score.ToString());
+            _scoreShown = score;
+
+            for (float e = 0f; e < half; e += Time.unscaledDeltaTime) {
+                group.alpha = Mathf.SmoothStep(0f, 1f, e / half);
+                yield return null;
+            }
+            group.alpha = 1f;
+        }
     }
 }
