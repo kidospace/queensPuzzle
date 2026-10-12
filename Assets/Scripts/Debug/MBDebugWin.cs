@@ -96,6 +96,14 @@ namespace qp {
         }
 
         void Close() => Destroy(gameObject);
+
+        /// <summary>Escape closes it — and on Android that is the back button, which is the one
+        /// thing a player reaches for when a panel is in the way. Handled here rather than with
+        /// the other shortcuts because this object only exists while the panel is up, so there
+        /// is nothing to ask and nothing to guard.</summary>
+        void Update() {
+            if (Input.GetKeyDown(KeyCode.Escape)) Close();
+        }
         void OnDestroy() { if (_instance == this) _instance = null; }
 
         // Everything under the panel is blocked while it's up: uGUI via the EventSystem
