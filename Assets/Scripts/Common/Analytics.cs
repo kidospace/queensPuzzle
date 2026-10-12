@@ -44,7 +44,10 @@ namespace qp {
         }
 
         public static void GameWin() {
-            GameEvent("game_win");
+            // Which tournament this win landed in. A tournament is always running for an
+            // unlocked player, so there is no separate "tournament win" to send - everything
+            // about play inside a tournament is a query over game_win grouped by this.
+            GameEvent("game_win", "t_day", TournamentManager.CurrentDay);
             // Milestone conversion events — campaign only (daily day indices would pollute them).
             // GameWin fires before LevelIdx++, so LevelIdx.Value is the just-solved level (0-based).
             if (!DailyChallengeManager.InDailyRun) {
@@ -114,6 +117,48 @@ namespace qp {
 
         /// <summary>A booster earned by watching a rewarded ad (no boost left → video).</summary>
         public static void BoostEarned(string boost) => GameEvent("boost_earned", "boost", boost);
+
+        /// <summary>
+        /// A tournament the player took part in has closed and been marked seen.
+        ///
+        /// <paramref name="place"/> is the one number this feature cannot be judged without: the
+        /// bots are built from recorded players and multipliers picked by hand, and only the
+        /// spread of final places says whether that guess was fair.
+        /// </summary>
+        public static void TournamentEnd(int day, int place, int score, bool prize) {
+            CrashLog($"[tournament] end day {day} place {place} score {score} prize {(prize ? 1 : 0)}");
+#if !IGNORE_FIREBASE
+            CDebug.Log("tournament_end",
+                new Firebase.Analytics.Parameter("t_day", day),
+                new Firebase.Analytics.Parameter("t_place", place),
+                new Firebase.Analytics.Parameter("t_score", score),
+                new Firebase.Analytics.Parameter("t_prize", prize ? 1 : 0));
+#else
+            CDebug.Log("tournament_end");
+#endif
+        }
+
+        /// <summary>
+        /// A prize actually collected, one count per boost.
+        ///
+        /// Counts and not a written-out list: "how much did this feature put into the economy
+        /// last month" has to be SUM(t_queen), not a string every query has to take apart first.
+        /// Sent rather than derived from the place, because the prize table will change and an
+        /// event that can only be read against today's config stops being readable.
+        /// </summary>
+        public static void TournamentClaim(int day, int place, int undo, int hint, int queen) {
+            CrashLog($"[tournament] claim day {day} place {place} undo {undo} hint {hint} queen {queen}");
+#if !IGNORE_FIREBASE
+            CDebug.Log("tournament_claim",
+                new Firebase.Analytics.Parameter("t_day", day),
+                new Firebase.Analytics.Parameter("t_place", place),
+                new Firebase.Analytics.Parameter("t_undo", undo),
+                new Firebase.Analytics.Parameter("t_hint", hint),
+                new Firebase.Analytics.Parameter("t_queen", queen));
+#else
+            CDebug.Log("tournament_claim");
+#endif
+        }
 
         // TEMP — review prepare timing probe, read via BigQuery. REMOVE after the measurement.
         public static void ReviewPrepareTime(int ms, bool prepared) {

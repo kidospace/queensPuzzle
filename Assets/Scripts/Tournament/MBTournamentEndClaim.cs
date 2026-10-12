@@ -136,6 +136,8 @@ namespace qp {
             // Granted and marked in one call, before a single frame of animation. A player who
             // closes the app mid-effect has still been paid, and it cannot be claimed twice.
             TournamentManager.CompleteEnded();
+            Analytics.TournamentClaim(TournamentManager.ClosedDay, Rank,
+                                      Granted(EBoostType.UNDO), Granted(EBoostType.HINT), Granted(EBoostType.QUEEN));
 
             // Particles first, lid second: the burst is what hides the swap.
             PlayPoof();
@@ -157,6 +159,19 @@ namespace qp {
         /// Without that component nothing would ever fade the rewards up, so they are simply put
         /// on screen — a skin with no clip still pays out and still reads.
         /// </summary>
+        /// <summary>How much of one boost this place just handed over. Read off the prize that
+        /// was granted, so the event says what the player actually got rather than what the place
+        /// happens to be worth whenever the numbers are read back.</summary>
+        static int Granted(EBoostType type) {
+            var rewards = TournamentConfig.Instance?.PrizeFor(Rank)?.rewards;
+            if (rewards == null) return 0;
+
+            int total = 0;
+            foreach (var reward in rewards)
+                if (reward != null && reward.type == type) total += reward.amount;
+            return total;
+        }
+
         void OpenBox() {
             var box = Box(Rank);
             if (box != null) {

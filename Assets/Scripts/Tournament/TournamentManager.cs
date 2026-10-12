@@ -170,6 +170,25 @@ namespace qp {
             }
         }
 
+        /// <summary>
+        /// The day a tournament OPENED, counted from the unix epoch — the key that ties every
+        /// event of one tournament together.
+        ///
+        /// From the start of the window and never from "now": a 48-hour window crosses two dates,
+        /// so a win on the second day would otherwise look like a different tournament entirely.
+        ///
+        /// An int rather than the id, which is a twenty-character string on every event. Two
+        /// tournaments cannot open on the same day inside a 48-hour window, so nothing is lost.
+        /// Zero means there was none.
+        /// </summary>
+        public static int CurrentDay => _dayOf(_state?.lastSyncCurrent);
+        public static int ClosedDay => _dayOf(_state?.lastSyncClosed);
+
+        static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        static int _dayOf(TournamentSnapshot snapshot) =>
+            snapshot != null && snapshot.Exists ? (int)(snapshot.info.StartUtc.Date - Epoch).TotalDays : 0;
+
         /// <summary>A prize is sitting there uncollected. The one question both auto-openings ask
         /// — the lobby as it opens, the win flow before the celebration — so neither has to work
         /// it out and they can never disagree about whether to interrupt the player.</summary>
@@ -235,6 +254,12 @@ namespace qp {
 
             _state.closedShown = true;
             _state.Save();
+
+            // Sent from here because this is the only place a result is ever closed, by any of
+            // the four routes in. Reported however it ended - a result nobody looked at counts
+            // for the spread of places exactly as much as one that was celebrated.
+            Analytics.TournamentEnd(ClosedDay, ClosedPlace,
+                                    _state.lastSyncClosed.standings.Me?.score ?? 0, ClosedWonPrize);
         }
 
 
