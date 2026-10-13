@@ -40,7 +40,7 @@ namespace qp {
         static float Scale =>
             Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height) / ReferenceShortSide);
 
-        string _scoreInput = "", _placeInput = "";
+        string _scoreInput = "", _placeInput = "", _minutesInput = "";
 
         /// <summary>
         /// Everything here writes the SERVER's state and then syncs, because the client's copy is
@@ -70,6 +70,18 @@ namespace qp {
             if (Button("+1h")) Do(() => dbg.SkipTime(TimeSpan.FromHours(1)));
             if (Button("+6h")) Do(() => dbg.SkipTime(TimeSpan.FromHours(6)));
             if (Button("+24h")) Do(() => dbg.SkipTime(TimeSpan.FromHours(24)));
+            GUILayout.EndHorizontal();
+
+            // Minutes as well as hours, because the states near the end of the window are minutes
+            // wide: "ending soon" is the last TournamentConfig.endingSoonMinutes, which the hour
+            // buttons step straight over.
+            GUILayout.BeginHorizontal();
+            _minutesInput = GUILayout.TextField(_minutesInput, GUILayout.Height(44), GUILayout.Width(120));
+            if (Button("Skip minutes") && int.TryParse(_minutesInput, out int minutes))
+                Do(() => dbg.SkipTime(TimeSpan.FromMinutes(minutes)));
+            if (Button($"To last {TournamentConfig.Instance?.endingSoonMinutes ?? 60}m"))
+                Do(() => dbg.SkipTime(TournamentManager.TimeLeft - TournamentConfig.Instance.EndingSoonTime
+                                      + TimeSpan.FromMinutes(1)));
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
