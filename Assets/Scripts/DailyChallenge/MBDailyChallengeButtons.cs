@@ -34,14 +34,28 @@ namespace qp {
             if (activeT != null) {   // $Date exists on BOTH cards — searches stay scoped per card
                 _date = activeT.RecursiveFindChild<TMP_Text>("$Date");
                 _timeLeft = activeT.RecursiveFindChild<TMP_Text>("$TimeLeft");
-                activeT.GetComponent<Button>().onClick.AddListener(OnPlayClick);
+                Tap(activeT, "$DailyButtonActive", OnPlayClick);
             }
             if (doneT != null) {
                 _doneDate = doneT.RecursiveFindChild<TMP_Text>("$Date");
                 _solvedTime = doneT.RecursiveFindChild<TMP_Text>("$SolvedTime");
                 _topPct = doneT.RecursiveFindChild<TMP_Text>("$TopPct");
-                doneT.GetComponent<Button>().onClick.AddListener(OnDoneClick);
+                // The done card is not a button on purpose: there is nothing to go to once
+                // today's challenge is solved. It only reports.
             }
+        }
+
+        /// <summary>
+        /// Subscribe to a card, and say so when it turns out not to be a button.
+        ///
+        /// Reached straight off GetComponent before, so a card that lost its Button threw in the
+        /// middle of Awake — which costs far more than the click: everything below the throw
+        /// never runs, and the component carries on half built with no sign of why.
+        /// </summary>
+        void Tap(Transform card, string name, UnityEngine.Events.UnityAction onClick) {
+            var button = card.GetComponent<Button>();
+            if (button == null) { Debug.LogError($"[DailyChallenge] {name} has no Button — it cannot be pressed"); return; }
+            button.onClick.AddListener(onClick);
         }
 
         void OnEnable() {
@@ -96,8 +110,5 @@ namespace qp {
             Navigator.Go(Navigator.Gameplay);
         }
 
-        void OnDoneClick() =>
-            Debug.Log($"[DailyChallenge] done card clicked — solved in {DailyChallengeManager.FormatTime(DailyChallengeManager.State.timeSec)}, " +
-                      $"TOP {DailyChallengeManager.State.topPct}%");
     }
 }
