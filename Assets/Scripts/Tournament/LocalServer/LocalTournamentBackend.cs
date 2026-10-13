@@ -66,11 +66,16 @@ namespace qp {
             // Retire the one that is over and have the next one waiting, both before the wins are
             // counted — a win that arrives after the end belongs to the tournament now running,
             // not to the one it just missed.
-            _closeIfOver(now);
-            if (!_running) _open(now);
+            bool changed = _closeIfOver(now);
+            if (!_running) { _open(now); changed = true; }
 
-            var accepted = _applyWins(req);
-            _state.Save();
+            var accepted = _applyWins(req, ref changed);
+
+            // Only when something actually moved. A sync with no new win, in a tournament that is
+            // neither closing nor opening, leaves this state exactly as it was — and writing it
+            // anyway costs a JSON of all nineteen rivals' recordings plus a full PlayerPrefs flush,
+            // twice a minute, for nothing.
+            if (changed) _state.Save();
 
             return new TournamentSyncResult {
                 acceptedWinIds = accepted.ToArray(),
@@ -156,15 +161,17 @@ namespace qp {
         bool _running => !string.IsNullOrEmpty(_state.currentId);
 
         /// <summary>Freeze a tournament whose time is up. Nothing opens here — only a win does
-        /// that.</summary>
-        void _closeIfOver(DateTime now) {
-            if (!_running || now.Ticks < _state.endTicks) return;
+        /// that. True when it actually closed one, so the caller knows the state has to be
+        /// written.</summary>
+        bool _closeIfOver(DateTime now) {
+            if (!_running || now.Ticks < _state.endTicks) return false;
             _freezeClosed();
 
             _state.currentId = "";
             _state.myScore = 0;
             _state.acceptedIds.Clear();
             _state.rivals.Clear();
+            return true;
         }
 
         /// <summary>
@@ -219,7 +226,7 @@ namespace qp {
         /// acknowledged again and added once — that is what lets the client resend everything it
         /// holds and never think about it.
         /// </summary>
-        List<string> _applyWins(TournamentSyncRequest req) {
+        List<string> _applyWins(TournamentSyncRequest req, ref bool changed) {
             var accepted = new List<string>();
             if (req?.wins == null) return accepted;
 
@@ -230,6 +237,7 @@ namespace qp {
 
                 _state.acceptedIds.Add(win.id);
                 _state.myScore += Mathf.Max(0, win.score);
+                changed = true;
             }
             return accepted;
         }

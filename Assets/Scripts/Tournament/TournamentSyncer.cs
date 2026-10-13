@@ -72,24 +72,31 @@ namespace qp {
         void _apply(TournamentSyncResult res) {
             if (res == null) return;   // nothing to fold in; the next run asks again
 
+            bool changed = false;
+
             // By id, never by position — wins made while the request was in flight stay put.
             if (res.acceptedWinIds != null)
                 foreach (var id in res.acceptedWinIds)
-                    _state.pending.RemoveAll(w => w.id == id);
+                    if (_state.pending.RemoveAll(w => w.id == id) > 0) changed = true;
 
             // Same etag = unchanged, keep what we hold. A different etag is the truth, whatever it
             // is: a new table, or nothing at all (no tournament running / none played yet).
-            if (res.current != null && res.current.etag != _state.lastSyncCurrent.etag)
+            if (res.current != null && res.current.etag != _state.lastSyncCurrent.etag) {
                 _state.lastSyncCurrent = res.current;
+                changed = true;
+            }
 
             if (res.lastClosed != null && res.lastClosed.etag != _state.lastSyncClosed.etag) {
                 bool isAnotherOne = res.lastClosed.Id != _state.lastSyncClosed.Id;
                 _state.lastSyncClosed = res.lastClosed;
                 // Only a real result is something the player hasn't seen — "there is none" isn't.
                 if (isAnotherOne && res.lastClosed.Exists) _state.closedShown = false;
+                changed = true;
             }
 
-            _state.Save();
+            // Nothing folded in = nothing to write. The etags exist precisely so an unchanged
+            // table costs nothing, and saving it again would spend the saving.
+            if (changed) _state.Save();
         }
     }
 }
