@@ -70,9 +70,17 @@ namespace qp {
         /// A VerticalLayoutGroup DRIVES its children's position, width and height — and driven
         /// values are recomputed every rebuild, never written to disk. Taking the group away did
         /// not leave the rows where they were; it uncovered what was underneath, which was
-        /// nothing. These four numbers are the layout it used to apply.
+        /// nothing. These two numbers are the layout it used to apply.
+        ///
+        /// The width, the anchors and the pivot are NOT here. They are the row's own, read off
+        /// the prefab and never written — writing them meant the list laid out in the editor was
+        /// a list nobody ever saw, and a row coming back from the climb came back a different
+        /// shape from the ones it landed between.
         /// </summary>
-        const float RowHeight = 150f, RowSpacing = 12f, ListPadding = 16f, RowInset = 20f;
+        const float RowSpacing = 12f, ListPadding = 16f;
+
+        /// <summary>The height the rows actually ship at, so the slots match the art.</summary>
+        float _rowHeight = 150f;
 
         /// <summary>Everyone but the player, highest first — the table with the player's row
         /// taken out, so it can be put back wherever a score puts them.</summary>
@@ -89,6 +97,7 @@ namespace qp {
             _content = _scroll != null ? _scroll.content : null;
             _rows    = _content != null ? _content.GetComponentsInChildren<MBTournamentRow>(true)
                                         : new MBTournamentRow[0];
+            if (_rows.Length > 0) _rowHeight = ((RectTransform)_rows[0].transform).rect.height;
 
             _overlay = _scroll != null ? _scroll.transform.parent : transform;
             _arrows = transform.RecursiveFindChild("$RankUpPS");
@@ -331,13 +340,22 @@ namespace qp {
         IEnumerator MakeRoom(int from, int to, int score) {
             if (_content == null || _scroll == null || from >= _rows.Length || to >= _rows.Length) yield break;
 
-            float step = RowHeight + RowSpacing;
+            float step = _rowHeight + RowSpacing;
 
             var home = new Vector2[_rows.Length];
             for (int i = 0; i < _rows.Length; i++) home[i] = ((RectTransform)_rows[i].transform).anchoredPosition;
 
             var me = (RectTransform)_rows[from].transform;
             _scroll.StopMovement();                        // inertia would fight the scroll below
+
+            // How the row is anchored is the prefab's business, and the trip is about to replace
+            // all of it — so it is kept here and handed back at the end, rather than put back as
+            // whatever this file happens to believe a row looks like.
+            var anchorMin = me.anchorMin;
+            var anchorMax = me.anchorMax;
+            var pivot = me.pivot;
+            var sizeDelta = me.sizeDelta;
+            float anchoredX = me.anchoredPosition.x;
 
             // Out: fixed size first, or stretched anchors under a different parent would resize it.
             var size = me.rect.size;
@@ -366,11 +384,17 @@ namespace qp {
 
             // Where the list can actually end up: the slot the player is heading for, put where
             // ScrollToMe would put it, and then clamped to the ends of the list.
+            //
+            // Measured as how far the list is SCROLLED, not as the content's anchoredPosition.
+            // Those are the same number only while the content hangs from the top of the
+            // viewport; anchored anywhere else they are not, and "scrolled to the very top" came
+            // out as a position halfway down the list — which is why a climb into first place
+            // was the one that landed wrong.
             var viewport = (RectTransform)_scroll.viewport;
-            float slotFromTop = ListPadding + to * step + RowHeight * 0.5f;
-            float c0 = _content.anchoredPosition.y;
-            float c1 = Mathf.Clamp(slotFromTop - viewport.rect.height * 0.5f,
-                                   0f, Mathf.Max(0f, _content.rect.height - viewport.rect.height));
+            float slotFromTop = ListPadding + to * step + _rowHeight * 0.5f;
+            float scrollable = Mathf.Max(0f, _content.rect.height - viewport.rect.height);
+            float c0 = scrollable > 0f ? (1f - _scroll.verticalNormalizedPosition) * scrollable : 0f;
+            float c1 = Mathf.Clamp(slotFromTop - viewport.rect.height * 0.5f, 0f, scrollable);
 
             // And therefore where the row has to land: exactly where that slot will be sitting
             // once the list stops. Derived from the scroll rather than chosen, so the row and the
@@ -385,7 +409,8 @@ namespace qp {
                 float cleared = Ease(Mathf.Clamp01(e / (TravelSeconds * ClearBy)));
 
                 me.position = Vector3.Lerp(start, end, p);
-                _content.anchoredPosition = new Vector2(_content.anchoredPosition.x, Mathf.Lerp(c0, c1, p));
+                if (scrollable > 0f)
+                    _scroll.verticalNormalizedPosition = 1f - Mathf.Lerp(c0, c1, p) / scrollable;
                 for (int i = to; i < from; i++)
                     ((RectTransform)_rows[i].transform).anchoredPosition =
                         new Vector2(home[i].x, home[i].y - step * cleared);
@@ -399,6 +424,12 @@ namespace qp {
             }
             me.SetParent(_content, true);
             yield return Scale(me, LiftScale, 1f, SettleSeconds);
+
+            me.anchorMin = anchorMin;
+            me.anchorMax = anchorMax;
+            me.pivot = pivot;
+            me.sizeDelta = sizeDelta;
+            me.anchoredPosition = new Vector2(anchoredX, me.anchoredPosition.y);
             Place(me, to);
         }
 
@@ -473,16 +504,20 @@ namespace qp {
         }
 
         /// <summary>
-        /// Put a row in its slot: full width inside the list's margins, and as far down from the
-        /// top as its place says. Every row is the same height, so the slot is just arithmetic.
+        /// Put a row in its slot: as far down from the top of the list as its place says, and
+        /// nothing else. Every row is the same height, so the slot is just arithmetic.
+        ///
+        /// Worked out against the row's OWN anchor and pivot rather than assuming it hangs from
+        /// the top of the list, so the prefab is free to anchor its rows however it likes and
+        /// this still drops them in the right place.
         /// </summary>
-        static void Place(RectTransform row, int slot) {
-            row.anchorMin = new Vector2(0f, 1f);
-            row.anchorMax = new Vector2(1f, 1f);
-            row.pivot = new Vector2(0.5f, 0.5f);
-            row.sizeDelta = new Vector2(-RowInset * 2f, RowHeight);
-            row.anchoredPosition =
-                new Vector2(0f, -(ListPadding + slot * (RowHeight + RowSpacing) + RowHeight * 0.5f));
+        void Place(RectTransform row, int slot) {
+            float centre = _content.rect.yMax
+                         - (ListPadding + slot * (_rowHeight + RowSpacing) + _rowHeight * 0.5f);
+            float anchor = _content.rect.yMin + row.anchorMin.y * _content.rect.height;
+
+            row.anchoredPosition = new Vector2(row.anchoredPosition.x,
+                centre - (0.5f - row.pivot.y) * row.rect.height - anchor);
             row.localScale = Vector3.one;
         }
 
@@ -492,7 +527,7 @@ namespace qp {
         void Resize(int used) {
             if (_content == null || used <= 0) return;
             _content.sizeDelta = new Vector2(_content.sizeDelta.x,
-                ListPadding * 2f + used * RowHeight + (used - 1) * RowSpacing);
+                ListPadding * 2f + used * _rowHeight + (used - 1) * RowSpacing);
         }
 
         /// <summary>
@@ -508,6 +543,12 @@ namespace qp {
             int mine = Place(myScore);
             int used = Mathf.Min(_rivals.Count + 1, _rows.Length);
 
+            // The list is sized BEFORE the rows go in it. Place works a slot out against the
+            // row's own anchor, and an anchor that is not the top of the list is measured from a
+            // height — so placing first put every row where it belonged in the list's previous
+            // size.
+            Resize(used);
+
             for (int i = 0; i < _rows.Length; i++) {
                 bool on = i < used;
                 _rows[i].gameObject.SetActive(on);
@@ -520,14 +561,17 @@ namespace qp {
                 if (rival < _rivals.Count) _rows[i].Set(Badge(i, mine, finalMine), _rivals[rival].name, _rivals[rival].score, false);
                 else _rows[i].gameObject.SetActive(false);
             }
-
-            Resize(used);
         }
 
         /// <summary>Open on the player's row. It is the one row this screen exists to show, and in
         /// a group of twenty it is easily below the fold.</summary>
         void ScrollToMe(int mine) {
             if (_scroll == null || _content == null || mine >= _rows.Length) return;
+
+            // The list was just resized and refilled. A ScrollRect works off bounds it refreshes
+            // at the end of the frame, so setting a position now lands against the size the list
+            // used to be — and the further down the player sits, the further off it lands.
+            Canvas.ForceUpdateCanvases();
 
             float view = ((RectTransform)_scroll.viewport).rect.height;
             float scrollable = _content.rect.height - view;
