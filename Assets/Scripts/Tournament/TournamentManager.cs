@@ -128,21 +128,38 @@ namespace qp {
             _state == null ? 0
             : _state.ConfirmedScore + (TimeLeft > TimeSpan.Zero ? _state.PendingScore : 0);
 
-        /// <summary>The player's row in the table, re-evaluated with that score — so a win that
-        /// hasn't been sent yet already moves the player up, before the server has seen it.
-        /// 0-based; -1 = not in the table. Ties keep the player below whoever already has that
-        /// score, which is what the server will say too once the win lands.</summary>
+        /// <summary>
+        /// The player's row in the table. 0-based; -1 = not in it.
+        ///
+        /// The server's answer, always, while it has one — the leaderboard draws the rows the
+        /// server ordered, and a card that worked the place out for itself is a second opinion
+        /// nobody asked for. It disagreed, too: it counted everyone level with the player as
+        /// ahead of them, and said 20th about a table that showed 11th.
+        ///
+        /// The one exception is a win the server has not seen yet, which is the whole point of
+        /// this over <c>standings.myIndex</c>: offline, or in the seconds before a sync, the card
+        /// still moves. That guess breaks ties the way the server does, so the sync that follows
+        /// it does not shuffle the number.
+        /// </summary>
         public static int MyIndexWithPending {
             get {
                 int mine = MyScoreWithPending;
                 if (mine <= 0) return -1;
 
                 var st = _state.lastSyncCurrent.standings;
-                if (st.entries == null) return 0;   // joined, table not synced yet
+                if (st.entries == null) return 0;                       // joined, table not synced yet
+                if (mine == _state.ConfirmedScore) return st.myIndex;   // nothing pending: the server said
+
+                // Ties by name, ascending — LocalTournamentBackend sorts the table that way.
+                string myName = st.Me?.name ?? ProfileManager.Name;
 
                 int index = 0;
-                for (int i = 0; i < st.entries.Length; i++)
-                    if (!st.IsMe(i) && st.entries[i].score >= mine) index++;
+                for (int i = 0; i < st.entries.Length; i++) {
+                    if (st.IsMe(i)) continue;
+                    var other = st.entries[i];
+                    if (other.score > mine) { index++; continue; }
+                    if (other.score == mine && string.CompareOrdinal(other.name, myName) < 0) index++;
+                }
                 return index;
             }
         }
