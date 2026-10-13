@@ -59,6 +59,11 @@ namespace qp {
             bool first = !_everSet;
             _everSet = true;
 
+            // The player's own name comes from the profile, never from the table. The name in a
+            // snapshot is as old as the sync that brought it, so a rename would stay invisible on
+            // the one row the player is actually looking at until the next one.
+            if (isMe && !string.IsNullOrEmpty(ProfileManager.Name)) name = ProfileManager.Name;
+
             if (first || isMe != _meShown) {
                 Show(_bg, !isMe);   Show(_bgMe, isMe);
                 Show(_pill, !isMe); Show(_pillMe, isMe);
