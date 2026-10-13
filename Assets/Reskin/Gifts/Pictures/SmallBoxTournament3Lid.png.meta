@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 548c41e85d4cad042bc097873e5e3804
+guid: 6639ff6e4f495924da5295015fad2ec6
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8573491201283763856
-    second: Box2_0
+      213: 7222300040709423661
+    second: SmallBoxTournament3Lid_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -126,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Box2_0
+      name: SmallBoxTournament3Lid_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 95
-        height: 108
+        width: 92
+        height: 96
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 09ea471c2d82bf670800000000000000
-      internalID: 8573491201283763856
+      spriteID: d2246c32f93ca3460800000000000000
+      internalID: 7222300040709423661
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Box2_0: 8573491201283763856
+      SmallBoxTournament3Lid_0: 7222300040709423661
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
