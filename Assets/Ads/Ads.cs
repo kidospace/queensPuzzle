@@ -221,6 +221,12 @@ namespace qp {
         static void OnRevenuePaid(string adUnitId, MaxSdkBase.AdInfo info) {
             if (info == null || info.Revenue <= 0) return;
 
+            // Debug mode reports no revenue. The Firebase half is covered by the gate inside
+            // CDebug, but Singular is a separate SDK that nothing else guards - and ad revenue is
+            // the worst thing to fake: it feeds attribution and bidding, not just a dashboard. A
+            // tester showing ads from the debug panel would have been paying himself.
+            if (!Analytics.EventsOn) return;
+
             // Singular — the ROAS piece (fields per Singular's MAX ad-revenue doc, enriched).
             var data = new SingularAdData("AppLovin", "USD", info.Revenue)
                 .WithNetworkName(info.NetworkName)
@@ -239,8 +245,8 @@ namespace qp {
             lock (_singularGate) SingularSDK.AdRevenue(data);
 
 #if !IGNORE_FIREBASE
-            if (Common.FirebaseBootstrap.FBAvailable) {
-                Firebase.Analytics.FirebaseAnalytics.LogEvent("ad_impression",
+
+            Common.CDebug.Log("ad_impression",
                     new Firebase.Analytics.Parameter("ad_platform", "AppLovin"),
                     new Firebase.Analytics.Parameter("ad_source", info.NetworkName ?? ""),
                     new Firebase.Analytics.Parameter("ad_format", info.AdFormat ?? ""),
@@ -249,7 +255,6 @@ namespace qp {
                     new Firebase.Analytics.Parameter("precision", info.RevenuePrecision ?? ""),
                     new Firebase.Analytics.Parameter("currency", "USD"),
                     new Firebase.Analytics.Parameter("value", info.Revenue));
-            }
 #endif
             Debug.Log($"[Ads] revenue {info.Revenue:F6} USD — {info.NetworkName} / {info.AdFormat} → Singular");
         }

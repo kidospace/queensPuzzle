@@ -128,6 +128,11 @@ namespace qp {
             GUILayout.Label($"DEBUG | level {AppData.LevelIdx + 1}/{LevelLoader.LevelCount} | attempts {AppData.LevelAttempts.Value} | bones lost {AppData.LastPlayData.bonesLost} | firebase {FirebaseState()}");
             _scroll = GUILayout.BeginScrollView(_scroll);
 
+            GUILayout.Label($"Firebase events: {(Analytics.EventsOn ? "ON" : "OFF — debug mode")}");
+            if (Button(Analytics.EventsOn ? "Stop sending events" : "SEND EVENTS anyway"))
+                Analytics.ForceEvents = !Analytics.ForceEvents;
+
+            GUILayout.Space(16);
             GUILayout.Label("Crashlytics");
             if (Button("Send non-fatal exception")) CDebug.LogError(new Exception("MBDebugWin: non-fatal test"));
             if (Button("CRASH NOW (native)")) Utils.ForceCrash(ForcedCrashCategory.AccessViolation);

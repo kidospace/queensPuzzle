@@ -12,6 +12,26 @@ namespace qp {
         /// <summary>Breadcrumb only — attached to the next crash report (and the Editor console).</summary>
         public static void CrashLog(string message) => CDebug.CrashLog(message);
 
+        /// <summary>
+        /// Every analytics event leaves through here, which is why the debug-mode check is here
+        /// and in no other place. Adding an event means calling this, and it is covered.
+        ///
+        /// <see cref="CrashLog"/> is the other door and is never closed: breadcrumbs are what
+        /// make a crash report readable, and a crash during a test session is the one worth
+        /// reading.
+        /// </summary>
+        static void Send(string name) {
+            if (!EventsOn) return;
+            CDebug.Log(name);
+        }
+
+#if !IGNORE_FIREBASE
+        static void Send(string name, params Firebase.Analytics.Parameter[] parameters) {
+            if (!EventsOn) return;
+            CDebug.Log(name, parameters);
+        }
+#endif
+
         public static void ScreenOpen(string screen) {
             CrashLog($"[screen] open {screen}");
         }
@@ -81,7 +101,11 @@ namespace qp {
             Firebase.Analytics.FirebaseAnalytics.SetUserProperty("uid", _userId);
             Firebase.Analytics.FirebaseAnalytics.SetUserProperty("first_version", _firstVersion.ToString());
             SetSourceProperty(AppData.SingularSource.Value);
-            CDebug.Log("pd_session_start",
+
+            // The user properties above stay: they tag the device and Crashlytics needs the id to
+            // attribute a crash. The session COUNT is a different thing - a day of testing would
+            // be read as a day of players coming back.
+            Send("pd_session_start",
                 new Firebase.Analytics.Parameter("session", UserData.Instance.Sessions),
                 new Firebase.Analytics.Parameter("lvl_idx", AppData.LevelIdx.Value));
         }
@@ -105,6 +129,28 @@ namespace qp {
         // mid-session and breaking every user_id join. Captured at boot, never read live.
         static string _userId;
         static int _firstVersion;
+
+        /// <summary>
+        /// Whether game events actually reach Firebase.
+        ///
+        /// Debug mode turns them OFF: a day of testing - skipping levels, forcing places, ending
+        /// tournaments - would otherwise land in the same stream the real numbers are read from,
+        /// and nothing downstream can tell a developer's win from a player's. Switched back on
+        /// from the debug window when a run is meant to be measured.
+        ///
+        /// Only the automatic events to Firebase. Crashlytics is never touched: breadcrumbs are
+        /// what make a crash report readable, and a crash during a test session is exactly the one
+        /// worth reading. An explicit send from the debug panel goes out regardless too - someone
+        /// pressing that button is asking for it on purpose.
+        /// </summary>
+        public static bool EventsOn => !AppData.DebugMode.Value || _forceEvents;
+
+        /// <summary>Set from the debug window — send anyway, debug mode or not.</summary>
+        public static bool ForceEvents {
+            get => _forceEvents;
+            set { _forceEvents = value; CrashLog($"[analytics] events {(EventsOn ? "ON" : "OFF")}"); }
+        }
+        static bool _forceEvents;
 
         /// <summary>Main thread, from MBStartup, before any SDK can fire a callback.</summary>
         public static void CaptureCommon() {
@@ -149,7 +195,7 @@ namespace qp {
         public static void TournamentEnd(int day, int place, int score, bool prize, string difficulty) {
             CrashLog($"[tournament] end day {day} place {place} score {score} prize {(prize ? 1 : 0)} {difficulty}");
 #if !IGNORE_FIREBASE
-            CDebug.Log("tournament_end",
+            Send("tournament_end",
                 new Firebase.Analytics.Parameter("t_day", day),
                 new Firebase.Analytics.Parameter("t_place", place),
                 new Firebase.Analytics.Parameter("t_score", score),
@@ -160,7 +206,7 @@ namespace qp {
                 new Firebase.Analytics.Parameter("t_difficulty",
                     string.IsNullOrEmpty(difficulty) ? "?" : difficulty));
 #else
-            CDebug.Log("tournament_end");
+            Send("tournament_end");
 #endif
         }
 
@@ -175,14 +221,14 @@ namespace qp {
         public static void TournamentClaim(int day, int place, int undo, int hint, int queen) {
             CrashLog($"[tournament] claim day {day} place {place} undo {undo} hint {hint} queen {queen}");
 #if !IGNORE_FIREBASE
-            CDebug.Log("tournament_claim",
+            Send("tournament_claim",
                 new Firebase.Analytics.Parameter("t_day", day),
                 new Firebase.Analytics.Parameter("t_place", place),
                 new Firebase.Analytics.Parameter("t_undo", undo),
                 new Firebase.Analytics.Parameter("t_hint", hint),
                 new Firebase.Analytics.Parameter("t_queen", queen));
 #else
-            CDebug.Log("tournament_claim");
+            Send("tournament_claim");
 #endif
         }
 
@@ -190,7 +236,7 @@ namespace qp {
         public static void ReviewPrepareTime(int ms, bool prepared) {
             CrashLog($"[review] prepare took {ms} ms (prepared={prepared})");
 #if !IGNORE_FIREBASE
-            CDebug.Log("review_prepare_time", new Firebase.Analytics.Parameter("gr_ms", ms),
+            Send("review_prepare_time", new Firebase.Analytics.Parameter("gr_ms", ms),
                                               new Firebase.Analytics.Parameter("gr_prepared", prepared ? 1 : 0));
 #endif
         }
@@ -221,9 +267,9 @@ namespace qp {
             if (extraKey != null)
                 ps.Add(extraVal is int i ? new Firebase.Analytics.Parameter(extraKey, i)
                                          : new Firebase.Analytics.Parameter(extraKey, extraVal.ToString()));
-            CDebug.Log(name, ps.ToArray());
+            Send(name, ps.ToArray());
 #else
-            CDebug.Log(name);
+            Send(name);
 #endif
         }
     }

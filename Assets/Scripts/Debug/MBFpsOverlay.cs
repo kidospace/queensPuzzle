@@ -58,6 +58,14 @@ namespace qp {
                 };
             _style.normal.textColor = _fps < 30f ? Color.red : Color.green;
             GUI.Label(new Rect(8, 8, 300, _style.fontSize * 2), $"FPS {_fps:0.}", _style);
+
+            // Only when events ARE going out under debug mode — that is the state worth a
+            // warning. Silence is the correct one, and a label that is always there stops being
+            // read within a day.
+            if (!AppData.DebugMode.Value || !Analytics.EventsOn) return;
+            _style.normal.textColor = Color.red;
+            GUI.Label(new Rect(8, 8 + _style.fontSize * 1.4f, 400, _style.fontSize * 2),
+                      "FIREBASE ON", _style);
         }
     }
 }
