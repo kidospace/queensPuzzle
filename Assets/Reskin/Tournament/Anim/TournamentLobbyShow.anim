@@ -49,7 +49,7 @@ AnimationClip:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
   m_FloatCurves:
   - serializedVersion: 2
     curve:
@@ -116,7 +116,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -155,7 +155,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
       (1)
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -195,7 +195,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
       (2)
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -235,7 +235,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -274,7 +274,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -313,7 +313,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -352,7 +352,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopStrech/Scaler/UIContainer
+    path: SafeArea/Popup/TopStrech/Scaler/UIContainer
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -391,7 +391,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopStrech/Scaler/UIContainer
+    path: SafeArea/Popup/TopStrech/Scaler/UIContainer
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -430,7 +430,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ListStrech/Scaler/Scroll View
+    path: SafeArea/Popup/ListStrech/Scaler/Scroll View
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -469,7 +469,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ListStrech/Scaler/Scroll View
+    path: SafeArea/Popup/ListStrech/Scaler/Scroll View
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -508,7 +508,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/ButtonStrech/Scaler/$LvlButton
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -547,7 +547,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/ButtonStrech/Scaler/$LvlButton
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -560,7 +560,7 @@ AnimationClip:
   m_ClipBindingConstant:
     genericBindings:
     - serializedVersion: 2
-      path: 1396742899
+      path: 3009984855
       attribute: 3
       script: {fileID: 0}
       typeID: 4
@@ -578,7 +578,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 114925176
+      path: 578212309
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -587,7 +587,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1435186048
+      path: 1356728761
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -596,7 +596,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 2124832835
+      path: 2079545978
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -605,7 +605,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1396742899
+      path: 3009984855
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
       typeID: 114
@@ -614,7 +614,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 2148539485
+      path: 3742417263
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -623,7 +623,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 2148539485
+      path: 3742417263
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -632,7 +632,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3345554193
+      path: 3147085093
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -641,7 +641,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3345554193
+      path: 3147085093
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -650,7 +650,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 725524346
+      path: 183932513
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -659,7 +659,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 725524346
+      path: 183932513
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -668,7 +668,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 272278642
+      path: 2591991191
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -677,7 +677,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 272278642
+      path: 2591991191
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -772,7 +772,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/BG
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -811,7 +811,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
       (1)
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -851,7 +851,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
       (2)
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -891,7 +891,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Color.a
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 114
     script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
@@ -930,7 +930,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.x
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -969,7 +969,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1008,7 +1008,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.z
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1047,7 +1047,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -1086,7 +1086,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
+    path: SafeArea/Popup/TopBannerStrech/Scaler/UIContainer/Header/LeaderboardHeader/Container/TimePannel
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1125,7 +1125,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopStrech/Scaler/UIContainer
+    path: SafeArea/Popup/TopStrech/Scaler/UIContainer
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -1164,7 +1164,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopStrech/Scaler/UIContainer
+    path: SafeArea/Popup/TopStrech/Scaler/UIContainer
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1203,7 +1203,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ListStrech/Scaler/Scroll View
+    path: SafeArea/Popup/ListStrech/Scaler/Scroll View
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -1242,7 +1242,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ListStrech/Scaler/Scroll View
+    path: SafeArea/Popup/ListStrech/Scaler/Scroll View
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -1281,7 +1281,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/ButtonStrech/Scaler/$LvlButton
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -1320,7 +1320,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/ButtonStrech/Scaler/$LvlButton
     classID: 224
     script: {fileID: 0}
     flags: 16

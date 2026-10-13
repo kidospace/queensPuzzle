@@ -49,11 +49,14 @@ namespace qp {
         ScrollRect _scroll;
         TMP_Text _clock;
         IPopupAnim _anim;           // the reskin's opening — absent in a skin without one
+        MBTournamentLeaderboardAnim _reskin;   // the same component, typed: the info states are
+                                               // this screen's, not part of the shared contract
+        GameObject _info;           // $Info — the rules, over the table
 
         Showing _showing;
         ETournamentScreenResult _pending;
         string _clockShown;
-        bool _laidOut;
+        bool _laidOut, _infoClosing;
 
         void Awake() {
             _group = GetComponent<CanvasGroup>();
@@ -65,6 +68,7 @@ namespace qp {
                                         : new MBTournamentRow[0];
             _clock = Label("$StopWatchText");
             _anim = GetComponent<IPopupAnim>();
+            _reskin = _anim as MBTournamentLeaderboardAnim;
 
             // Play answers at once: the caller is leaving for the gameplay scene, and making it
             // wait out a fade on a screen that is about to be unloaded only delays the level.
@@ -78,10 +82,46 @@ namespace qp {
             // to it — the lobby has no part in that and should not be told.
             var info = transform.RecursiveFindChild("$InfoButton")?.GetComponent<Button>();
             if (info != null) info.onClick.AddListener(OpenInfo);
+
+            var panel = transform.RecursiveFindChild("$Info");
+            _info = panel != null ? panel.gameObject : null;
+            if (_info == null) Debug.LogError("[Leaderboard] $Info is missing from the prefab");
+            else _info.SetActive(false);
+
+            var close = panel?.RecursiveFindChild("$CloseInfo")?.GetComponent<Button>();
+            if (close == null) Debug.LogError("[Leaderboard] $CloseInfo has no Button — info cannot be closed");
+            else close.onClick.AddListener(CloseInfo);
         }
 
-        /// <summary>TODO: the info screen is not built yet. It opens from here, over this screen.</summary>
-        void OpenInfo() => Debug.Log("[Leaderboard] info screen not built yet");
+        /// <summary>
+        /// The rules, over the table they are about. It explains THIS screen, so it opens on top
+        /// of it and closes back to it — the lobby is never told, and the table underneath keeps
+        /// its scroll position and its clock.
+        /// </summary>
+        void OpenInfo() {
+            if (_info == null || _info.activeSelf) return;
+            _info.SetActive(true);
+            _reskin?.PlayInfo();
+        }
+
+        void CloseInfo() {
+            if (_info == null || !_info.activeSelf || _infoClosing) return;
+            StartCoroutine(HideInfo());
+        }
+
+        /// <summary>Let the panel take itself back before it stops existing — switching it off on
+        /// the tap would cut the last frame of its own animation.</summary>
+        IEnumerator HideInfo() {
+            _infoClosing = true;
+
+            if (_reskin != null) {
+                _reskin.PlayInfoOut();
+                yield return new WaitUntil(() => _reskin.IsInfoOutDone());
+            }
+
+            _info.SetActive(false);
+            _infoClosing = false;
+        }
 
         // Stay active but invisible for the first frames so everything lays out at its real size,
         // then hide until Show(). Laying out while hidden gives zero-sized rows.

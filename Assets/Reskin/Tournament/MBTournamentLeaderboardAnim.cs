@@ -14,24 +14,40 @@ namespace qp {
     [RequireComponent(typeof(Animator))]
     public class MBTournamentLeaderboardAnim : MonoBehaviour, IPopupAnim {
 
-        const string Show = "Show";
+        const string Show = "Show", InfoIn = "InfoIn", InfoOut = "InfoOut";
         static readonly int ShowState = Animator.StringToHash(Show);
+        static readonly int InfoInState = Animator.StringToHash(InfoIn);
+        static readonly int InfoOutState = Animator.StringToHash(InfoOut);
 
         Animator _animator;
 
         void Awake() => _animator = GetComponent<Animator>();
 
         /// <summary>Rewinds and plays the opening. Driven by MBTournamentLeaderboard.Show.</summary>
-        public void PlayIn() {
-            _animator.Play(ShowState, 0, 0f);
+        public void PlayIn() => _play(ShowState);
+
+        /// <summary>True once the clip has played through (a one-shot, so it holds at the end).</summary>
+        public bool IsFinished() => _done(Show);
+
+        /// <summary>The info panel revealing itself a step at a time.</summary>
+        public void PlayInfo() => _play(InfoInState);
+
+        /// <summary>And taking it all back. Its own state, because the state that brought it in
+        /// holds its last frame for as long as it is the current one — fading those colours from
+        /// code would be overwritten on the next frame.</summary>
+        public void PlayInfoOut() => _play(InfoOutState);
+
+        public bool IsInfoOutDone() => _done(InfoOut);
+
+        void _play(int state) {
+            _animator.Play(state, 0, 0f);
             if (_animator.isInitialized) _animator.Update(0f);
         }
 
-        /// <summary>True once the clip has played through (a one-shot, so it holds at the end).</summary>
-        public bool IsFinished() {
+        bool _done(string state) {
             if (_animator == null || !_animator.isInitialized) return true;
             var st = _animator.GetCurrentAnimatorStateInfo(0);
-            return !st.IsName(Show) || st.normalizedTime >= 1f;
+            return !st.IsName(state) || st.normalizedTime >= 1f;
         }
     }
 }
