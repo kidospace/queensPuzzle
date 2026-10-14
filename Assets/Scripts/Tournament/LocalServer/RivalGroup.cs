@@ -160,12 +160,16 @@ namespace qp {
             float[] set = chosen == Kind.Easy ? Easy : chosen == Kind.Hard ? Hard : Normal;
             var usedRecordings = new HashSet<int>();
             var usedNames = new HashSet<string> { myName ?? "" };
+            var usedWords = new HashSet<string>();
 
-            // Drawn once, for the whole group: how many of them look like players who named
-            // themselves, and where in the world they are from.
-            var cfg = TournamentConfig.Instance;
-            float realNames = cfg != null ? cfg.RealNameShare(myLevel) : 0.5f;
+            // Decided once, for the whole group: where in the world they are from, and which of
+            // them are players who named themselves.
+            //
+            // A COUNT and not a chance per rival. A share of 24% can land on a table where
+            // eighteen of the nineteen kept the name the game gave them, which is honest and
+            // reads as nothing at all — and that is the first table a player ever sees.
             string country = Country.Code;
+            var renamed = _whoRenamed(myLevel, set.Length, rnd);
 
             for (int i = 0; i < set.Length; i++) {
                 bool isLast = i == set.Length - 1;
@@ -178,7 +182,7 @@ namespace qp {
                 usedRecordings.Add(pick);
 
                 var rival = new LocalRival {
-                    name = _pickName(usedNames, country, realNames),
+                    name = _pickName(usedNames, usedWords, country, renamed[i]),
                     total = RivalsBlob.TotalAt(pick),
                 };
                 _unpack(RivalsBlob.PlaysAt(pick), rnd, rival);
@@ -253,16 +257,58 @@ namespace qp {
             return best;
         }
 
-        /// <summary>A name nobody in this group already has. <see cref="RivalNames"/> decides what
-        /// kind of name it is; this only keeps the table from showing the same one twice.</summary>
-        static string _pickName(HashSet<string> used, string country, float realNames) {
-            for (int attempt = 0; attempt < 20; attempt++) {
-                string name = RivalNames.Pick(country, realNames);
-                if (used.Add(name)) return name;
+        /// <summary>
+        /// Which rivals are players who named themselves, one flag each, shuffled.
+        ///
+        /// Shuffled because the rest of this method walks the group from the strongest target
+        /// score down — handing out the flags in order would make the renamed ones the ones at
+        /// the top of the table, every time, in every tournament anybody ever played.
+        /// </summary>
+        static bool[] _whoRenamed(int level, int size, System.Random rnd) {
+            var cfg = TournamentConfig.Instance;
+            int count = cfg != null
+                ? Mathf.Clamp(Mathf.RoundToInt(size * cfg.RealNameShare(level)), cfg.minRenamed, size)
+                : size / 2;
+
+            var flags = new bool[size];
+            for (int i = 0; i < count; i++) flags[i] = true;
+            for (int i = size - 1; i > 0; i--) {
+                int j = rnd.Next(i + 1);
+                (flags[i], flags[j]) = (flags[j], flags[i]);
             }
-            // Every draw collided — vanishingly unlikely against pools this size, and a duplicate
-            // name is better than no rival.
-            return RivalNames.Pick(country, realNames);
+            return flags;
+        }
+
+        /// <summary>
+        /// A name nobody in this group already has. <see cref="RivalNames"/> decides what kind of
+        /// name it is; this only keeps the table from repeating itself.
+        ///
+        /// For a generated name that means no repeated WORD, not just no repeated name. It is two
+        /// words drawn from thirty-five and thirty-five, so a dozen of them in one group share an
+        /// adjective or a noun almost every time — "Quiet Sparrow" above "Quiet Acorn" is what
+        /// makes a table read as one thing repeated instead of as people.
+        /// </summary>
+        static string _pickName(HashSet<string> used, HashSet<string> usedWords,
+                                string country, bool renamed) {
+            for (int attempt = 0; attempt < 20; attempt++) {
+                string name = RivalNames.Pick(country, renamed);
+                if (!used.Add(name)) continue;
+                if (renamed) return name;
+
+                int space = name.IndexOf(' ');
+                if (space < 0) return name;
+
+                string first = name.Substring(0, space), second = name.Substring(space + 1);
+                if (!usedWords.Contains(first) && !usedWords.Contains(second)) {
+                    usedWords.Add(first);
+                    usedWords.Add(second);
+                    return name;
+                }
+                used.Remove(name);   // not taken after all — a later rival may still get it
+            }
+            // Every draw collided — vanishingly unlikely against pools this size, and a repeat is
+            // better than no rival.
+            return RivalNames.Pick(country, renamed);
         }
 
         /// <summary>

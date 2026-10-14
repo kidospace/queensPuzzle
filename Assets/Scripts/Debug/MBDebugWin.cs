@@ -66,6 +66,15 @@ namespace qp {
             GUILayout.Label($"Tournament ({TournamentManager.Status}, {TournamentManager.TimeLeftText} left, " +
                             $"score {TournamentManager.MyScoreWithPending}, place {TournamentManager.MyIndexWithPending + 1})");
 
+            // Which name pools the rivals are drawn from, and how much of the table should look
+            // like players who renamed themselves. Both are decided when a group is built, so a
+            // change here shows up on Restart and not before.
+            var tcfg = TournamentConfig.Instance;
+            string country = Country.Code;
+            GUILayout.Label($"Names: country {(string.IsNullOrEmpty(country) ? "UNKNOWN (global pool)" : country)}, " +
+                            $"real {(tcfg != null ? tcfg.RealNameShare(AppData.LevelIdx.Value + 1) : 0f):P0} " +
+                            $"— Restart to rebuild the group");
+
             GUILayout.BeginHorizontal();
             if (Button("+1h")) Do(() => dbg.SkipTime(TimeSpan.FromHours(1)));
             if (Button("+6h")) Do(() => dbg.SkipTime(TimeSpan.FromHours(6)));

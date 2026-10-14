@@ -58,12 +58,20 @@ namespace qp {
                  "the same level are not the same group.")]
         [Range(0f, 0.5f)] public float realNamesSpread = 0.10f;
 
-        [Tooltip("Of the real-looking names: how many carry a surname initial, as in 'Daniel K'.")]
-        [Range(0f, 1f)] public float nameWithInitial = 0.16f;
+        [Tooltip("Fewest rivals in a group with a name they typed themselves, whatever the share " +
+                 "works out to. A table of nineteen Cozy Pebbles is honest and reads as nobody.")]
+        public int minRenamed = 4;
 
-        [Tooltip("Of the real-looking names: how many carry digits, as in 'Daniel22'. Keep it low " +
-                 "— a table full of these is the one thing that reads as generated.")]
-        [Range(0f, 1f)] public float nameWithDigits = 0.14f;
+        [Tooltip("Of the ones who renamed themselves: how many typed something silly and short — " +
+                 "Mimi, KoKo, NnNn. They bothered, they just did not try hard.")]
+        [Range(0f, 1f)] public float namePlayful = 0.20f;
+
+        [Tooltip("Of the ones who renamed themselves: how many went for a handle — ShadowWolf, " +
+                 "xXViperXx. A handle belongs to no country.")]
+        [Range(0f, 1f)] public float nameGamer = 0.30f;
+
+        // Whatever is left of them is a local name, dressed up. Not a field: three shares that
+        // have to add up is three places to get it wrong.
 
         /// <summary>How much of a group built for a player at <paramref name="level"/> should look
         /// like players who have named themselves. Straight line between the two anchors, plus

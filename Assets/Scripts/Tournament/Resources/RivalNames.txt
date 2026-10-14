@@ -17,9 +17,21 @@
 # reads as a list somebody wrote. Mixing is what makes it read as people.
 #
 # ---------------------------------------------------------------------------
+# THREE KINDS OF PLAYER
+#
+#   1. the ones who never touched it   "Lucky Paw", and the Mimi/KoKo/NnNn sort
+#   2. the ones from around here       a local name, ALWAYS dressed up:
+#                                      Doron96, DORONbest, xXDoronXx, doron7
+#   3. the ones who came to play       ShadowWolf, xXViperXx, BlazeKing
+#
+# Nobody is ever just "Doron". A bare first name is what a list of names looks
+# like; a leaderboard looks like people who typed something.
+#
+# ---------------------------------------------------------------------------
 # FORMAT
 #
-#   [culture:<name>]   starts a pool; every line after it is one name
+#   [culture:<name>]   a name pool a country can draw from
+#   [pool:<name>]      a pool the code uses by name (playful, gamer, tag)
 #   <CC> = <culture>*<weight> ...   a country, under [map]
 #
 # Every name is 10 characters or fewer, so "Name K" and "Name22" still fit the
@@ -1464,3 +1476,365 @@ Natalia
 Christina
 Isabel
 Alice
+
+
+# ---------------------------------------------------------------------------
+# The three pools below are not countries. The code asks for them by name.
+# ---------------------------------------------------------------------------
+
+[pool:playful]
+# Kind 1. Shipped whole — these are already names, nothing is added to them.
+# The sounds people make up when a box asks them for a name and they do not
+# care: a syllable, twice.
+Mimi
+MiMi
+Koko
+KoKo
+Lulu
+LuLu
+Nana
+NnNn
+Bibi
+Titi
+Dodo
+Zuzu
+Momo
+Lili
+Kiki
+Fifi
+Gigi
+Vivi
+Sisi
+Tutu
+Bubu
+Dudu
+Juju
+Nono
+Pepe
+Rara
+Sasa
+Toto
+Yoyo
+Zaza
+Coco
+Lola
+Bobo
+Pupu
+Wawa
+Chuchu
+Nunu
+Tata
+Gogo
+Haha
+Boom
+Nope
+Oops
+Yolo
+Blah
+
+Mumu
+Papa
+Riri
+Didi
+Lala
+Mama
+Nini
+Pipo
+Tito
+Vovo
+Zizi
+Bebe
+Cici
+Fofo
+Gaga
+Hoho
+Jojo
+Kuku
+Lolo
+Memo
+Nene
+Popo
+Rere
+Soso
+Tiki
+Vivo
+Wiwi
+Yaya
+Zozo
+Bimbo
+Dingo
+Fifo
+Gizmo
+Hobo
+Jiji
+Kiwi
+Mojo
+Pogo
+Quack
+Rolo
+Shush
+Tuna
+Umbo
+Vito
+Woop
+Yummy
+Zonk
+Nugo
+Oopsy
+Peep
+Puff
+Zoom
+Whee
+Yikes
+Bonk
+Clap
+Ding
+Honk
+
+[pool:gamer]
+# Kind 3. A word, and the code bolts the rest on.
+Shadow
+Ninja
+Dragon
+Phoenix
+Tiger
+Wolf
+Storm
+Viper
+Ghost
+Blaze
+Falcon
+Reaper
+Frost
+Thunder
+Raven
+Hunter
+Savage
+Titan
+Venom
+Rogue
+Nova
+Cosmo
+Pixel
+Turbo
+Cyber
+Neon
+Laser
+Rocket
+Panda
+Dark
+Fire
+Ice
+Steel
+Crystal
+Diamond
+Mega
+Ultra
+Omega
+Alpha
+Sniper
+Slayer
+Legend
+Rebel
+Chaos
+Fury
+Bolt
+Spark
+Queen
+King
+Brain
+Puzzle
+Sharp
+
+[pool:tag]
+# Short words that get stuck on a name. Short, because the whole thing has to
+# stay inside 14 characters.
+Best
+Pro
+King
+Queen
+Star
+Boss
+Master
+Ace
+Top
+Win
+Max
+One
+Gold
+Real
+Fun
+Cool
+Girl
+Boy
+Mom
+Dad
+Mr
+Miss
+Big
+Lil
+Old
+New
+Super
+Baby
+Love
+Sweet
+Happy
+Crazy
+Silly
+Smart
+Fast
+Hot
+Cute
+X
+Z
+XD
+OG
+
+[pool:scribble]
+# Two or three letters of nothing, stuck on the front or the back of a name.
+# {pre} never ends with the letter the name starts with, and {post} never starts
+# with the letter it ends with — iTzZiv and GalLl read as a typo, not a flourish.
+iTz
+iZi
+xXx
+oOo
+zZz
+vVv
+kKk
+sSs
+mMm
+lIl
+iLi
+oXo
+xOx
+zIz
+nIn
+jIj
+wIw
+qIq
+iXi
+iOi
+eXe
+uWu
+oWo
+xZx
+zXz
+oZo
+iEi
+aXa
+yXy
+Tzz
+Zyx
+Kzk
+
+[pool:dress]
+# How a local name gets worn. One line per form, and a line written twice comes
+# up twice as often — that is the whole weighting system.
+#
+# Anything in {braces} is replaced; everything else is literal, so the xX and
+# the The below are just text and you can write your own.
+#
+#   {n}          the name              {tag}        a word from [pool:tag]
+#   {lower}      the name, lower case   {tag_lower}  the same, lower case
+#   {upper}      the name, UPPER CASE   {w}          a word from [pool:gamer]
+#   {year}       60-99, or 00-24        {num}        1-99
+#   {initial}    one letter, A-Z
+#
+# Keep the whole thing inside 14 characters or it falls back to the bare name.
+
+# digits — far and away the most common thing anyone does
+{n}{year}
+{n}{year}
+{n}{year}
+{lower}{year}
+{lower}{year}
+{lower}{year}
+{upper}{year}
+{n}{num}
+{n}{num}
+{lower}{num}
+{n}1
+{n}7
+{n}23
+{n}100
+
+# a word after it
+{n}{tag}
+{n}{tag}
+{lower}{tag_lower}
+{lower}{tag_lower}
+{upper}{tag_lower}
+{n}{w}
+{lower}{w}
+
+# a word before it
+The{n}
+The{n}
+Im{n}
+iam{lower}
+its{lower}
+{w}{n}
+
+# letters and brackets
+{n} {initial}
+{n} {initial}
+{initial}{n}
+xX{n}Xx
+XX{n}XX
+x{n}x
+{n}x
+{n}xo
+{n}X
+{n}Z
+
+# left alone except for the shift key
+
+# a scribble on the front or the back
+{pre}{n}
+{pre}{n}
+{n}{post}
+{n}{post}
+oO{n}Oo
+ii{n}ii
+i{n}i
+iTz{n}
+
+[pool:handle]
+# The same, for someone who came to play. Here {n} is a word from [pool:gamer],
+# so {n}{w} is two of them.
+
+# two words
+{n}{w}
+{n}{w}
+{n}{w}
+{w}{n}
+
+# digits
+{n}{year}
+{n}{year}
+{n}{num}
+{n}{num}
+{upper}{num}
+{n}99
+{n}123
+{n}1
+
+# a word
+{n}{tag}
+{n}{tag}
+{upper}{tag_lower}
+
+# before and after
+The{n}
+The{n}
+xX{n}Xx
+XX{n}XX
+x{n}x
+{n}X
+{n}Z
+Mr{n}
+Im{n}
+its{lower}
+
+# a scribble on the front or the back
