@@ -939,16 +939,22 @@ namespace qp {
         // tournament popup once it exists (a closed tournament's result comes first, then the climb).
         TournamentWinResult _tournamentWin;
 
-        /// <summary>There is a tournament for this win to have landed in. Active and EndingSoon
-        /// climb; Offline shows what is waiting to be sent. Everything else — no tournament, the
-        /// feature locked, or a clock that has already run out — means the win belongs to a
-        /// tournament that is not on screen yet, and there is nothing to draw it on.</summary>
+        /// <summary>
+        /// The player is IN a tournament, so this win landed somewhere worth showing them.
+        ///
+        /// The connection is not asked about. Being offline does not take a player out of a
+        /// tournament — their score and the clock are both still true — so an offline win is an
+        /// Active one, and the screen says what is waiting to be sent on its own. It used to be
+        /// listed here as a state of its own, which is how the win that unlocks the tournament
+        /// came to open this screen: that win is scored while the feature is still locked, counts
+        /// for nothing, and then unlocks it. Now it leaves the player NotJoined, and NotJoined has
+        /// nothing to draw.
+        /// </summary>
         static bool _showsClimb {
             get {
                 switch (TournamentManager.Status) {
                     case ETournamentStatus.Active:
-                    case ETournamentStatus.EndingSoon:
-                    case ETournamentStatus.Offline: return true;
+                    case ETournamentStatus.EndingSoon: return true;
                     default: return false;
                 }
             }
@@ -972,7 +978,8 @@ namespace qp {
                 yield return _tournamentEndPopup.Show();
                 InputLocks--;
             }
-            else if (TournamentManager.Status == ETournamentStatus.Ended) {
+            else if (!TournamentManager.ShowsOffline
+                     && TournamentManager.Status == ETournamentStatus.Ended) {
                 // It ended while they were playing and it pays them nothing. Closed quietly,
                 // exactly as leaving the lobby closes it: a result nobody is owed is not worth
                 // stopping a level win for, and holding it back would only have it ambush them

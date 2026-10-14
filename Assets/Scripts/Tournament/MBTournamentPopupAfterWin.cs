@@ -224,7 +224,7 @@ namespace qp {
             _clockShown = now;
         }
 
-        static bool Offline => TournamentManager.Status == ETournamentStatus.Offline;
+        static bool Offline => TournamentManager.ShowsOffline;
 
         // ---- offline: nothing happened -----------------------------------------------------
 
@@ -278,8 +278,9 @@ namespace qp {
         /// wait offline: the one the player won in can have closed while they were away, and
         /// animating a table that is already finished would be a lie.</summary>
         static bool Climbable =>
-            TournamentManager.Status == ETournamentStatus.Active ||
-            TournamentManager.Status == ETournamentStatus.EndingSoon;
+            !TournamentManager.ShowsOffline &&
+            (TournamentManager.Status == ETournamentStatus.Active ||
+             TournamentManager.Status == ETournamentStatus.EndingSoon);
 
         // ---- online: the climb --------------------------------------------------------------
 

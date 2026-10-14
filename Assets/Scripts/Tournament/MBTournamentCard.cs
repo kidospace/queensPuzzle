@@ -134,7 +134,8 @@ namespace qp {
 
         void _draw() {
             var status = TournamentManager.Status;
-            var wanted = _stateFor(status);
+            bool offline = TournamentManager.ShowsOffline;
+            var wanted = offline ? _offline : _stateFor(status);
 
             if (wanted != _shown) {
                 foreach (var state in _all)
@@ -158,7 +159,8 @@ namespace qp {
             // A finished tournament shows where the player ENDED; a running one shows where they
             // stand right now, pending wins included, so a win moves the card before the server
             // has heard about it.
-            bool ended = status == ETournamentStatus.Ended || status == ETournamentStatus.Calculating;
+            bool ended = !offline && (status == ETournamentStatus.Ended
+                                   || status == ETournamentStatus.Calculating);
             int rank = ended ? TournamentManager.ClosedPlace : TournamentManager.MyIndexWithPending + 1;
             _set(wanted.place, rank > 0 ? rank.ToString() : "-", ref _placeShown);
 
@@ -184,11 +186,13 @@ namespace qp {
         /// Which state a status draws. Ended is the one that splits: the same closed tournament is
         /// a prize to claim or a table to look at, and the difference is only whether the player
         /// landed inside the paying places.
+        ///
+        /// Offline is not here — it is not a status. <see cref="_draw"/> asks the connection
+        /// first, exactly where the old status ladder answered it.
         /// </summary>
         State _stateFor(ETournamentStatus status) {
             switch (status) {
                 case ETournamentStatus.Locked:      return _lock;
-                case ETournamentStatus.Offline:     return _offline;
                 case ETournamentStatus.NotJoined:   return _notJoined;
                 case ETournamentStatus.Active:      return _active;
                 case ETournamentStatus.EndingSoon:  return _endingSoon;

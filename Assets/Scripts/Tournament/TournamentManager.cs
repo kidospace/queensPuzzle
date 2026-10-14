@@ -11,7 +11,6 @@ namespace qp {
     public enum ETournamentStatus {
         None,         // no tournament running at all (server says so) — the card is hidden
         Locked,       // campaign hasn't reached the unlock level yet
-        Offline,      // no internet / no trusted clock — wins are kept and sent later
         NotJoined,    // tournament running, no win in it yet
         Active,       // joined — timer + rank
         EndingSoon,   // joined, less than the config's threshold left
@@ -60,15 +59,18 @@ namespace qp {
         // ---- derived: needs the clock / config / connection, so it can't sit in State ----
 
         /// <summary>
-        /// What the lobby card shows. Read top to bottom — the first line that matches wins:
-        /// no feature at all, then the lock, then no connection (nothing below it can be trusted),
-        /// then a result waiting to be seen, and only then the running tournament.
+        /// Where the tournament stands. Read top to bottom — the first line that matches wins:
+        /// no feature at all, then the lock, then a result waiting to be seen, and only then the
+        /// running tournament.
+        ///
+        /// The connection is NOT in here. Being offline is a fact about the device, true
+        /// alongside any of these rather than instead of one — see <see cref="ShowsOffline"/>,
+        /// which is what a caller asks when it must not act on a state it cannot trust.
         /// </summary>
         public static ETournamentStatus Status {
             get {
-                if (TournamentConfig.Instance == null || _state == null) return ETournamentStatus.None;
+                if (!_exists) return ETournamentStatus.None;
                 if (!_isUnlocked) return ETournamentStatus.Locked;
-                if (!_isOnline) return ETournamentStatus.Offline;
 
                 // A closed tournament the player hasn't been shown yet — Claim Prize / See Results.
                 // The row check is a belt: the server only sends one the player actually played,
@@ -209,7 +211,23 @@ namespace qp {
         /// <summary>A prize is sitting there uncollected. The one question both auto-openings ask
         /// — the lobby as it opens, the win flow before the celebration — so neither has to work
         /// it out and they can never disagree about whether to interrupt the player.</summary>
-        public static bool PrizeWaiting => Status == ETournamentStatus.Ended && ClosedWonPrize;
+        public static bool PrizeWaiting =>
+            !ShowsOffline && Status == ETournamentStatus.Ended && ClosedWonPrize;
+
+        /// <summary>No usable connection — a fact about the device, not about the tournament.</summary>
+        public static bool IsOffline => !_isOnline;
+
+        /// <summary>
+        /// Offline is what the player should be told about, rather than a <see cref="Status"/>
+        /// read out of state that may be hours old.
+        ///
+        /// Not simply <see cref="IsOffline"/>: no feature and no unlock are settled before a
+        /// connection is worth asking about, and a player who has not reached the unlock level
+        /// is owed the lock, not a network complaint. That order used to live in the status
+        /// ladder, above the line that returned Offline; it lives here now, in one place, so no
+        /// caller has to remember it.
+        /// </summary>
+        public static bool ShowsOffline => IsOffline && _exists && _isUnlocked;
 
         // ---- what the game calls ---------------------------------------------------------
 
@@ -223,7 +241,7 @@ namespace qp {
         /// whether there is anything to animate at all.</summary>
         public static TournamentWinResult OnLevelWin(int score) {
             var res = new TournamentWinResult { fromIndex = -1, toIndex = -1 };
-            if (_state == null || TournamentConfig.Instance == null || !_isUnlocked || score <= 0) return res;
+            if (!_exists || !_isUnlocked || score <= 0) return res;
 
             res.fromIndex = MyIndexWithPending;
             bool wasIn = res.fromIndex >= 0;
@@ -282,6 +300,10 @@ namespace qp {
 
 
         // ---- internal --------------------------------------------------------------------
+
+        /// <summary>There is a tournament feature at all: it was shipped, and the blob is loaded.
+        /// Everything else about it is undecidable until both are true.</summary>
+        static bool _exists => TournamentConfig.Instance != null && _state != null;
 
         static bool _isUnlocked => AppData.LevelIdx.Value + 1 >= TournamentConfig.Instance.unlockLevel;
 

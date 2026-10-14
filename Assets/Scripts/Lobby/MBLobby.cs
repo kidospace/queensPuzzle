@@ -89,6 +89,7 @@ namespace qp {
         /// look at, so on that card only the Play button does anything at all.
         /// </summary>
         void OnTournamentTapped(ETournamentStatus status) {
+            if (TournamentManager.ShowsOffline) return;   // the table behind it may be hours old
             switch (status) {
                 case ETournamentStatus.Active:
                 case ETournamentStatus.EndingSoon:
