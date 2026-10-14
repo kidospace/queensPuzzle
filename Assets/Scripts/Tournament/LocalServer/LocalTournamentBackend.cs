@@ -67,7 +67,7 @@ namespace qp {
             // counted — a win that arrives after the end belongs to the tournament now running,
             // not to the one it just missed.
             bool changed = _closeIfOver(now);
-            if (!_running) { _open(now); changed = true; }
+            if (!_running) { _open(now, req?.level ?? 0); changed = true; }
 
             var accepted = _applyWins(req, ref changed);
 
@@ -184,7 +184,7 @@ namespace qp {
         /// Everything a tournament is — its window, its nineteen rivals, their whole two days —
         /// is decided here, once, and then only played back.
         /// </summary>
-        void _open(DateTime now) {
+        void _open(DateTime now, int level) {
             int usual = _state.UsualScore > 0 ? _state.UsualScore : RivalGroup.TypicalScore;
 
             _state.currentId = "t" + now.Ticks;
@@ -193,7 +193,7 @@ namespace qp {
             _state.myScore = 0;
             _state.acceptedIds.Clear();
             _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
-                                             _state.setKind, out var kind);
+                                             level, _state.setKind, out var kind);
             _state.setKind = kind;
 
             Debug.Log($"[LocalTournament] {_state.currentId} opened with {_state.rivals.Count} rivals " +

@@ -134,16 +134,19 @@ namespace qp {
         /// </summary>
         /// <param name="last">The kind the player got last time, so the draw can avoid repeating
         /// an extreme. <paramref name="chosen"/> reports what this group actually is.</param>
-        public static List<LocalRival> Build(int myScore, uint myOwner, string myName,
+        public static List<LocalRival> Build(int myScore, uint myOwner, string myName, int myLevel,
                                              Kind last, out Kind chosen) {
-            try { return _build(myScore, myOwner, myName, last, out chosen); }
-            // The recordings are read here and nowhere else, so this is where they stop being
-            // worth holding: everything chosen is copied out below, and the ~280 KB behind it is
-            // not wanted again for another 48 hours.
-            finally { RivalsBlob.Unload(); }
+            // Taken and released in the same breath, so the whole lifetime is one method. The
+            // recordings and the name lists are read here and nowhere else: everything chosen is
+            // copied out below, and the ~280 KB and ~70 KB behind them are not wanted again for
+            // another 48 hours.
+            RivalsBlob.Load();
+            RivalNames.Load();
+            try { return _build(myScore, myOwner, myName, myLevel, last, out chosen); }
+            finally { RivalsBlob.Unload(); RivalNames.Unload(); }
         }
 
-        static List<LocalRival> _build(int myScore, uint myOwner, string myName,
+        static List<LocalRival> _build(int myScore, uint myOwner, string myName, int myLevel,
                                        Kind last, out Kind chosen) {
             chosen = Kind.Unknown;   // nothing was drawn unless the group is actually built
             var rivals = new List<LocalRival>(Size);
@@ -158,6 +161,12 @@ namespace qp {
             var usedRecordings = new HashSet<int>();
             var usedNames = new HashSet<string> { myName ?? "" };
 
+            // Drawn once, for the whole group: how many of them look like players who named
+            // themselves, and where in the world they are from.
+            var cfg = TournamentConfig.Instance;
+            float realNames = cfg != null ? cfg.RealNameShare(myLevel) : 0.5f;
+            string country = Country.Code;
+
             for (int i = 0; i < set.Length; i++) {
                 bool isLast = i == set.Length - 1;
                 int target = isLast
@@ -169,7 +178,7 @@ namespace qp {
                 usedRecordings.Add(pick);
 
                 var rival = new LocalRival {
-                    name = _pickName(usedNames),
+                    name = _pickName(usedNames, country, realNames),
                     total = RivalsBlob.TotalAt(pick),
                 };
                 _unpack(RivalsBlob.PlaysAt(pick), rnd, rival);
@@ -244,16 +253,16 @@ namespace qp {
             return best;
         }
 
-        /// <summary>The same generator the player's own name came from, so no row on the table
-        /// looks like a different kind of thing from the others.</summary>
-        static string _pickName(HashSet<string> used) {
+        /// <summary>A name nobody in this group already has. <see cref="RivalNames"/> decides what
+        /// kind of name it is; this only keeps the table from showing the same one twice.</summary>
+        static string _pickName(HashSet<string> used, string country, float realNames) {
             for (int attempt = 0; attempt < 20; attempt++) {
-                string name = ProfileManager.GenerateName();
+                string name = RivalNames.Pick(country, realNames);
                 if (used.Add(name)) return name;
             }
-            // Every draw collided — vanishingly unlikely with 35x35 pairs, and a duplicate name
-            // is better than no rival.
-            return ProfileManager.GenerateName();
+            // Every draw collided — vanishingly unlikely against pools this size, and a duplicate
+            // name is better than no rival.
+            return RivalNames.Pick(country, realNames);
         }
 
         /// <summary>

@@ -109,8 +109,12 @@ namespace qp {
         /// caller is a group build, which runs from the sync runner — a MonoBehaviour — so the
         /// await before it returns to the player loop. Moving the sync off the main thread would
         /// have to deal with this.
+        ///
+        /// Public so a caller that is about to use the blob and then release it can say so at the
+        /// top rather than leaving a lone Unload at the bottom with nothing to pair against. Every
+        /// read still calls it itself, so nobody HAS to.
         /// </summary>
-        static bool Load() {
+        public static bool Load() {
             if (_loadTried) return _blob != null;
             _loadTried = true;
 

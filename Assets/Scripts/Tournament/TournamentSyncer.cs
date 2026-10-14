@@ -63,6 +63,7 @@ namespace qp {
         // Build the request: every win we still hold + the etags of what we already have.
         TournamentSyncRequest _request() => new TournamentSyncRequest {
             wins = _state.pending.ToArray(),
+            level = AppData.LevelIdx.Value + 1,
             currentEtag = _state.lastSyncCurrent.etag,
             closedEtag = _state.lastSyncClosed.etag,
         };

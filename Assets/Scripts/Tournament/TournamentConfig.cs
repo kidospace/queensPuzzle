@@ -35,6 +35,47 @@ namespace qp {
 
         public TimeSpan EndingSoonTime => TimeSpan.FromMinutes(endingSoonMinutes);
 
+        // ---- what the rivals are called --------------------------------------------------
+        //
+        // The names themselves are in Resources/RivalNames.txt. These are only the proportions:
+        // how many rivals look like players who named themselves, and what shape those names
+        // take. Everyone else keeps the adjective-and-noun name the game hands out, which is
+        // what a player who never opened the settings looks like — and most never do.
+
+        [Tooltip("Share of rivals with a real-looking name at the unlock level. The rest keep the " +
+                 "name the game generated, like a player who never changed it.")]
+        [Range(0f, 1f)] public float realNamesAtUnlock = 0.30f;
+
+        [Tooltip("The same share at veteranLevel and beyond. Higher, because a player who has been " +
+                 "here that long has had far more chances to name themselves.")]
+        [Range(0f, 1f)] public float realNamesAtVeteran = 0.70f;
+
+        [Tooltip("The campaign level by which a player counts as a veteran. Between the unlock " +
+                 "level and this one the share rises straight.")]
+        public int veteranLevel = 1000;
+
+        [Tooltip("Drawn once per tournament and added to the share, either way — so two groups at " +
+                 "the same level are not the same group.")]
+        [Range(0f, 0.5f)] public float realNamesSpread = 0.10f;
+
+        [Tooltip("Of the real-looking names: how many carry a surname initial, as in 'Daniel K'.")]
+        [Range(0f, 1f)] public float nameWithInitial = 0.16f;
+
+        [Tooltip("Of the real-looking names: how many carry digits, as in 'Daniel22'. Keep it low " +
+                 "— a table full of these is the one thing that reads as generated.")]
+        [Range(0f, 1f)] public float nameWithDigits = 0.14f;
+
+        /// <summary>How much of a group built for a player at <paramref name="level"/> should look
+        /// like players who have named themselves. Straight line between the two anchors, plus
+        /// this group's own draw.</summary>
+        public float RealNameShare(int level) {
+            float t = veteranLevel > unlockLevel
+                ? Mathf.InverseLerp(unlockLevel, veteranLevel, level)
+                : 1f;
+            float centre = Mathf.Lerp(realNamesAtUnlock, realNamesAtVeteran, t);
+            return Mathf.Clamp01(centre + UnityEngine.Random.Range(-realNamesSpread, realNamesSpread));
+        }
+
         // ---- prizes ---------------------------------------------------------------------
 
         [Tooltip("What each place wins, best first: element 0 is 1st place. Uses the same Reward " +

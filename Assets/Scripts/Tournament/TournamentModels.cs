@@ -55,6 +55,11 @@ namespace qp {
         /// already applied are ignored, so there is nothing to freeze and nothing to count twice.</summary>
         public TournamentWin[] wins = new TournamentWin[0];
 
+        /// <summary>The campaign level the player is on, 1-based. The group is built around them,
+        /// so the server needs to know who they are — today only to judge how many of their rivals
+        /// should look like players who have been here long enough to name themselves.</summary>
+        public int level;
+
         // The etags of the snapshots the client already holds, exactly as the server sent them.
         // The server skips the payload of anything that hasn't changed since.
         public string currentEtag = "";

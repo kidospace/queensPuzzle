@@ -1,0 +1,1466 @@
+# Rival first names, for the whole world.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS IS NOT ONE LIST PER COUNTRY
+#
+# There are about two hundred countries and maybe thirty name cultures. Egypt,
+# Jordan, Morocco and the Gulf draw from one pool; Spain and every country in
+# Latin America draw from another. Writing two hundred lists would mean writing
+# the same names over and over and maintaining every copy — which is exactly the
+# thing you said you did not want to be doing in two weeks.
+#
+# So: a pool per CULTURE, and a line per COUNTRY saying which pools it draws
+# from and in what proportion. Adding a country is one line. Nothing unmapped
+# breaks — it falls to [global].
+#
+# The proportions are the point. A US leaderboard that is all Jacob and Emily
+# reads as a list somebody wrote. Mixing is what makes it read as people.
+#
+# ---------------------------------------------------------------------------
+# FORMAT
+#
+#   [culture:<name>]   starts a pool; every line after it is one name
+#   <CC> = <culture>*<weight> ...   a country, under [map]
+#
+# Every name is 10 characters or fewer, so "Name K" and "Name22" still fit the
+# 14-character leaderboard row. Latin only — the font atlas has nothing else.
+# Lines starting with # are notes.
+# ---------------------------------------------------------------------------
+
+
+[map]
+# Anglosphere
+US = anglo*7 spanish*2 global*1
+GB = anglo*7 indian*1 global*2
+AU = anglo*8 chinese*1 global*1
+CA = anglo*7 french*1 global*2
+NZ = anglo*8 global*2
+IE = anglo*9 global*1
+ZA = anglo*5 african*4 global*1
+SG = chinese*5 indian*2 anglo*2 global*1
+
+# Western Europe
+DE = german*8 turkish*1 global*1
+AT = german*9 global*1
+CH = german*6 french*2 italian*1 global*1
+FR = french*7 arabic*2 global*1
+BE = dutch*5 french*4 global*1
+NL = dutch*8 global*2
+IT = italian*9 global*1
+ES = spanish*9 global*1
+PT = portuguese*9 global*1
+LU = french*5 german*4 global*1
+MT = italian*5 anglo*4 global*1
+
+# Nordics
+SE = nordic*8 global*2
+NO = nordic*9 global*1
+DK = nordic*9 global*1
+FI = nordic*9 global*1
+IS = nordic*9 global*1
+
+# Central and Eastern Europe
+PL = polish*9 global*1
+CZ = czech*9 global*1
+SK = czech*9 global*1
+HU = hungarian*9 global*1
+RO = romanian*9 global*1
+MD = romanian*7 russian*2 global*1
+BG = balkan*9 global*1
+RS = balkan*9 global*1
+HR = balkan*9 global*1
+BA = balkan*9 global*1
+SI = balkan*9 global*1
+MK = balkan*9 global*1
+AL = balkan*7 arabic*2 global*1
+ME = balkan*9 global*1
+GR = greek*9 global*1
+CY = greek*7 turkish*2 global*1
+RU = russian*9 global*1
+UA = ukrainian*8 russian*1 global*1
+BY = russian*9 global*1
+LT = polish*4 russian*3 global*3
+LV = russian*5 nordic*2 global*3
+EE = nordic*4 russian*4 global*2
+
+# Middle East, North Africa, Central Asia
+IL = hebrew*7 arabic*2 russian*1
+TR = turkish*9 global*1
+EG = arabic*9 global*1
+SA = arabic*9 global*1
+AE = arabic*8 indian*1 global*1
+QA = arabic*8 indian*1 global*1
+KW = arabic*8 indian*1 global*1
+BH = arabic*8 indian*1 global*1
+OM = arabic*9 global*1
+JO = arabic*9 global*1
+LB = arabic*9 global*1
+SY = arabic*9 global*1
+IQ = arabic*9 global*1
+YE = arabic*9 global*1
+PS = arabic*9 global*1
+MA = arabic*9 global*1
+DZ = arabic*9 global*1
+TN = arabic*9 global*1
+LY = arabic*9 global*1
+SD = arabic*7 african*2 global*1
+IR = persian*9 global*1
+AF = persian*9 global*1
+TJ = persian*6 russian*3 global*1
+KZ = russian*6 turkish*3 global*1
+UZ = turkish*5 russian*4 global*1
+KG = russian*5 turkish*4 global*1
+TM = turkish*5 russian*4 global*1
+AZ = turkish*7 russian*2 global*1
+AM = russian*6 global*4
+GE = russian*5 global*5
+
+# South Asia
+IN = indian*9 global*1
+PK = arabic*7 indian*2 global*1
+BD = arabic*5 indian*4 global*1
+LK = indian*8 global*2
+NP = indian*8 global*2
+
+# East and South-East Asia
+CN = chinese*9 global*1
+TW = chinese*9 global*1
+HK = chinese*8 anglo*1 global*1
+JP = japanese*9 global*1
+KR = korean*9 global*1
+TH = thai*9 global*1
+LA = thai*8 global*2
+KH = thai*6 global*4
+VN = vietnamese*9 global*1
+ID = indonesian*9 global*1
+MY = indonesian*6 chinese*2 indian*1 global*1
+BN = indonesian*9 global*1
+PH = filipino*9 global*1
+
+# Latin America
+MX = spanish*9 global*1
+BR = portuguese*9 global*1
+AR = spanish*7 italian*2 global*1
+CL = spanish*9 global*1
+CO = spanish*9 global*1
+PE = spanish*9 global*1
+VE = spanish*9 global*1
+EC = spanish*9 global*1
+BO = spanish*9 global*1
+PY = spanish*9 global*1
+UY = spanish*8 italian*1 global*1
+CR = spanish*9 global*1
+PA = spanish*9 global*1
+GT = spanish*9 global*1
+HN = spanish*9 global*1
+SV = spanish*9 global*1
+NI = spanish*9 global*1
+DO = spanish*9 global*1
+CU = spanish*9 global*1
+PR = spanish*7 anglo*2 global*1
+
+# Sub-Saharan Africa
+NG = african*9 global*1
+GH = african*9 global*1
+KE = african*9 global*1
+UG = african*9 global*1
+TZ = african*9 global*1
+ET = african*9 global*1
+ZM = african*9 global*1
+ZW = african*9 global*1
+CM = african*7 french*2 global*1
+CI = african*6 french*3 global*1
+SN = african*6 french*3 global*1
+CD = african*7 french*2 global*1
+AO = portuguese*5 african*4 global*1
+MZ = portuguese*5 african*4 global*1
+
+
+[culture:anglo]
+James
+Michael
+Robert
+David
+William
+Chris
+Joseph
+Thomas
+Daniel
+Matthew
+Anthony
+Mark
+Steven
+Andrew
+Kevin
+Brian
+Jason
+Ryan
+Jacob
+Tyler
+Brandon
+Nathan
+Dylan
+Logan
+Caleb
+Hunter
+Austin
+Trevor
+Evan
+Ian
+Sean
+Craig
+Keith
+Liam
+Mason
+Owen
+Harry
+Jack
+Oliver
+Charlie
+Mary
+Jennifer
+Linda
+Patricia
+Sarah
+Karen
+Jessica
+Lisa
+Michelle
+Amanda
+Melissa
+Stephanie
+Rebecca
+Laura
+Rachel
+Heather
+Hannah
+Olivia
+Sophie
+Charlotte
+Amelia
+Emily
+Grace
+Chloe
+Lily
+Ella
+Ruby
+Katie
+Zoe
+Megan
+Holly
+
+[culture:spanish]
+Carlos
+Jose
+Luis
+Miguel
+Juan
+Diego
+Mateo
+Angel
+Hector
+Ramon
+Pablo
+Javier
+Sergio
+Alberto
+Fernando
+Ricardo
+Andres
+Alvaro
+Rafael
+Eduardo
+Oscar
+Ruben
+Victor
+Emilio
+Marcos
+Ignacio
+Felipe
+Santiago
+Maria
+Carmen
+Lucia
+Valeria
+Camila
+Daniela
+Rosa
+Ana
+Sofia
+Elena
+Paula
+Laura
+Marta
+Beatriz
+Pilar
+Clara
+Alicia
+Nuria
+Irene
+Julia
+Mariana
+Natalia
+Gabriela
+Ximena
+Renata
+Fatima
+
+[culture:portuguese]
+Joao
+Pedro
+Lucas
+Gabriel
+Rafael
+Bruno
+Felipe
+Thiago
+Rodrigo
+Gustavo
+Matheus
+Vinicius
+Leandro
+Caio
+Murilo
+Henrique
+Fabio
+Marcelo
+Ricardo
+Diogo
+Tomas
+Afonso
+Ana
+Beatriz
+Camila
+Juliana
+Larissa
+Mariana
+Leticia
+Amanda
+Carolina
+Fernanda
+Patricia
+Vanessa
+Bruna
+Isabela
+Rafaela
+Sofia
+Ines
+Matilde
+Carla
+Joana
+Rita
+Sara
+
+[culture:french]
+Pierre
+Jean
+Nicolas
+Julien
+Thomas
+Alexandre
+Maxime
+Antoine
+Lucas
+Hugo
+Theo
+Clement
+Romain
+Guillaume
+Mathieu
+Baptiste
+Florian
+Quentin
+Vincent
+Olivier
+Sebastien
+Damien
+Loic
+Gaetan
+Marie
+Camille
+Chloe
+Manon
+Lea
+Emma
+Julie
+Laura
+Sarah
+Pauline
+Clara
+Alice
+Louise
+Juliette
+Margaux
+Amandine
+Celine
+Sandrine
+Elodie
+Audrey
+Oceane
+
+[culture:german]
+Lukas
+Jonas
+Leon
+Felix
+Maximilian
+Paul
+Elias
+Noah
+Moritz
+Jan
+Tim
+Nico
+Fabian
+Simon
+Tobias
+Florian
+Sebastian
+Andreas
+Stefan
+Thomas
+Markus
+Christian
+Matthias
+Daniel
+Dominik
+Patrick
+Julian
+Hannah
+Lena
+Mia
+Emma
+Sophia
+Marie
+Laura
+Lisa
+Julia
+Anna
+Sarah
+Katharina
+Johanna
+Leonie
+Nina
+Melanie
+Claudia
+Sabine
+Petra
+Franziska
+Theresa
+
+[culture:italian]
+Marco
+Luca
+Andrea
+Matteo
+Alessandro
+Francesco
+Lorenzo
+Davide
+Simone
+Giovanni
+Antonio
+Giuseppe
+Stefano
+Riccardo
+Fabio
+Gabriele
+Nicolo
+Emanuele
+Paolo
+Roberto
+Pietro
+Giulia
+Chiara
+Francesca
+Sara
+Martina
+Alessia
+Valentina
+Elena
+Federica
+Silvia
+Laura
+Elisa
+Beatrice
+Alice
+Arianna
+Gaia
+Ilaria
+Serena
+Veronica
+Camilla
+
+[culture:dutch]
+Daan
+Sem
+Lucas
+Finn
+Levi
+Luuk
+Bram
+Jesse
+Milan
+Thijs
+Sven
+Ruben
+Tim
+Jasper
+Bas
+Niels
+Koen
+Stijn
+Joost
+Pieter
+Willem
+Emma
+Julia
+Sophie
+Anna
+Eva
+Lotte
+Fleur
+Sanne
+Noor
+Lieke
+Tess
+Femke
+Maaike
+Marieke
+Esther
+Saskia
+Linde
+Roos
+
+[culture:nordic]
+Erik
+Lars
+Johan
+Anders
+Magnus
+Henrik
+Niklas
+Oskar
+Emil
+Elias
+Mattias
+Jonas
+Fredrik
+Gustav
+Viktor
+Axel
+Olav
+Jens
+Soren
+Mikkel
+Rasmus
+Kasper
+Mikko
+Jari
+Ville
+Aleksi
+Eero
+Anna
+Emma
+Sofia
+Elin
+Ida
+Maja
+Linnea
+Astrid
+Ingrid
+Freja
+Signe
+Mette
+Pernille
+Line
+Aino
+Elina
+Sanna
+Noora
+Hanna
+
+[culture:polish]
+Jakub
+Kacper
+Filip
+Mateusz
+Michal
+Szymon
+Piotr
+Pawel
+Tomasz
+Marcin
+Lukasz
+Adam
+Bartosz
+Dawid
+Kamil
+Rafal
+Grzegorz
+Krzysztof
+Andrzej
+Anna
+Maria
+Katarzyna
+Magda
+Agata
+Natalia
+Julia
+Zofia
+Lena
+Oliwia
+Wiktoria
+Karolina
+Monika
+Joanna
+Ewa
+Alicja
+Marta
+Paulina
+
+[culture:czech]
+Jakub
+Jan
+Tomas
+Martin
+Petr
+Lukas
+David
+Ondrej
+Filip
+Vojtech
+Adam
+Matej
+Pavel
+Marek
+Michal
+Stanislav
+Zdenek
+Milan
+Tereza
+Eliska
+Anna
+Adela
+Karolina
+Natalie
+Veronika
+Lucie
+Katerina
+Barbora
+Marketa
+Petra
+Jana
+Zuzana
+Michaela
+
+[culture:hungarian]
+Bence
+Mate
+Levente
+Daniel
+Marton
+Balazs
+Adam
+Peter
+Tamas
+Gabor
+Zoltan
+Attila
+Laszlo
+Istvan
+Csaba
+Norbert
+Kristof
+Hanna
+Anna
+Zsofia
+Lilla
+Luca
+Eszter
+Petra
+Reka
+Noemi
+Dora
+Viktoria
+Timea
+Agnes
+Krisztina
+Edina
+
+[culture:romanian]
+Andrei
+Alexandru
+Mihai
+Ionut
+Gabriel
+Cristian
+Stefan
+Vlad
+Radu
+Bogdan
+Catalin
+Florin
+Marian
+Nicolae
+Adrian
+Razvan
+Daniel
+Maria
+Elena
+Ioana
+Andreea
+Alexandra
+Gabriela
+Cristina
+Daniela
+Mihaela
+Roxana
+Bianca
+Diana
+Oana
+Simona
+
+[culture:russian]
+Alexey
+Dmitri
+Sergei
+Andrei
+Ivan
+Nikita
+Maxim
+Artem
+Roman
+Pavel
+Egor
+Kirill
+Denis
+Vladimir
+Igor
+Boris
+Vadim
+Anton
+Oleg
+Yuri
+Stanislav
+Timur
+Anna
+Maria
+Elena
+Olga
+Irina
+Natalia
+Svetlana
+Tatiana
+Ekaterina
+Polina
+Alina
+Diana
+Marina
+Daria
+Ksenia
+Veronika
+Yulia
+Vika
+Lena
+
+[culture:ukrainian]
+Oleksandr
+Andriy
+Dmytro
+Serhiy
+Vitaliy
+Bohdan
+Taras
+Mykola
+Yaroslav
+Maksym
+Oleh
+Ihor
+Vadym
+Pavlo
+Roman
+Danylo
+Olena
+Oksana
+Iryna
+Nataliya
+Tetiana
+Yuliya
+Kateryna
+Mariya
+Anna
+Sofiya
+Viktoriya
+Daryna
+Alina
+Khrystyna
+
+[culture:balkan]
+Nikola
+Marko
+Stefan
+Luka
+Milos
+Nemanja
+Dusan
+Filip
+Ivan
+Petar
+Dragan
+Goran
+Zoran
+Vladimir
+Aleksa
+Ante
+Josip
+Mateo
+Hrvoje
+Emir
+Amar
+Dino
+Ana
+Marija
+Jelena
+Milica
+Sara
+Teodora
+Katarina
+Ivana
+Dragana
+Snezana
+Lara
+Petra
+Dunja
+Amina
+Lejla
+
+[culture:greek]
+Giorgos
+Dimitris
+Nikos
+Kostas
+Panagiotis
+Vasilis
+Christos
+Yiannis
+Thanasis
+Stelios
+Petros
+Alexis
+Manolis
+Antonis
+Lefteris
+Stavros
+Maria
+Eleni
+Katerina
+Sofia
+Georgia
+Dimitra
+Anna
+Vasiliki
+Christina
+Despina
+Ioanna
+Nikoleta
+Zoi
+Anastasia
+
+[culture:turkish]
+Mehmet
+Mustafa
+Ahmet
+Ali
+Huseyin
+Hasan
+Ibrahim
+Murat
+Emre
+Burak
+Serkan
+Onur
+Kerem
+Baris
+Deniz
+Cem
+Tolga
+Yusuf
+Kaan
+Berk
+Eren
+Fatma
+Ayse
+Emine
+Hatice
+Zeynep
+Elif
+Merve
+Esra
+Busra
+Selin
+Melis
+Ceren
+Gizem
+Pinar
+Dilara
+Ece
+
+[culture:arabic]
+Mohammed
+Ahmad
+Omar
+Ali
+Yousef
+Khaled
+Samer
+Rami
+Bilal
+Hassan
+Ibrahim
+Mahmoud
+Mustafa
+Tariq
+Saeed
+Faisal
+Nasser
+Sami
+Walid
+Ziad
+Adel
+Karim
+Hamza
+Anas
+Imran
+Fatima
+Aisha
+Maryam
+Noor
+Rana
+Sara
+Leila
+Amal
+Hiba
+Dina
+Salma
+Yara
+Lina
+Huda
+Rania
+Nadia
+Samira
+Zainab
+Khadija
+Mona
+
+[culture:persian]
+Ali
+Reza
+Mohammad
+Hossein
+Amir
+Mehdi
+Saeed
+Hamid
+Omid
+Arash
+Babak
+Farhad
+Kaveh
+Navid
+Pouya
+Sina
+Shayan
+Behrooz
+Fatemeh
+Zahra
+Maryam
+Sara
+Nasrin
+Shirin
+Leila
+Parisa
+Mina
+Niloofar
+Yasaman
+Roya
+Azadeh
+Mahsa
+
+[culture:hebrew]
+Noam
+Itay
+Uri
+Omer
+Ido
+Yonatan
+Ariel
+Eitan
+Guy
+Tomer
+Amit
+Roee
+Nadav
+Shai
+Lior
+Oren
+Gal
+Yuval
+Alon
+Eran
+Dor
+Niv
+Erez
+Gilad
+Ofek
+Yarden
+Maor
+Matan
+Yoav
+Ziv
+Avi
+Moshe
+David
+Asaf
+Boaz
+Nir
+Ohad
+Rotem
+Shachar
+Yair
+Yotam
+Idan
+Aviv
+Elad
+Kfir
+Raz
+Tamir
+Omri
+Eyal
+Doron
+Noa
+Maya
+Shira
+Tamar
+Yael
+Adi
+Michal
+Sharon
+Hila
+Dana
+Inbar
+Shani
+Naama
+Roni
+Talia
+Liel
+Agam
+Stav
+Keren
+Lihi
+Sivan
+Noya
+Ayala
+Efrat
+Orly
+Galit
+Limor
+Tali
+Vered
+Zohar
+Chen
+Ela
+Gaya
+Hallel
+Ofri
+Shaked
+Alma
+Bar
+Carmel
+Eden
+Ella
+Gili
+Hadar
+Maayan
+Meital
+Mika
+Nofar
+Reut
+Romi
+Sapir
+Yasmin
+
+[culture:indian]
+Rahul
+Amit
+Vikram
+Arjun
+Rohit
+Sanjay
+Rajesh
+Anil
+Suresh
+Deepak
+Manish
+Nikhil
+Karan
+Aditya
+Siddharth
+Varun
+Ankit
+Gaurav
+Harsh
+Pranav
+Kunal
+Abhishek
+Ravi
+Sachin
+Vivek
+Priya
+Anjali
+Pooja
+Neha
+Divya
+Sneha
+Kavita
+Meera
+Ritu
+Shreya
+Aarti
+Nisha
+Swati
+Preeti
+Isha
+Riya
+Ananya
+Lakshmi
+Deepika
+
+[culture:indonesian]
+Budi
+Agus
+Andi
+Bambang
+Dedi
+Eko
+Hendra
+Joko
+Rizki
+Dimas
+Fajar
+Yusuf
+Arif
+Bayu
+Teguh
+Wawan
+Iwan
+Hadi
+Siti
+Dewi
+Rina
+Ayu
+Indah
+Putri
+Fitri
+Lestari
+Wulan
+Nurul
+Ratna
+Sari
+Yanti
+Melati
+
+[culture:filipino]
+Jose
+Juan
+Mark
+John
+Angelo
+Carlo
+Paolo
+Miguel
+Rafael
+Joshua
+Kenneth
+Jericho
+Dexter
+Reynaldo
+Rodel
+Ramon
+Noel
+Maria
+Angel
+Jasmine
+Kristine
+Michelle
+Rowena
+Analyn
+Jenelyn
+Cherry
+Divine
+Grace
+Mary
+Nerissa
+Rosalie
+
+[culture:thai]
+Somchai
+Anan
+Chaiwat
+Narong
+Prasert
+Surasak
+Thanakorn
+Wichai
+Kittisak
+Nattapong
+Peerapat
+Sakda
+Teerapat
+Worawut
+Siriporn
+Malee
+Nattaya
+Pimchanok
+Sudarat
+Kanya
+Wanida
+Chanida
+Sirinat
+Panida
+Ratana
+
+[culture:vietnamese]
+Minh
+Hoang
+Tuan
+Nam
+Quang
+Duc
+Hieu
+Thanh
+Khanh
+Binh
+Cuong
+Dung
+Long
+Phuc
+Son
+Trung
+Vinh
+Linh
+Huong
+Lan
+Mai
+Ngoc
+Nhung
+Phuong
+Thao
+Trang
+Tuyet
+Yen
+Hanh
+Quyen
+
+[culture:chinese]
+Wei
+Jun
+Hao
+Lei
+Ming
+Feng
+Tao
+Xin
+Qiang
+Peng
+Kai
+Rui
+Yang
+Bo
+Chen
+Zhen
+Jian
+Long
+Hui
+Gang
+Na
+Mei
+Ying
+Fang
+Jing
+Xia
+Ling
+Yu
+Hong
+Juan
+Li
+Yan
+Ting
+Qian
+Shan
+Lan
+
+[culture:japanese]
+Hiroshi
+Takashi
+Kenji
+Haruto
+Sota
+Ren
+Daiki
+Riku
+Kaito
+Naoki
+Shota
+Kenta
+Yuto
+Sora
+Taiga
+Hayato
+Tsubasa
+Ryo
+Yuki
+Akira
+Sakura
+Hina
+Aoi
+Rin
+Mei
+Yui
+Miku
+Ayaka
+Hana
+Kana
+Mao
+Nana
+Rei
+Emi
+Saki
+Yuna
+
+[culture:korean]
+Minjun
+Jiwoo
+Jihoon
+Doyun
+Sian
+Jimin
+Jiho
+Eunwoo
+Jinwoo
+Seojun
+Hyunwoo
+Junseo
+Taeyang
+Sunghoon
+Hoseok
+Jungwoo
+Seoyeon
+Haeun
+Yuna
+Minseo
+Soyeon
+Jisoo
+Nayeon
+Yerin
+Daeun
+Sora
+Mina
+Chaeyoung
+Hyeri
+Bomi
+
+[culture:african]
+Chidi
+Emeka
+Obi
+Kelechi
+Ifeanyi
+Tunde
+Segun
+Bayo
+Kwame
+Kofi
+Yaw
+Kojo
+Mensah
+Juma
+Baraka
+Jabari
+Otieno
+Kamau
+Mwangi
+Njoroge
+Tendai
+Tapiwa
+Sipho
+Thabo
+Lungile
+Amara
+Chioma
+Ngozi
+Adaeze
+Folake
+Yetunde
+Abeni
+Akosua
+Afia
+Ama
+Zuri
+Imani
+Nia
+Asha
+Neema
+Wanjiru
+Nyaradzo
+Thandi
+Lindiwe
+
+[culture:global]
+# The fallback, and the 10-20% that every country mixes in. Deliberately the
+# names that travel — the ones you meet anywhere, under any flag.
+Alex
+Daniel
+David
+Michael
+Thomas
+Martin
+Adam
+Victor
+Leo
+Max
+Oscar
+Felix
+Simon
+Marco
+Ivan
+Omar
+Kai
+Noah
+Luca
+Nicolas
+Samuel
+Benjamin
+Gabriel
+Anton
+Emil
+Anna
+Maria
+Sofia
+Elena
+Sara
+Nina
+Laura
+Julia
+Eva
+Clara
+Lina
+Mia
+Nora
+Vera
+Diana
+Alina
+Natalia
+Christina
+Isabel
+Alice
