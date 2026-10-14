@@ -2514,7 +2514,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 0.1
+  m_fontSize: 0.15
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -9100,7 +9100,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &841572789
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9186,7 +9186,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: 34dc7cbd8de510547917b50cb71cb4f6, type: 3}
-  m_Type: 0
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -12531,6 +12531,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3882091641028064903, guid: 35385e7e27378f945a876e01f6dd4073, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7390623340319563187, guid: 35385e7e27378f945a876e01f6dd4073, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7745009920083085086, guid: 35385e7e27378f945a876e01f6dd4073, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -12554,6 +12562,10 @@ PrefabInstance:
     - target: {fileID: 7932887595852150522, guid: 35385e7e27378f945a876e01f6dd4073, type: 3}
       propertyPath: m_Name
       value: TournamentPopupAfterWin
+      objectReference: {fileID: 0}
+    - target: {fileID: 7932887595852150522, guid: 35385e7e27378f945a876e01f6dd4073, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
