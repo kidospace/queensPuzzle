@@ -47,6 +47,13 @@ namespace qp {
         void OnApplicationFocus(bool focus) { if (focus) _ = _run(); }
 
         Task _run() {
+            // Below the unlock level there is nothing to ask about and nothing to be told. Worth
+            // more than the request it saves: a sync is what OPENS a tournament, so syncing for a
+            // locked player starts a 48-hour window they cannot see and rolls it over for as long
+            // as it takes them to get there — and the win that unlocks the feature drops them
+            // into whatever was left of the one running at that moment.
+            if (!TournamentManager.IsUnlocked) return Task.CompletedTask;
+
             // No confirmed connection, or no trusted server time: the request would only fail, and
             // the tick will come round again the moment both are back.
             var net = InternetConnection.Instance;

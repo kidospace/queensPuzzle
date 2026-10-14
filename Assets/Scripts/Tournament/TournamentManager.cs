@@ -217,6 +217,12 @@ namespace qp {
         /// <summary>No usable connection — a fact about the device, not about the tournament.</summary>
         public static bool IsOffline => !_isOnline;
 
+        /// <summary>The player has reached the level the tournament opens at. Public because the
+        /// sync runner will not talk to the server below it: a tournament nobody can see should
+        /// not be running, least of all rolling over every 48 hours — the player would unlock the
+        /// feature into whatever was left of one.</summary>
+        public static bool IsUnlocked => _exists && _isUnlocked;
+
         /// <summary>
         /// Offline is what the player should be told about, rather than a <see cref="Status"/>
         /// read out of state that may be hours old.

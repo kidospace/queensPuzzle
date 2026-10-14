@@ -922,7 +922,15 @@ namespace qp {
                 _topBar.MaxWrongMoves - AppData.LastPlayData.bonesLost);
             AppData.LastPlayData.Invalidate();   // level done — the saved attempt is history
             _saveQueued = false;   // a queued write would resurrect the board under the NEXT level
+            bool tournamentWasLocked = !TournamentManager.IsUnlocked;
             if (!DailyChallengeManager.InDailyRun) AppData.LevelIdx.Value++;    // advance campaign progress (persisted)
+
+            // This win is the one that unlocked the tournament. It happens once in a player's
+            // life and nothing else has asked for a tournament yet: OnLevelWin refused the win a
+            // few lines up because the feature was still locked, and below the unlock level the
+            // runner does not sync at all, so there is nothing running to join. Open it on the
+            // win rather than on whenever the runner next comes round.
+            if (tournamentWasLocked && TournamentManager.IsUnlocked) _ = TournamentManager.Sync();
 
             Haptics.Play(GameHaptic.Win); // last, so nothing here can block the popup
             CommonSFX.Play(GPSFX.Instance.Win);
