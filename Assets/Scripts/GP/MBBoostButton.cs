@@ -20,11 +20,13 @@ namespace qp {
         private TMP_Text _amountText;
         private int _lastAmount = int.MinValue;
         private bool _lastVideoReady;
+        private bool _lastOffline;
 
         Button _btn = null;
         private Transform _amount;
         private Transform _videoLoading;
         private Transform _showVideo;
+        private Transform _offline;
 
         public Button GetButton() {
 
@@ -46,6 +48,7 @@ namespace qp {
             _amount = transform.RecursiveFindChild("$Amount");
             _videoLoading = transform.RecursiveFindChild("$VideoLoading");
             _showVideo = transform.RecursiveFindChild("$ShowVideo");
+            _offline = transform.RecursiveFindChild("$Offline");
 
             _amountText = _amount.RecursiveFindChild<TMPro.TMP_Text>("$AmountText");
             
@@ -65,6 +68,7 @@ namespace qp {
             if (boost.Value > 0) {
                 if (UseAction != null && UseAction()) boost.Value--;
             } else {
+                if (_offline.gameObject.activeSelf) return;   // offline — not clickable
                 // Invariant: a culture-aware ToLower turns "HINT" into "hınt" on Turkish devices.
                 string name = BoostType.ToString().ToLowerInvariant();
                 Ads.WatchToEarn("boost_" + name, () => {
@@ -78,17 +82,20 @@ namespace qp {
             if (SuppressUpdate) return;   // hold the display; a granted streak reward reveals via its popup
             int amount = AppData.Boosts[BoostType].Value;
             bool videoReady = Ads.IsRewardedReady;
-            if (amount == _lastAmount && videoReady == _lastVideoReady) return;
+            bool offline = InternetConnection.Instance != null && !InternetConnection.Instance.HasInternet;
+            if (amount == _lastAmount && videoReady == _lastVideoReady && offline == _lastOffline) return;
             _lastAmount = amount;
             _lastVideoReady = videoReady;
+            _lastOffline = offline;
 
             if (amount > 0) _amountText.text = amount.ToString();
 
-            // has boost → $Amount; no boost → $ShowVideo (ad ready) or $VideoLoading (still loading)
+            // has boost → $Amount; no boost → $ShowVideo (ad ready), else $Offline, else $VideoLoading
             bool has = amount > 0;
             _amount.gameObject.SetActive(has);
             _showVideo.gameObject.SetActive(!has && videoReady);
-            _videoLoading.gameObject.SetActive(!has && !videoReady);
+            _offline.gameObject.SetActive(!has && !videoReady && offline);
+            _videoLoading.gameObject.SetActive(!has && !videoReady && !offline);
         }
     }
 }

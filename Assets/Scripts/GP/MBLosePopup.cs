@@ -10,7 +10,12 @@ namespace qp {
         CanvasGroup _group;
         bool _showing;   // a real fail is on screen (guards the layout pass from hiding it)
         bool _opportunitySent;   // rewarded_ad_opportunity — once per Show
-        GameObject _btnContinue;   // rewarded revive — only offered when a rewarded ad is ready
+        GameObject _btnContinue;   // rewarded revive — clickable only when an ad is ready
+        Button _continueButton;
+        GameObject _showVideo;
+        GameObject _offline;
+        GameObject _videoLoading;
+        bool _hasLast, _lastReviveLevel, _lastReady, _lastOffline;   // last applied Continue state — redraw only on change
         TMPro.TMP_Text _remainingText;
 
         [SerializeField]
@@ -20,6 +25,7 @@ namespace qp {
         public void Show() {
             _showing = true;
             _opportunitySent = false;
+            _hasLast = false;   // fresh show — apply the Continue state even if it didn't change
             _group.alpha = 1f;   // whatever the layout pass left behind, a real show is opaque
             gameObject.SetActive(true);
             UpdateContinueButton();
@@ -61,6 +67,15 @@ namespace qp {
             var btnContinue = transform.RecursiveFindChild<Button>("$BtnContinue");
             btnContinue.onClick.AddListener(Continue);
             _btnContinue = btnContinue.gameObject;
+            _continueButton = btnContinue;
+            _showVideo = btnContinue.transform.RecursiveFindChild("$ShowVideo").gameObject;
+            _offline = btnContinue.transform.RecursiveFindChild("$Offline").gameObject;
+            _videoLoading = btnContinue.transform.RecursiveFindChild("$VideoLoading").gameObject;
+
+            // interactable=false only blocks clicks — no gray-out (same as the boost button)
+            var colors = btnContinue.colors;
+            colors.disabledColor = colors.normalColor;
+            btnContinue.colors = colors;
 
             _remainingText = transform.RecursiveFindChild<TMPro.TMP_Text>("$RemainingText");
 
@@ -101,16 +116,29 @@ namespace qp {
             }
         }
 
-        // Continue is a rewarded revive — only shown when a rewarded ad is ready.
+        // Continue is a rewarded revive: ad ready → $ShowVideo; else offline → $Offline; else
+        // (online, ad still loading) → $VideoLoading. Only $ShowVideo is clickable.
         void Update() {
             if (_showing) UpdateContinueButton();
         }
 
         void UpdateContinueButton() {
             if (_btnContinue == null) return;
-            bool ready = Ads.IsRewardedReady
-                         && AppData.LevelIdx.Value + 1 >= GameConfig.StartShowReviveAtLevel;
-            if (_btnContinue.activeSelf != ready) _btnContinue.SetActive(ready);
+            bool reviveLevel = AppData.LevelIdx.Value + 1 >= GameConfig.StartShowReviveAtLevel;
+            bool ready = reviveLevel && Ads.IsRewardedReady;
+            bool offline = reviveLevel && !ready
+                           && InternetConnection.Instance != null && !InternetConnection.Instance.HasInternet;
+            if (_hasLast && reviveLevel == _lastReviveLevel && ready == _lastReady && offline == _lastOffline) return;
+            _hasLast = true;
+            _lastReviveLevel = reviveLevel;
+            _lastReady = ready;
+            _lastOffline = offline;
+
+            _btnContinue.SetActive(reviveLevel);
+            _showVideo.SetActive(ready);
+            _offline.SetActive(offline);
+            _videoLoading.SetActive(reviveLevel && !ready && !offline);
+            _continueButton.interactable = ready;
             if (ready && !_opportunitySent) { _opportunitySent = true; Analytics.RewardedOpportunity(); }
         }
 
