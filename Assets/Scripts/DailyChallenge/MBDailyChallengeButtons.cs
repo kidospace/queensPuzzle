@@ -7,7 +7,8 @@ namespace qp {
 
     /// <summary>
     /// Drives the lobby's three daily cards — pure display over <see cref="DailyChallengeManager"/>.
-    /// Attach to ButtonsContainer (or any parent of the cards). Exactly one card is active:
+    /// Attach to ButtonsContainer (or any parent of the cards). Below
+    /// <see cref="DailyChallengeManager.IsRevealed"/> none is active; otherwise exactly one:
     ///   $DailyButtonLock            Status == Lock (nothing to fill)
     ///   $DailyButtonActive          Status == Active — $Date, $TimeLeft (countdown to next UTC day)
     ///   $DailyButtonDone            Status == Done — $Date, $SolvedTime, $TopPct
@@ -79,9 +80,10 @@ namespace qp {
         void Refresh() {
             var status = _shownStatus = DailyChallengeManager.Status;
             if (status != EDailyChallengeStatus.Lock) _shownDay = DailyChallengeManager.DayIndex;
-            if (_lock != null) _lock.SetActive(status == EDailyChallengeStatus.Lock);
-            if (_active != null) _active.SetActive(status == EDailyChallengeStatus.Active);
-            if (_done != null) _done.SetActive(status == EDailyChallengeStatus.Done);
+            bool revealed = DailyChallengeManager.IsRevealed;   // below it no card at all
+            if (_lock != null) _lock.SetActive(revealed && status == EDailyChallengeStatus.Lock);
+            if (_active != null) _active.SetActive(revealed && status == EDailyChallengeStatus.Active);
+            if (_done != null) _done.SetActive(revealed && status == EDailyChallengeStatus.Done);
 
             switch (status) {
                 case EDailyChallengeStatus.Active:

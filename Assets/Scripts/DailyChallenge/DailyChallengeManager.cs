@@ -30,6 +30,10 @@ namespace qp {
         // daily — reaching stage 21 unlocks it, matching the lock card's text.
         const int UnlockLevel = 21;
 
+        // Below this stage the lobby shows no daily card at all. The lobby is only seen when the
+        // app opens, so a lock card at level 1 is noise; from here it is a near goal.
+        const int RevealLevel = 8;
+
         const string TiersResource = "DailyChallengeTiers";
 
         // ---- persisted ----------------------------------------------------------------
@@ -82,6 +86,9 @@ namespace qp {
             MBServerTimeManagerV2.UTCNow.ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture);
 
         static bool IsUnlocked => AppData.LevelIdx.Value + 1 >= UnlockLevel;
+
+        /// <summary>The lobby shows a daily card at all (locked or not).</summary>
+        public static bool IsRevealed => AppData.LevelIdx.Value + 1 >= RevealLevel;
 
         static int DailyProgress => AppData.LevelIdx + _boardsSolved.Value;
 

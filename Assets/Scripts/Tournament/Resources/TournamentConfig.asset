@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a4c9d45870493344a1151823e0bf217, type: 3}
   m_Name: TournamentConfig
   m_EditorClassIdentifier:
-  unlockLevel: 30
-  revealLevel: 10
+  unlockLevel: 40
+  revealLevel: 25
   endingSoonMinutes: 60
   prizePlaces: 3
   maxPendingWins: 200
