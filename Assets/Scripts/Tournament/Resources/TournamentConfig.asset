@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: TournamentConfig
   m_EditorClassIdentifier:
   unlockLevel: 30
+  revealLevel: 10
   endingSoonMinutes: 60
   prizePlaces: 3
   maxPendingWins: 200

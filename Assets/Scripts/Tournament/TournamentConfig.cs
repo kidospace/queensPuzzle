@@ -23,6 +23,9 @@ namespace qp {
         [Tooltip("Display stage number (1-based) that unlocks the tournament — the lock card's text.")]
         public int unlockLevel = 30;
 
+        [Tooltip("Display stage number (1-based) from which the lock card is shown. Below it the card is hidden.")]
+        public int revealLevel = 10;
+
         [Tooltip("Minutes left when the card switches to 'ending soon'.")]
         public int endingSoonMinutes = 60;
 

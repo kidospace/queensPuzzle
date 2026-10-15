@@ -70,6 +70,7 @@ namespace qp {
         public static ETournamentStatus Status {
             get {
                 if (!_exists) return ETournamentStatus.None;
+                if (!_isRevealed) return ETournamentStatus.None;
                 if (!_isUnlocked) return ETournamentStatus.Locked;
 
                 // A closed tournament the player hasn't been shown yet — Claim Prize / See Results.
@@ -310,6 +311,10 @@ namespace qp {
         /// <summary>There is a tournament feature at all: it was shipped, and the blob is loaded.
         /// Everything else about it is undecidable until both are true.</summary>
         static bool _exists => TournamentConfig.Instance != null && _state != null;
+
+        /// <summary>The player sees the lobby only when the app opens, so the lock card is held
+        /// back until a returning player would actually meet it — at level 1 it is just noise.</summary>
+        static bool _isRevealed => AppData.LevelIdx.Value + 1 >= TournamentConfig.Instance.revealLevel;
 
         static bool _isUnlocked => AppData.LevelIdx.Value + 1 >= TournamentConfig.Instance.unlockLevel;
 
