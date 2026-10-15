@@ -17,8 +17,12 @@ namespace qp {
     /// </summary>
     public class MBDailyStreakBtn : MonoBehaviour {
 
+        // "Days" rides in the same label as the number, so a 3-digit streak pushes it along instead
+        // of running into it. The font tag loads from Resources/Fonts & Materials — keep it there.
+        const string DaysSuffix = "<space=7><font=\"Mitr-SemiBold SDF\"><size=52>Days";
+
         GameObject _active, _offline;
-        TMP_Text _currentDay;                 // the 🔥 streak number
+        TMP_Text _currentDay;                 // the 🔥 streak number + "Days"
         MBDailyStreakProgress _progress;      // the bar widget under $DailyButtonActive
         MBDailyStreakInfoPopup _infoPopup;    // opened on tap (found lazily)
 
@@ -68,7 +72,7 @@ namespace qp {
             if (_offline != null) _offline.SetActive(status == EStreakStatus.Offline);
 
             if (status == EStreakStatus.Active) {
-                if (_currentDay != null) _currentDay.text = streak.ToString();
+                if (_currentDay != null) _currentDay.text = streak + DaysSuffix;
                 if (_progress != null) _progress.ApplyImmediately(streak);
             }
         }
