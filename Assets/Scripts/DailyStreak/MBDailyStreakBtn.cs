@@ -1,4 +1,5 @@
 using Common;
+using Puzzby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +26,7 @@ namespace qp {
         TMP_Text _currentDay;                 // the 🔥 streak number + "Days"
         MBDailyStreakProgress _progress;      // the bar widget under $DailyButtonActive
         MBDailyStreakInfoPopup _infoPopup;    // opened on tap (found lazily)
+        MBWiggle _wifiWiggle;                 // on $IconWifi — rocks when the offline button is tapped
 
         // What the UI currently shows. Sentinels so the first tick always paints.
         EStreakStatus _shownStatus = (EStreakStatus)(-1);
@@ -42,6 +44,17 @@ namespace qp {
             // Tapping the active button opens the streak info popup (current streak, entrance only).
             var btn = activeT != null ? activeT.GetComponent<Button>() : null;
             if (btn != null) btn.onClick.AddListener(_openInfo);
+
+            // Offline has nothing to open, but a dead tap feels broken: the wifi icon rocks instead,
+            // pointing at the connection as the reason.
+            _wifiWiggle = MBWiggle.On(offlineT != null ? offlineT.RecursiveFindChild("$IconWifi") : null);
+            var offlineBtn = offlineT != null ? offlineT.GetComponent<Button>() : null;
+            if (offlineBtn != null) offlineBtn.onClick.AddListener(_wiggleWifi);
+        }
+
+        void _wiggleWifi() {
+            Haptics.Play(GameHaptic.Tap);
+            if (_wifiWiggle != null) _wifiWiggle.Play();
         }
 
         void _openInfo() {

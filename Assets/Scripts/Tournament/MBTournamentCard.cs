@@ -1,5 +1,6 @@
 using System;
 using Common;
+using Puzzby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -62,6 +63,21 @@ namespace qp {
             _results     = _find("$EndSeeResults");
 
             _all = new[] { _lock, _offline, _notJoined, _active, _endingSoon, _calculating, _claim, _results };
+
+            // The two cards a tap cannot open still answer it: their icon rocks, pointing at why.
+            _wiggleOnTap(_offline, "$WifiIcon");
+            _wiggleOnTap(_lock, "$LockerIcon");
+        }
+
+        static void _wiggleOnTap(State state, string icon) {
+            if (state == null) return;
+            var button = state.root.GetComponent<Button>();
+            var wiggle = MBWiggle.On(state.root.transform.RecursiveFindChild(icon));
+            if (button == null || wiggle == null) { Debug.LogError($"[TournamentCard] {state.root.name} needs a Button and {icon}"); return; }
+            button.onClick.AddListener(() => {
+                Haptics.Play(GameHaptic.Tap);
+                wiggle.Play();
+            });
         }
 
         State _find(string name) {
