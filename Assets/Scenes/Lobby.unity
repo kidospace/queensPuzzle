@@ -1627,14 +1627,14 @@ MonoBehaviour:
   ListneresMethod: 0
   _minRatioSize:
     screenRatio: 0.45
-    TopNormal: 0.32311714
-    BottomNormal: 0.25549287
-    LeftNormal: 0.02656145
-    RightNormal: 0.026561452
+    TopNormal: 0.28444403
+    BottomNormal: 0.255496
+    LeftNormal: 0.026814945
+    RightNormal: 0.026814945
   _maxRatioSize:
     screenRatio: 0.75
-    TopNormal: 0.331535
-    BottomNormal: 0.25769502
+    TopNormal: 0.32094
+    BottomNormal: 0.25694
     LeftNormal: 0.18161337
     RightNormal: 0.18161331
 --- !u!1 &1569896134
@@ -2607,14 +2607,14 @@ MonoBehaviour:
   ListneresMethod: 0
   _minRatioSize:
     screenRatio: 0.45
-    TopNormal: 0.10092001
-    BottomNormal: 0.6961
-    LeftNormal: 0.14931503
-    RightNormal: 0.14423165
+    TopNormal: 0.10091476
+    BottomNormal: 0.7155552
+    LeftNormal: 0.14946255
+    RightNormal: 0.14439194
   _maxRatioSize:
     screenRatio: 0.75
-    TopNormal: 0.096875
-    BottomNormal: 0.683715
+    TopNormal: 0.096874975
+    BottomNormal: 0.705135
     LeftNormal: 0.2363
     RightNormal: 0.23894003
 --- !u!1001 &2104226187
