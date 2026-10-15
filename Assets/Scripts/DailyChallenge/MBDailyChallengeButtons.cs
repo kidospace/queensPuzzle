@@ -1,4 +1,5 @@
 using Common;
+using Puzzby;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -42,6 +43,14 @@ namespace qp {
                 _date = activeT.RecursiveFindChild<TMP_Text>("$Date");
                 _timeLeft = activeT.RecursiveFindChild<TMP_Text>("$TimeLeft");
                 Tap(activeT, "$DailyButtonActive", OnPlayClick);
+            }
+            if (lockT != null) {
+                // Locked has nothing to open, but a dead tap feels broken: the lock rocks instead.
+                var lockWiggle = MBWiggle.On(lockT.RecursiveFindChild("$Lock"));
+                Tap(lockT, "$DailyButtonLock", () => {
+                    Haptics.Play(GameHaptic.Tap);
+                    if (lockWiggle != null) lockWiggle.Play();
+                });
             }
             if (doneT != null) {
                 _doneDate = doneT.RecursiveFindChild<TMP_Text>("$Date");
