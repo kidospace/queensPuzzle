@@ -23,6 +23,7 @@ namespace qp {
 
         EDailyChallengeStatus _shownStatus;   // what Refresh last built — Tick refreshes only on change
         int _shownDay = -1;                   // day Refresh last painted — midnight repaints even if status didn't flip
+        bool _shownRevealed;                  // reveal Refresh last painted — a level jump (debug) repaints
 
         void Awake() {
             var lockT = transform.RecursiveFindChild("$DailyButtonLock");
@@ -31,6 +32,11 @@ namespace qp {
             _lock = lockT != null ? lockT.gameObject : null;
             _active = activeT != null ? activeT.gameObject : null;
             _done = doneT != null ? doneT.gameObject : null;
+
+            // Art for an offline card exists but nothing drives it yet — keep it off so it never
+            // shows on top of (or instead of) the real card.
+            var offlineT = transform.RecursiveFindChild("$DailyButtonOffline");
+            if (offlineT != null) offlineT.gameObject.SetActive(false);
 
             if (activeT != null) {   // $Date exists on BOTH cards — searches stay scoped per card
                 _date = activeT.RecursiveFindChild<TMP_Text>("$Date");
@@ -72,7 +78,7 @@ namespace qp {
         void Tick() {
             var status = DailyChallengeManager.Status;
             bool dayChanged = status != EDailyChallengeStatus.Lock && DailyChallengeManager.DayIndex != _shownDay;
-            if (status != _shownStatus || dayChanged) { Refresh(); return; }
+            if (status != _shownStatus || dayChanged || DailyChallengeManager.IsRevealed != _shownRevealed) { Refresh(); return; }
             if (_shownStatus == EDailyChallengeStatus.Active && _timeLeft != null)
                 _timeLeft.text = DailyChallengeManager.TimeLeft.ToString(@"hh\:mm\:ss");
         }
@@ -80,7 +86,7 @@ namespace qp {
         void Refresh() {
             var status = _shownStatus = DailyChallengeManager.Status;
             if (status != EDailyChallengeStatus.Lock) _shownDay = DailyChallengeManager.DayIndex;
-            bool revealed = DailyChallengeManager.IsRevealed;   // below it no card at all
+            bool revealed = _shownRevealed = DailyChallengeManager.IsRevealed;   // below it no card at all
             if (_lock != null) _lock.SetActive(revealed && status == EDailyChallengeStatus.Lock);
             if (_active != null) _active.SetActive(revealed && status == EDailyChallengeStatus.Active);
             if (_done != null) _done.SetActive(revealed && status == EDailyChallengeStatus.Done);

@@ -47,8 +47,11 @@ namespace qp {
         State _lock, _offline, _notJoined, _active, _endingSoon, _calculating, _claim, _results;
         State[] _all;
 
-        // What is on screen right now, so a tick that changes nothing writes nothing.
-        State _shown;
+        // What is on screen right now, so a tick that changes nothing writes nothing. Unknown, not
+        // null, until the first draw: null is a real answer (None — every state off), and starting
+        // at null made a None card skip the switch and keep whatever state the prefab was saved with.
+        static readonly State Unknown = new State();
+        State _shown = Unknown;
         string _clockShown, _placeShown;
         int _pendingShown = -1;
 
@@ -112,7 +115,7 @@ namespace qp {
         void OnEnable() {
             // Forget what was on screen: the card may have been away long enough for all of it to
             // be wrong, and the first tick has to write everything again.
-            _shown = null;
+            _shown = Unknown;
             _clockShown = _placeShown = null;
             _pendingShown = -1;
 
