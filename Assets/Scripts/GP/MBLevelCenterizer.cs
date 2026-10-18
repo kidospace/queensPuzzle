@@ -14,16 +14,26 @@ namespace qp {
         [SerializeField] float _x4Digits;
         [SerializeField] float _x5Digits;
 
+        // Optional child that must stay put while the container shifts (the Hard icon under the
+        // text) — moved back by the same amount, so it never leaves the middle.
+        [SerializeField] RectTransform _keepCentered;
+
         RectTransform _rt;
         float _authoredX;   // kept for text that isn't a plain number (the daily date)
+        float _keepCenteredX;
 
-        private void Awake() {
+        // Lazy, not Awake: the Regular/Hard containers start inactive in the scene, and Recenter
+        // can arrive before this object has ever been awake.
+        private void _init() {
+            if (_rt != null) return;
             _rt = (RectTransform)transform;
             _authoredX = _rt.anchoredPosition.x;
+            if (_keepCentered != null) _keepCenteredX = _keepCentered.anchoredPosition.x;
         }
 
         // Anything outside 1-5 digits stays at the position authored in the scene.
         public void Recenter(string text) {
+            _init();
             float x;
             switch (_digitCount(text)) {
                 case 1: x = _x1Digit; break;
@@ -34,6 +44,11 @@ namespace qp {
                 default: x = _authoredX; break;
             }
             _rt.anchoredPosition = new Vector2(x, _rt.anchoredPosition.y);
+
+            if (_keepCentered != null) {
+                float back = _keepCenteredX - (x - _authoredX);
+                _keepCentered.anchoredPosition = new Vector2(back, _keepCentered.anchoredPosition.y);
+            }
         }
 
         private static int _digitCount(string text) {

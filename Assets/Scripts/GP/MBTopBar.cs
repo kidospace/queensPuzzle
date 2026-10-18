@@ -26,10 +26,12 @@ namespace qp {
 
         private GameObject _withoutTime, _withTime;   // bottom row: campaign layout / daily layout with the timer
         private TMPro.TMP_Text _timeProgress;
-        private MBLevelCenterizer _levelCenterizer;   // keeps "Level <n>" centered as the digit count changes
-
         private GameObject _levelStrech, _dateStrech;   // top row: "Level <n>" (campaign) / the date (daily)
-        private TMPro.TMP_Text _levelText, _dateText;
+        private TMPro.TMP_Text _dateText;
+
+        // "Level <n>" comes in two skins ($LevelContainerRegular / $LevelContainerHard), each with
+        // its own $LevelText and its own centerizer (keeps it centered as the digit count changes).
+        private GameObject _levelRegular, _levelHard;
 
         // The three rule cards' backgrounds ($RuleTouch / $RuleRowCol / $RuleColor → their BG image)
         private Dictionary<QueensPuzzle.Rule, Image> _ruleBGs;
@@ -49,13 +51,12 @@ namespace qp {
             _withTime = withTime.gameObject;
             _timeProgress = withTime.transform.RecursiveFindChild<TMPro.TMP_Text>("$TimeProgress");
 
-            _levelCenterizer = GetComponentInChildren<MBLevelCenterizer>(true);
-
             var levelStrech = transform.RecursiveFindChild("%LevelStrech");
             var dateStrech = transform.RecursiveFindChild("%DateStrech");
             _levelStrech = levelStrech.gameObject;
             _dateStrech = dateStrech.gameObject;
-            _levelText = levelStrech.RecursiveFindChild<TMPro.TMP_Text>("$LevelText");
+            _levelRegular = levelStrech.RecursiveFindChild("$LevelContainerRegular").gameObject;
+            _levelHard = levelStrech.RecursiveFindChild("$LevelContainerHard").gameObject;
             _dateText = dateStrech.RecursiveFindChild<TMPro.TMP_Text>("$Date");
 
             _settingsBtn = transform.RecursiveFindChild<Button>("$SettingsBtn");
@@ -177,9 +178,14 @@ namespace qp {
             if (showTimeProgress) {
                 _dateText.text = DailyChallengeManager.NiceDate;
             } else {
+                bool hard = AppData.IsHardLevel;
+                _levelRegular.SetActive(!hard);
+                _levelHard.SetActive(hard);
+
+                var shown = (hard ? _levelHard : _levelRegular).transform;
                 var levelText = (AppData.LevelIdx + 1).ToString();
-                _levelText.text = levelText;
-                _levelCenterizer.Recenter(levelText);
+                shown.RecursiveFindChild<TMPro.TMP_Text>("$LevelText").text = levelText;
+                shown.GetComponent<MBLevelCenterizer>().Recenter(levelText);
             }
 
             _withoutTime.SetActive(!showTimeProgress);
