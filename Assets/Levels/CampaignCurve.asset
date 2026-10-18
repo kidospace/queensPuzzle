@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 757ea84788f8cb04a9c36466402ab940, type: 3}
   m_Name: CampaignCurve
   m_EditorClassIdentifier: 
-  weightCap: 600
+  weightCap: 555
   learnEnd: 200
   learnStart: 0.05
   learnEndMedian: 0.25
@@ -156,9 +156,19 @@ MonoBehaviour:
   matchTol: 0.1
   minTolWeight: 4
   sizeRotation: 080000000a0000000a000000090000000a0000000a000000090000000a0000000a0000000a000000
-  widenAfterAttempts: 300
-  tolWidenStep: 0.05
-  tolMax: 0.3
+  sizeWeightRanges:
+  - size: 8
+    minWeight: 19
+    maxWeight: 700
+  - size: 9
+    minWeight: 55
+    maxWeight: 950
+  - size: 10
+    minWeight: 80
+    maxWeight: 1300
+  - size: 11
+    minWeight: 150
+    maxWeight: 1600
   maxTrials: 0
   maxPeakShare: 0.4
   minWeightPerStep: 8
