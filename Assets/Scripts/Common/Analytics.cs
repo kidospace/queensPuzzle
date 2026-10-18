@@ -100,6 +100,10 @@ namespace qp {
             if (!FirebaseBootstrap.FBAvailable) return;
             Firebase.Analytics.FirebaseAnalytics.SetUserProperty("uid", _userId);
             Firebase.Analytics.FirebaseAnalytics.SetUserProperty("first_version", _firstVersion.ToString());
+
+            // The same id on every crash, so a crash in the Crashlytics BigQuery export (user.id)
+            // joins to this player's events through the `uid` property above.
+            Firebase.Crashlytics.Crashlytics.SetUserId(_userId);
             SetSourceProperty(AppData.SingularSource.Value);
 
             // The user properties above stay: they tag the device and Crashlytics needs the id to
