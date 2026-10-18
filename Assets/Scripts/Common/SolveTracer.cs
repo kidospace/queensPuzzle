@@ -5,25 +5,15 @@ using System.Text;
 namespace QueensPuzzle
 {
     /// <summary>
-    /// Builds the full, human-readable solve trace for a level (every deduction and placement,
-    /// not just queens) and, at each trial, the whole tree of options the player could pick —
-    /// bounded to <see cref="MaxDepth"/> levels of nested guessing. Returned flattened (each node
-    /// points to its parent) so it serializes onto the asset and rebuilds into a tree.
+    /// The deduction engine: a board, every trick a player can use on it, and the two things the
+    /// game asks of it at runtime — <see cref="TryHint"/> and <see cref="TryQueenBoost"/>.
     ///
-    /// Separate from <c>WeightRater</c> (which only needs the weight): this one trades
-    /// speed for a readable, branch-by-branch record. Pure C#; runs at build time.
+    /// What only the level tools need (the full solve trace with its guess tree, open-cell counts,
+    /// the difficulty probes) lives in SolveTracer.Editor.cs and is compiled into the editor only.
+    /// Pure C#.
     /// </summary>
-    public static class SolveTracer
+    public static partial class SolveTracer
     {
-        public const int MaxDepth = 4;
-
-        public static TraceNode[] Build(int n, int[] region, int[] solution)
-        {
-            var board = new Board(n, region, solution, new List<TraceNode>());
-            board.Run(-1, 0, guided: true);
-            return board.Nodes.ToArray();
-        }
-
         /// <summary>
         /// The single cheapest next deduction from the player's current, mistake-free board — the
         /// same tricks the trace uses, tried cheapest-first, but just one step (no trials, no nodes).
@@ -61,7 +51,7 @@ namespace QueensPuzzle
             return false;
         }
 
-        public class Board
+        public partial class Board
         {
             readonly int n;
             readonly int[] region, sol;
@@ -76,8 +66,6 @@ namespace QueensPuzzle
 
             public int N => n;
             public bool Solved => placed == n;
-
-            public Board(int n, int[] region) : this(n, region, null, null) { }
 
             public Board(int n, int[] region, int[] sol, List<TraceNode> nodes, Func<int, string> regionName = null,
                          string piece = "queen", string pieces = "queens")
@@ -97,77 +85,6 @@ namespace QueensPuzzle
                 b.rowDone = (bool[])rowDone.Clone(); b.colDone = (bool[])colDone.Clone(); b.regDone = (bool[])regDone.Clone();
                 b.placed = placed;
                 return b;
-            }
-
-            int Add(int parent, NodeKind kind, SolveTechnique tech, Outcome outcome, TraceMark[] marks, string note, int cost = 0, bool streak = false)
-            {
-                Nodes.Add(new TraceNode { parent = parent, technique = tech, kind = kind, outcome = outcome, marks = marks, note = note, cost = cost, streak = streak });
-                return Nodes.Count - 1;
-            }
-
-            void SetOutcome(int idx, Outcome o) { var nd = Nodes[idx]; nd.outcome = o; Nodes[idx] = nd; }
-
-            static readonly TraceMark[] NoMarks = new TraceMark[0];
-            static TraceMark[] QueenAt(int idx) => new[] { new TraceMark { cell = idx, mark = CellMark.Queen } };
-            // X-marks for whatever the last rule eliminated (it leaves the cells in _elim).
-            TraceMark[] ElimMarks()
-            {
-                var a = new TraceMark[_elim.Count];
-                for (int i = 0; i < _elim.Count; i++) a[i] = new TraceMark { cell = _elim[i], mark = CellMark.X };
-                return a;
-            }
-
-            // ---- the recursive trace ----
-
-            public Outcome Run(int parent, int depth, bool guided)
-            {
-                int cur = parent;
-                var prevTech = SolveTechnique.None; // last paid trick — a repeat halves the think cost
-                while (true)
-                {
-                    if (HasEmptyUnit()) return Outcome.DeadEnd;
-                    if (placed == n) return Outcome.Solved;
-
-                    int open = OpenCells();
-                    if (NextStep(out var step))
-                    {
-                        bool streak = step.tech == prevTech && TrickWeights.Streakable(step.tech);
-                        if (TrickWeights.Streakable(step.tech)) prevTech = step.tech;
-                        var marks = step.kind == NodeKind.Placement ? QueenAt(step.cells[0]) : XMarks(step.cells);
-                        cur = Add(cur, step.kind, step.tech, Outcome.Continues, marks, step.note,
-                            TrickWeights.StepCost(step.tech, step.k, open, streak), streak);
-                        continue;
-                    }
-
-                    // stuck → trial
-                    if (depth >= MaxDepth)
-                    {
-                        Add(cur, NodeKind.TrialRoot, SolveTechnique.Trial, Outcome.Unresolved,
-                            NoMarks, $"would need a deeper guess (depth limit {MaxDepth})");
-                        return Outcome.Unresolved;
-                    }
-                    var unit = MostConstrainedUnitCells(out string uname);
-                    if (unit == null) return Outcome.DeadEnd;
-                    int trial = Add(cur, NodeKind.TrialRoot, SolveTechnique.Trial, Outcome.Continues,
-                        NoMarks, $"stuck — guess in {uname} ({unit.Count} options)");
-
-                    int rightBranch = -1, rightCell = -1;
-                    foreach (int cell in unit)
-                    {
-                        int branch = Add(trial, NodeKind.TrialBranch, SolveTechnique.Trial, Outcome.Continues,
-                            QueenAt(cell), $"try a queen in {uname}");
-                        if (guided && sol[cell / n] == cell % n) { rightBranch = branch; rightCell = cell; continue; } // the real path continues here
-                        var clone = Clone();
-                        clone.Place(cell / n, cell % n);
-                        Outcome outc = clone.Run(branch, depth + 1, guided: false);
-                        SetOutcome(branch, outc == Outcome.Solved ? Outcome.Continues : outc);
-                    }
-
-                    if (!guided || rightCell < 0) return Outcome.DeadEnd; // an impossible line — every option exhausted
-                    Place(rightCell / n, rightCell % n);
-                    cur = rightBranch;
-                    prevTech = SolveTechnique.None;      // a guess is a context switch — streak broken
-                }
             }
 
             // ---- one shared deduction step: the trace, the weight and the hint all go through here ----
@@ -372,13 +289,6 @@ namespace QueensPuzzle
                     if (placed == n) return false;
                     if (!NextStep(out _)) return false;   // stuck at this depth — don't nest here
                 }
-            }
-
-            TraceMark[] XMarks(int[] cells)
-            {
-                var a = new TraceMark[cells.Length];
-                for (int i = 0; i < cells.Length; i++) a[i] = new TraceMark { cell = cells[i], mark = CellMark.X };
-                return a;
             }
 
             // ---- placement & rules ----
@@ -766,9 +676,6 @@ namespace QueensPuzzle
             List<int> RegCells(int g) { var l = new List<int>(); for (int i = 0; i < cand.Length; i++) if (region[i] == g && C(i)) l.Add(i); return l; }
             List<int> RowCells(int r) { var l = new List<int>(); for (int c = 0; c < n; c++) if (C(r * n + c)) l.Add(r * n + c); return l; }
             List<int> ColCells(int c) { var l = new List<int>(); for (int r = 0; r < n; r++) if (C(r * n + c)) l.Add(r * n + c); return l; }
-            public List<int> RowCands(int r) { var l = new List<int>(); for (int c = 0; c < n; c++) if (C(r * n + c)) l.Add(c); return l; } // columns, not indices
-            public int OpenCells() { int k = 0; for (int i = 0; i < cand.Length; i++) if (C(i)) k++; return k; }
-            public int MostConstrainedRow() { int best = -1, bk = int.MaxValue; for (int r = 0; r < n; r++) { if (rowDone[r]) continue; int k = RowCount(r); if (k > 1 && k < bk) { bk = k; best = r; } } return best; }
 
             // The unfinished unit — row, COLUMN or REGION — with the fewest candidates: the best
             // place to guess (a 3-cell color beats a 4-option row). Null = nothing guessable.
