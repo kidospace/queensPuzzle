@@ -8,8 +8,8 @@ namespace QueensPuzzle
     /// The deduction engine: a board, every trick a player can use on it, and the two things the
     /// game asks of it at runtime — <see cref="TryHint"/> and <see cref="TryQueenBoost"/>.
     ///
-    /// What only the level tools need (the full solve trace with its guess tree, open-cell counts,
-    /// the difficulty probes) lives in SolveTracer.Editor.cs and is compiled into the editor only.
+    /// What only the level tools need (the full solve trace with its guess tree, open-cell counts)
+    /// lives in SolveTracer.Editor.cs and is compiled into the editor only.
     /// Pure C#.
     /// </summary>
     public static partial class SolveTracer

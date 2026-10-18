@@ -198,6 +198,21 @@ namespace qp {
                 return AnchorPct(0);                       // unreachable, but never throw
             }
 
+#if UNITY_EDITOR
+            /// <summary>EDITOR: the solve time that beats `pct`% of winners — SecondsAtPct(50) is the
+            /// median. Linear between anchors, clamped to the slowest/fastest anchor. -1 = no data.</summary>
+            public float SecondsAtPct(float pct) {
+                if (_b == null) return -1f;
+                if (pct <= AnchorPct(0)) return AnchorSec(0);
+                for (int i = 0; i < _anchors - 1; i++) {
+                    int p0 = AnchorPct(i), p1 = AnchorPct(i + 1);
+                    if (pct >= p0 && pct <= p1)
+                        return p1 == p0 ? AnchorSec(i + 1) : Mathf.Lerp(AnchorSec(i), AnchorSec(i + 1), (pct - p0) / (p1 - p0));
+                }
+                return AnchorSec(_anchors - 1);
+            }
+#endif
+
             // Stored as whole-percent bytes, exposed as float for one uniform API
             // (if the server ever ships finer resolution, no call site changes).
             // PURE DATA — display policy (e.g. "show only above 60%") lives in the callers

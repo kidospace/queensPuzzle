@@ -100,57 +100,6 @@ namespace QueensPuzzle
                     prevTech = SolveTechnique.None;      // a guess is a context switch — streak broken
                 }
             }
-
-            // ---- difficulty probes (DifficultyRater) ----
-
-            /// <summary>Applies every pending queen shadow (row/column/region/touch eliminations).</summary>
-            public void ApplyQueenScope() { while (TryQueenElim(out _)) { } }
-
-            /// <summary>
-            /// Is an easy move in sight — a last cell (row, column or region), or a region confined to
-            /// one line / a line that is one colour? Call after <see cref="ApplyQueenScope"/>.
-            /// Does not change the board.
-            /// </summary>
-            public bool HasSimpleMove()
-            {
-                if (RegionSingle() >= 0 || LineSingle(out _, out _) >= 0) return true;
-                return Clone().TryLineToRegion(out _) || Clone().TryRegionToLine(out _);
-            }
-
-            /// <summary>
-            /// How far the board gets using ONLY singles, queen shadows and the tricks in
-            /// <paramref name="mask"/> (bit = 1 &lt;&lt; (int)SolveTechnique). Eliminations only ever remove
-            /// candidates, so the result does not depend on the order the tricks fire in.
-            /// <paramref name="maxSubsetK"/> caps the size of the subset tricks (2 = only two colours/lines).
-            /// Returns { queens placed, open cells left }. Does not change the board.
-            /// </summary>
-            public int[] ProgressUnder(int mask, int maxSubsetK = int.MaxValue)
-            {
-                var b = Clone();
-                bool On(SolveTechnique t) => (mask & (1 << (int)t)) != 0;
-                for (int guard = 0; guard < 5000; guard++)
-                {
-                    if (b.placed == n || b.HasEmptyUnit()) break;
-                    if (b.TryQueenElim(out _)) continue;
-                    int idx = b.RegionSingle(); if (idx >= 0) { b.Place(idx / n, idx % n); continue; }
-                    idx = b.LineSingle(out _, out _); if (idx >= 0) { b.Place(idx / n, idx % n); continue; }
-                    if (On(SolveTechnique.LineToRegion) && b.TryLineToRegion(out _)) continue;
-                    if (On(SolveTechnique.RegionToLine) && b.TryRegionToLine(out _)) continue;
-                    if (On(SolveTechnique.Squeeze) && b.TrySqueeze(out _)) continue;
-                    if (On(SolveTechnique.RegionChoke) && b.TryRegionChoke(out _)) continue;
-                    bool fired = false;
-                    for (int k = 2; k < n && !fired; k++)
-                        fired = (k <= maxSubsetK && On(SolveTechnique.SubsetLineToRegion) && b.TrySubsetLineToRegion(k, out _))
-                             || (k <= maxSubsetK && On(SolveTechnique.SubsetRegionToLine) && b.TrySubsetRegionToLine(k, out _))
-                             || (On(SolveTechnique.Fish) && b.TryFish(k, out _));
-                    if (fired) continue;
-                    if (On(SolveTechnique.LineChoke))
-                        for (int k = 2; k <= 6 && !fired; k++) fired = b.TryLineChoke(k, out _);
-                    if (fired) continue;
-                    break;
-                }
-                return new[] { b.placed, b.OpenCells() };
-            }
         }
     }
 }

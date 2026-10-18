@@ -5,12 +5,12 @@ namespace QueensPuzzle
 {
     /// <summary>
     /// Campaign build window: pick a <see cref="CampaignCurveConfig"/>, a level range, and see
-    /// the target-weight graph the curve produces for that range.
+    /// three lines for that range — the curve's target, the built level's weight, and the real
+    /// median solve time from the winstats blob — in seconds or weight.
     ///
-    /// Performance: targets are computed once per "Show graph" click (never in OnGUI), the
+    /// Performance: the data is computed once per "Show graph" click (never in OnGUI), each
     /// polyline is decimated to two points per pixel column (max/min per column, so peaks and
-    /// breathers both survive) and cached until data or window size changes, and all drawing
-    /// is immediate-mode GL — no per-frame allocations.
+    /// breathers both survive) and cached until data, visibility or window size changes.
     /// </summary>
     public class CampaignBuilderWindow : EditorWindow
     {
@@ -38,17 +38,38 @@ namespace QueensPuzzle
         (int, int, int, Object) offTolKey;          // (from, to, setIdx, config) the count was made for
         int threadCount = Mathf.Max(1, System.Environment.ProcessorCount - 1);
 
-        // graph data, rebuilt only on Show graph
-        int[] weights;
-        byte[] roles;
-        int dataFrom, maxW;
+        // graph data, rebuilt only on Show graph: three lines over the level range, all in one unit.
+        // NaN = no value for that level (missing asset, no curve, no real data) → a gap in the line.
+        const int SeriesCount = 3;
+        const int STarget = 0, SWeight = 1, SReal = 2;
+        static readonly string[] SeriesNames = { "Target", "Weight", "Real" };
+        static readonly string[] SeriesTips =
+        {
+            "What the curve asks for this level (its target weight).",
+            "The built level's weight (WeightRater, stored on the asset).",
+            "Measured: the median solve time of the players who won it, from Resources/winstats.bytes " +
+            "(all players). Gap = no record for this board.",
+        };
 
-        // screen-space cache, rebuilt when data or rect changes
-        Vector3[] line;
+        // Weight ↔ seconds, TODAY's average relation: seconds = 12.321 × weight^0.439, fitted on
+        // 1,315 campaign levels (built weight vs experienced players' measured time, level 101+).
+        // Only so the lines can share an axis — it flattens the extremes the weight gets wrong.
+        static float SecondsForWeight(float weight) => weight <= 0f ? 0f : 12.321f * Mathf.Pow(weight, 0.439f);
+        static float WeightForSeconds(float seconds) => seconds <= 0f ? 0f : Mathf.Pow(seconds / 12.321f, 1f / 0.439f);
+        float[][] series;
+        int[] seriesPoints;   // levels with a value, per line — shown in the legend
+        byte[] roles;
+        int dataFrom;
+        float maxV;
+        [SerializeField] bool graphSeconds = true;   // plot in seconds (on) or weight (off)
+        [SerializeField] bool[] showSeries = { true, true, true };
+        bool graphIsSeconds;                          // the unit of the data on screen
+
+        // screen-space cache, rebuilt when data, visibility or rect changes
+        Vector3[][][] lines;   // per series: contiguous runs (NaN breaks a run)
         Vector3[] milestones;
         Rect cachedRect;
 
-        static Material lineMat;
 
         [MenuItem("QueensPuzzle/Campaign Builder")]
         static void Open() => GetWindow<CampaignBuilderWindow>("Campaign Builder");
@@ -163,21 +184,33 @@ namespace QueensPuzzle
             if (!graphFoldout) return;
 
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(config == null))   // targets need a curve
-                if (GUILayout.Button("Show graph (targets)"))
-                {
-                    BuildData();
-                    GUIUtility.ExitGUI();   // layout pass didn't include the graph rect yet
-                }
-            // built levels are read off the assets — no curve needed
-            if (GUILayout.Button("Show graph (built levels)"))
+            graphSeconds = EditorGUILayout.ToggleLeft(new GUIContent("Seconds",
+                "Plot every line in seconds (on) or in weight (off). Weight ↔ seconds uses today's average " +
+                "relation (SecondsForWeight / WeightForSeconds in this window). Read-only — generation still uses weight."),
+                graphSeconds, GUILayout.Width(70));
+            if (GUILayout.Button("Show graph"))
             {
-                BuildDataFromLevels();
-                GUIUtility.ExitGUI();
+                BuildGraph();
+                GUIUtility.ExitGUI();   // layout pass didn't include the graph rect yet
             }
             EditorGUILayout.EndHorizontal();
 
-            if (weights == null) return;
+            if (series == null) return;
+            if (seriesPoints[STarget] == 0)
+                EditorGUILayout.HelpBox(config == null
+                    ? "No curve selected — pick a CampaignCurveConfig at the top to see the Target line, then Show graph again."
+                    : "The Target line has no points for this range.", MessageType.Warning);
+            EditorGUILayout.BeginHorizontal();   // legend = per-line show/hide (drawing only)
+            for (int s = 0; s < SeriesCount; s++)
+            {
+                var r = GUILayoutUtility.GetRect(12, 12, GUILayout.Width(12));
+                r.y += 3; r.height = 10; r.width = 10;
+                EditorGUI.DrawRect(r, SeriesColor(s));
+                string name = $"{SeriesNames[s]} ({seriesPoints[s]})";
+                bool on = EditorGUILayout.ToggleLeft(new GUIContent(name, SeriesTips[s]), showSeries[s], GUILayout.Width(name.Length * 7 + 24));
+                if (on != showSeries[s]) { showSeries[s] = on; lines = null; }
+            }
+            EditorGUILayout.EndHorizontal();
             var rect = GUILayoutUtility.GetRect(120f, 8000f, 120f, 8000f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             DrawGraph(rect);
         }
@@ -756,48 +789,78 @@ namespace QueensPuzzle
             }
         }
 
-        // Graph the actual weights of the built level assets in the output folder.
-        // Missing levels show as 0 (gaps on the floor).
-        void BuildDataFromLevels()
+        // All four lines for the range, in one unit. Weight ↔ seconds goes through today's average
+        // relation, so the lines can share an axis whichever unit is picked.
+        void BuildGraph()
         {
             from = Mathf.Max(1, from);
             to = Mathf.Clamp(to, from, from + MaxRange - 1);
             int n = to - from + 1;
-            weights = new int[n];
-            roles = new byte[n];
             dataFrom = from;
-            maxW = config != null ? Mathf.Max(1, config.weightCap) : 1;
+            graphIsSeconds = graphSeconds;
+            if (showSeries == null || showSeries.Length != SeriesCount)   // saved by an older window with fewer lines
+            {
+                var keep = showSeries;
+                showSeries = new bool[SeriesCount];
+                for (int s = 0; s < SeriesCount; s++) showSeries[s] = keep == null || s >= keep.Length || keep[s];
+            }
+            series = new float[SeriesCount][];
+            for (int s = 0; s < SeriesCount; s++) series[s] = new float[n];
+            roles = new byte[n];
+            float FromWeight(float w) => graphIsSeconds ? SecondsForWeight(w) : w;
+            float FromSeconds(float sec) => graphIsSeconds ? sec : WeightForSeconds(sec);
+
             for (int i = 0; i < n; i++)
             {
-                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
-                weights[i] = lvl != null ? lvl.weight : 0;
-                roles[i] = (byte)(config != null && config.milestoneEvery > 0 && (from + i) % config.milestoneEvery == 0
-                    ? CampaignCurveConfig.Role.Milestone : CampaignCurveConfig.Role.Normal);
-                if (weights[i] > maxW) maxW = weights[i];
+                int level = from + i;
+                if (i % 200 == 0 && n > 400 && EditorUtility.DisplayCancelableProgressBar("Graph", $"Level {level}", i / (float)n))
+                {   // cancelled: the rest of the range shows as gaps
+                    for (int j = i; j < n; j++) for (int s = 0; s < SeriesCount; s++) series[s][j] = float.NaN;
+                    break;
+                }
+
+                if (config != null)
+                {
+                    var t = config.GetTarget(level);
+                    series[STarget][i] = FromWeight(t.targetWeight);
+                    roles[i] = (byte)t.role;
+                }
+                else series[STarget][i] = float.NaN;
+
+                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
+                if (lvl == null)
+                {
+                    series[SWeight][i] = series[SReal][i] = float.NaN;
+                    continue;
+                }
+                series[SWeight][i] = FromWeight(lvl.weight);
+                var stats = qp.WinStats.For(lvl.ContentHash(), 0);
+                float real = stats.Found && !stats.IsGlobal ? stats.SecondsAtPct(50f) : -1f;
+                series[SReal][i] = real > 0f ? FromSeconds(real) : float.NaN;
             }
-            line = null;
+            EditorUtility.ClearProgressBar();
+
+            maxV = 1f;
+            seriesPoints = new int[SeriesCount];
+            for (int s = 0; s < SeriesCount; s++)
+                foreach (float x in series[s])
+                    if (!float.IsNaN(x)) { seriesPoints[s]++; if (x > maxV) maxV = x; }
+            lines = null;   // invalidate screen cache
             Repaint();
         }
 
-        void BuildData()
+        static Color SeriesColor(int s)
         {
-            from = Mathf.Max(1, from);
-            to = Mathf.Clamp(to, from, from + MaxRange - 1);
-            int n = to - from + 1;
-            weights = new int[n];
-            roles = new byte[n];
-            dataFrom = from;
-            maxW = Mathf.Max(1, config.weightCap);
-            for (int i = 0; i < n; i++)
+            bool pro = EditorGUIUtility.isProSkin;
+            switch (s)
             {
-                var t = config.GetTarget(from + i);
-                weights[i] = t.targetWeight;
-                roles[i] = (byte)t.role;
-                if (t.targetWeight > maxW) maxW = t.targetWeight;
+                case STarget: return pro ? new Color(0.22f, 0.53f, 0.90f) : new Color(0.16f, 0.47f, 0.84f);   // blue
+                case SWeight: return pro ? new Color(0.95f, 0.62f, 0.20f) : new Color(0.88f, 0.52f, 0.10f);   // orange
+                default:      return pro ? new Color(0.35f, 0.80f, 0.45f) : new Color(0.15f, 0.62f, 0.28f);   // green
             }
-            line = null;   // invalidate screen cache
-            Repaint();
         }
+
+        string FormatValue(float v) => float.IsNaN(v) ? "—" : graphIsSeconds ? MinSec(Mathf.RoundToInt(v)) : Mathf.RoundToInt(v).ToString();
 
         void DrawGraph(Rect r)
         {
@@ -808,12 +871,11 @@ namespace QueensPuzzle
             var e = Event.current;
             if (e.type == EventType.MouseMove && plot.Contains(e.mousePosition)) Repaint();
             if (e.type != EventType.Repaint) return;
-            if (line == null || r != cachedRect) RebuildScreenCache(plot, r);
+            if (lines == null || r != cachedRect) RebuildScreenCache(plot, r);
 
             bool pro = EditorGUIUtility.isProSkin;
             var ink = pro ? new Color(0.75f, 0.75f, 0.73f) : new Color(0.33f, 0.33f, 0.31f);
             var grid = pro ? new Color(1f, 1f, 1f, 0.07f) : new Color(0f, 0f, 0f, 0.08f);
-            var blue = pro ? new Color(0.22f, 0.53f, 0.90f) : new Color(0.16f, 0.47f, 0.84f);
             var red = pro ? new Color(0.90f, 0.40f, 0.40f) : new Color(0.82f, 0.23f, 0.23f);
 
             EditorGUI.DrawRect(plot, pro ? new Color(0, 0, 0, 0.18f) : new Color(1, 1, 1, 0.5f));
@@ -821,53 +883,45 @@ namespace QueensPuzzle
             // gridlines + labels (GUI, repaint-safe)
             var label = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleRight };
             label.normal.textColor = ink;
-            int step = NiceStep(maxW, 5);
-            for (int v = 0; v <= maxW; v += step)
+            int step = NiceStep(Mathf.CeilToInt(maxV), 5);
+            for (int v = 0; v <= maxV; v += step)
             {
-                float y = plot.yMax - v / (float)maxW * plot.height;
+                float y = plot.yMax - v / maxV * plot.height;
                 EditorGUI.DrawRect(new Rect(plot.xMin, y, plot.width, 1f), grid);
-                GUI.Label(new Rect(r.x, y - 8, padL - 6, 16), v.ToString(), label);
+                GUI.Label(new Rect(r.x, y - 8, padL - 6, 16), graphIsSeconds ? MinSec(v) : v.ToString(), label);
             }
 
             // cap line (weightCap = difficulty 1.0) — only meaningful with a curve loaded
             if (config != null)
             {
-                float capY = plot.yMax - config.weightCap / (float)maxW * plot.height;
+                float cap = graphIsSeconds ? SecondsForWeight(config.weightCap) : config.weightCap;
+                float capY = plot.yMax - cap / maxV * plot.height;
                 EditorGUI.DrawRect(new Rect(plot.xMin, capY, plot.width, 1f), new Color(red.r, red.g, red.b, 0.55f));
             }
 
-            // curve + milestone dots via GL
-            if (!lineMat)
-                lineMat = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
-            GUI.BeginClip(new Rect(0, 0, position.width, position.height));
-            lineMat.SetPass(0);
-            GL.PushMatrix();
+            // lines (Handles take their colour directly — no GL vertex-colour state) + milestone dots
+            // the target goes on top: built levels sit within ±10% of it, so the old-weight line
+            // would otherwise cover it almost everywhere
+            foreach (int s in new[] { SWeight, SReal, STarget })
+            {
+                if (!showSeries[s] || lines[s] == null) continue;
+                Handles.color = SeriesColor(s);
+                foreach (var run in lines[s])
+                    if (run.Length > 1) Handles.DrawAAPolyLine(s == STarget ? 3f : 2f, run);
+            }
+            Handles.color = Color.white;
 
-            GL.Begin(GL.LINE_STRIP);
-            GL.Color(blue);
-            for (int i = 0; i < line.Length; i++) GL.Vertex(line[i]);
-            GL.End();
-
-            GL.Begin(GL.QUADS);
-            GL.Color(red);
-            const float s = 3.5f;
+            const float sz = 3.5f;
             for (int i = 0; i < milestones.Length; i++)
             {
                 var p = milestones[i];
-                GL.Vertex3(p.x - s, p.y - s, 0);
-                GL.Vertex3(p.x + s, p.y - s, 0);
-                GL.Vertex3(p.x + s, p.y + s, 0);
-                GL.Vertex3(p.x - s, p.y + s, 0);
+                EditorGUI.DrawRect(new Rect(p.x - sz, p.y - sz, 2 * sz, 2 * sz), red);
             }
-            GL.End();
-
-            GL.PopMatrix();
-            GUI.EndClip();
 
             // x labels
             var xlab = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperCenter };
             xlab.normal.textColor = ink;
-            int count = weights.Length;
+            int count = series[0].Length;
             int ticks = Mathf.Min(6, count);
             for (int i = 0; i < ticks; i++)
             {
@@ -876,27 +930,31 @@ namespace QueensPuzzle
                 GUI.Label(new Rect(x - 24, plot.yMax + 2, 48, 16), lvl.ToString(), xlab);
             }
 
-            DrawGraphHover(plot, ink, blue, red);
+            DrawGraphHover(plot, ink, red);
         }
 
-        void DrawGraphHover(Rect plot, Color ink, Color blue, Color red)
+        void DrawGraphHover(Rect plot, Color ink, Color red)
         {
-            if (weights == null || weights.Length == 0 || !plot.Contains(Event.current.mousePosition)) return;
+            if (series == null || series[0].Length == 0 || !plot.Contains(Event.current.mousePosition)) return;
 
-            int n = weights.Length;
+            int n = series[0].Length;
             int i = Mathf.Clamp(Mathf.RoundToInt((Event.current.mousePosition.x - plot.xMin) / Mathf.Max(1f, plot.width) * Mathf.Max(1, n - 1)), 0, n - 1);
             int level = dataFrom + i;
-            int weight = weights[i];
-            var p = ToScreen(plot, i, n, weight);
             bool milestone = roles != null && i < roles.Length && roles[i] == (byte)CampaignCurveConfig.Role.Milestone;
 
-            var marker = milestone ? red : blue;
-            EditorGUI.DrawRect(new Rect(p.x - 1f, plot.yMin, 2f, plot.height), new Color(marker.r, marker.g, marker.b, 0.28f));
-            EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), marker);
+            float x = plot.xMin + i / (float)Mathf.Max(1, n - 1) * plot.width;
+            EditorGUI.DrawRect(new Rect(x - 1f, plot.yMin, 2f, plot.height), new Color(ink.r, ink.g, ink.b, 0.25f));
+            var text = new System.Text.StringBuilder($"Level {level}{(milestone ? "  |  milestone" : "")}");
+            for (int s = 0; s < SeriesCount; s++)
+            {
+                if (!showSeries[s]) continue;
+                float v = series[s][i];
+                text.Append($"\n{SeriesNames[s]}: {FormatValue(v)}");
+                if (float.IsNaN(v)) continue;
+                var p = ToScreen(plot, i, n, v);
+                EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), SeriesColor(s));
+            }
 
-            string text = milestone
-                ? $"Level {level}  |  weight {weight}  |  milestone"
-                : $"Level {level}  |  weight {weight}";
             var style = new GUIStyle(EditorStyles.helpBox)
             {
                 alignment = TextAnchor.MiddleLeft,
@@ -905,55 +963,58 @@ namespace QueensPuzzle
             };
             style.normal.textColor = ink;
 
-            Vector2 size = style.CalcSize(new GUIContent(text));
+            var content = new GUIContent(text.ToString());
+            Vector2 size = style.CalcSize(content);
             var box = new Rect(Event.current.mousePosition.x + 12f, Event.current.mousePosition.y - size.y - 10f, size.x + 10f, size.y + 6f);
             if (box.xMax > plot.xMax) box.x = Event.current.mousePosition.x - box.width - 12f;
             if (box.yMin < plot.yMin) box.y = Event.current.mousePosition.y + 12f;
-            GUI.Label(box, text, style);
+            GUI.Label(box, content, style);
         }
-        // Two points per pixel column (max then min) — spikes and breathers both survive
-        // decimation, and the polyline stays ≤ 2 * plot.width points no matter the range.
+
+        // Per series: two points per pixel column (max then min) so spikes and breathers both
+        // survive decimation; a level with no value (NaN) ends the current run of the line.
         void RebuildScreenCache(Rect plot, Rect full)
         {
             cachedRect = full;
-            int n = weights.Length;
+            int n = series[0].Length;
             int cols = Mathf.Max(1, (int)plot.width);
-            var pts = new System.Collections.Generic.List<Vector3>(Mathf.Min(n, cols) * 2);
-            var miles = new System.Collections.Generic.List<Vector3>();
-
-            if (n <= cols)
+            lines = new Vector3[SeriesCount][][];
+            for (int s = 0; s < SeriesCount; s++)
             {
-                for (int i = 0; i < n; i++)
-                    pts.Add(ToScreen(plot, i, n, weights[i]));
-            }
-            else
-            {
-                for (int c = 0; c < cols; c++)
+                if (!showSeries[s]) continue;
+                var v = series[s];
+                var runs = new System.Collections.Generic.List<Vector3[]>();
+                var run = new System.Collections.Generic.List<Vector3>();
+                void Flush() { if (run.Count > 0) { runs.Add(run.ToArray()); run.Clear(); } }
+                int colsUsed = Mathf.Min(n, cols);
+                for (int c = 0; c < colsUsed; c++)
                 {
-                    int i0 = (int)(c * (long)n / cols), i1 = (int)((c + 1) * (long)n / cols);
-                    if (i1 <= i0) i1 = i0 + 1;
-                    int lo = int.MaxValue, hi = int.MinValue;
-                    for (int i = i0; i < i1; i++)
-                    {
-                        if (weights[i] < lo) lo = weights[i];
-                        if (weights[i] > hi) hi = weights[i];
-                    }
-                    pts.Add(ToScreen(plot, i0, n, hi));
-                    if (lo != hi) pts.Add(ToScreen(plot, i0, n, lo));
+                    int i0 = n <= cols ? c : (int)(c * (long)n / cols);
+                    int i1 = n <= cols ? c + 1 : Mathf.Max(i0 + 1, (int)((c + 1) * (long)n / cols));
+                    float lo = float.MaxValue, hi = float.MinValue;
+                    for (int i = i0; i < i1; i++) { if (float.IsNaN(v[i])) continue; if (v[i] < lo) lo = v[i]; if (v[i] > hi) hi = v[i]; }
+                    if (hi == float.MinValue) { Flush(); continue; }
+                    run.Add(ToScreen(plot, i0, n, hi));
+                    if (lo != hi) run.Add(ToScreen(plot, i0, n, lo));
                 }
+                Flush();
+                lines[s] = runs.ToArray();
             }
-            for (int i = 0; i < n; i++)
-                if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone)
-                    miles.Add(ToScreen(plot, i, n, weights[i]));
 
-            line = pts.ToArray();
+            var miles = new System.Collections.Generic.List<Vector3>();
+            int ms = !float.IsNaN(series[STarget][0]) ? STarget : SWeight;   // dots ride the target line, else the weight
+            for (int i = 0; i < n; i++)
+                if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone && !float.IsNaN(series[ms][i]))
+                    miles.Add(ToScreen(plot, i, n, series[ms][i]));
             milestones = miles.ToArray();
         }
 
-        Vector3 ToScreen(Rect plot, int i, int n, int w) => new Vector3(
+        Vector3 ToScreen(Rect plot, int i, int n, float v) => new Vector3(
             plot.xMin + i / (float)Mathf.Max(1, n - 1) * plot.width,
-            plot.yMax - w / (float)maxW * plot.height,
+            plot.yMax - v / maxV * plot.height,
             0f);
+
+        static string MinSec(int seconds) => $"{seconds / 60}:{seconds % 60:00}";
 
         static int NiceStep(int max, int ticks)
         {
