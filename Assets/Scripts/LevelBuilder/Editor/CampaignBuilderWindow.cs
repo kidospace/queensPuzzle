@@ -5,7 +5,7 @@ namespace QueensPuzzle
 {
     /// <summary>
     /// Campaign build window: pick a <see cref="CampaignCurveConfig"/>, a level range, and see
-    /// the target-weight graph the curve produces for that range.
+    /// the curve's target weights and the built levels' weights for that range on one graph.
     ///
     /// Performance: targets are computed once per "Show graph" click (never in OnGUI), the
     /// polyline is decimated to two points per pixel column (max/min per column, so peaks and
@@ -38,15 +38,18 @@ namespace QueensPuzzle
         (int, int, int, Object) offTolKey;          // (from, to, setIdx, config) the count was made for
         int threadCount = Mathf.Max(1, System.Environment.ProcessorCount - 1);
 
-        // graph data, rebuilt only on Show graph
-        int[] weights;
+        // graph data, rebuilt only on Show graph: the curve's targets and the built levels, drawn
+        // together on one plot; each line has a checkbox. null = that line has no data (no curve).
+        int[] targets, built;
         byte[] roles;
         int dataFrom, maxW;
+        [SerializeField] bool showTargets = true, showBuilt = true;
 
-        // screen-space cache, rebuilt when data or rect changes
-        Vector3[] line;
+        // screen-space cache, rebuilt when data, checkboxes or rect changes
+        Vector3[] targetLine, builtLine;
         Vector3[] milestones;
         Rect cachedRect;
+        bool cacheStale = true;
 
         static Material lineMat;
 
@@ -163,21 +166,18 @@ namespace QueensPuzzle
             if (!graphFoldout) return;
 
             EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(config == null))   // targets need a curve
-                if (GUILayout.Button("Show graph (targets)"))
-                {
-                    BuildData();
-                    GUIUtility.ExitGUI();   // layout pass didn't include the graph rect yet
-                }
-            // built levels are read off the assets — no curve needed
-            if (GUILayout.Button("Show graph (built levels)"))
+            if (GUILayout.Button("Show graph"))
             {
-                BuildDataFromLevels();
-                GUIUtility.ExitGUI();
+                BuildData();
+                GUIUtility.ExitGUI();   // layout pass didn't include the graph rect yet
             }
+            // which lines to draw — no rebuild needed, the data has both
+            bool st = EditorGUILayout.ToggleLeft("Targets", showTargets, GUILayout.Width(70));
+            bool sb = EditorGUILayout.ToggleLeft("Built levels", showBuilt, GUILayout.Width(90));
+            if (st != showTargets || sb != showBuilt) { showTargets = st; showBuilt = sb; cacheStale = true; }
             EditorGUILayout.EndHorizontal();
 
-            if (weights == null) return;
+            if (built == null) return;
             var rect = GUILayoutUtility.GetRect(120f, 8000f, 120f, 8000f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             DrawGraph(rect);
         }
@@ -756,46 +756,32 @@ namespace QueensPuzzle
             }
         }
 
-        // Graph the actual weights of the built level assets in the output folder.
-        // Missing levels show as 0 (gaps on the floor).
-        void BuildDataFromLevels()
-        {
-            from = Mathf.Max(1, from);
-            to = Mathf.Clamp(to, from, from + MaxRange - 1);
-            int n = to - from + 1;
-            weights = new int[n];
-            roles = new byte[n];
-            dataFrom = from;
-            maxW = config != null ? Mathf.Max(1, config.weightCap) : 1;
-            for (int i = 0; i < n; i++)
-            {
-                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
-                weights[i] = lvl != null ? lvl.weight : 0;
-                roles[i] = (byte)(config != null && config.milestoneEvery > 0 && (from + i) % config.milestoneEvery == 0
-                    ? CampaignCurveConfig.Role.Milestone : CampaignCurveConfig.Role.Normal);
-                if (weights[i] > maxW) maxW = weights[i];
-            }
-            line = null;
-            Repaint();
-        }
-
+        // Both lines in one pass: the curve's target weight (needs a curve) and the weight of the built
+        // level asset in the output folder. Missing levels show as 0 (gaps on the floor).
         void BuildData()
         {
             from = Mathf.Max(1, from);
             to = Mathf.Clamp(to, from, from + MaxRange - 1);
             int n = to - from + 1;
-            weights = new int[n];
+            targets = config != null ? new int[n] : null;
+            built = new int[n];
             roles = new byte[n];
             dataFrom = from;
-            maxW = Mathf.Max(1, config.weightCap);
+            maxW = config != null ? Mathf.Max(1, config.weightCap) : 1;
             for (int i = 0; i < n; i++)
             {
-                var t = config.GetTarget(from + i);
-                weights[i] = t.targetWeight;
-                roles[i] = (byte)t.role;
-                if (t.targetWeight > maxW) maxW = t.targetWeight;
+                if (config != null)
+                {
+                    var t = config.GetTarget(from + i);
+                    targets[i] = t.targetWeight;
+                    roles[i] = (byte)t.role;
+                    if (t.targetWeight > maxW) maxW = t.targetWeight;
+                }
+                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
+                built[i] = lvl != null ? lvl.weight : 0;
+                if (built[i] > maxW) maxW = built[i];
             }
-            line = null;   // invalidate screen cache
+            cacheStale = true;   // invalidate screen cache
             Repaint();
         }
 
@@ -808,12 +794,13 @@ namespace QueensPuzzle
             var e = Event.current;
             if (e.type == EventType.MouseMove && plot.Contains(e.mousePosition)) Repaint();
             if (e.type != EventType.Repaint) return;
-            if (line == null || r != cachedRect) RebuildScreenCache(plot, r);
+            if (cacheStale || r != cachedRect) RebuildScreenCache(plot, r);
 
             bool pro = EditorGUIUtility.isProSkin;
             var ink = pro ? new Color(0.75f, 0.75f, 0.73f) : new Color(0.33f, 0.33f, 0.31f);
             var grid = pro ? new Color(1f, 1f, 1f, 0.07f) : new Color(0f, 0f, 0f, 0.08f);
             var blue = pro ? new Color(0.22f, 0.53f, 0.90f) : new Color(0.16f, 0.47f, 0.84f);
+            var orange = pro ? new Color(0.95f, 0.62f, 0.20f) : new Color(0.88f, 0.52f, 0.10f);
             var red = pro ? new Color(0.90f, 0.40f, 0.40f) : new Color(0.82f, 0.23f, 0.23f);
 
             EditorGUI.DrawRect(plot, pro ? new Color(0, 0, 0, 0.18f) : new Color(1, 1, 1, 0.5f));
@@ -836,17 +823,23 @@ namespace QueensPuzzle
                 EditorGUI.DrawRect(new Rect(plot.xMin, capY, plot.width, 1f), new Color(red.r, red.g, red.b, 0.55f));
             }
 
-            // curve + milestone dots via GL
+            // lines + milestone dots via GL — built first, so the target line sits on top
             if (!lineMat)
                 lineMat = new Material(Shader.Find("Hidden/Internal-Colored")) { hideFlags = HideFlags.HideAndDontSave };
             GUI.BeginClip(new Rect(0, 0, position.width, position.height));
             lineMat.SetPass(0);
             GL.PushMatrix();
 
-            GL.Begin(GL.LINE_STRIP);
-            GL.Color(blue);
-            for (int i = 0; i < line.Length; i++) GL.Vertex(line[i]);
-            GL.End();
+            void Strip(Vector3[] pts, Color c)
+            {
+                if (pts == null) return;
+                GL.Begin(GL.LINE_STRIP);
+                GL.Color(c);   // after Begin — GL resets the colour on every Begin
+                for (int i = 0; i < pts.Length; i++) GL.Vertex(pts[i]);
+                GL.End();
+            }
+            Strip(builtLine, orange);
+            Strip(targetLine, blue);
 
             GL.Begin(GL.QUADS);
             GL.Color(red);
@@ -867,7 +860,7 @@ namespace QueensPuzzle
             // x labels
             var xlab = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperCenter };
             xlab.normal.textColor = ink;
-            int count = weights.Length;
+            int count = built.Length;
             int ticks = Mathf.Min(6, count);
             for (int i = 0; i < ticks; i++)
             {
@@ -876,27 +869,29 @@ namespace QueensPuzzle
                 GUI.Label(new Rect(x - 24, plot.yMax + 2, 48, 16), lvl.ToString(), xlab);
             }
 
-            DrawGraphHover(plot, ink, blue, red);
+            DrawGraphHover(plot, ink, blue, orange, red);
         }
 
-        void DrawGraphHover(Rect plot, Color ink, Color blue, Color red)
+        void DrawGraphHover(Rect plot, Color ink, Color blue, Color orange, Color red)
         {
-            if (weights == null || weights.Length == 0 || !plot.Contains(Event.current.mousePosition)) return;
+            if (built == null || built.Length == 0 || !plot.Contains(Event.current.mousePosition)) return;
 
-            int n = weights.Length;
+            int n = built.Length;
             int i = Mathf.Clamp(Mathf.RoundToInt((Event.current.mousePosition.x - plot.xMin) / Mathf.Max(1f, plot.width) * Mathf.Max(1, n - 1)), 0, n - 1);
             int level = dataFrom + i;
-            int weight = weights[i];
-            var p = ToScreen(plot, i, n, weight);
             bool milestone = roles != null && i < roles.Length && roles[i] == (byte)CampaignCurveConfig.Role.Milestone;
+            bool hasTarget = targets != null && showTargets;
 
+            float x = plot.xMin + i / (float)Mathf.Max(1, n - 1) * plot.width;
             var marker = milestone ? red : blue;
-            EditorGUI.DrawRect(new Rect(p.x - 1f, plot.yMin, 2f, plot.height), new Color(marker.r, marker.g, marker.b, 0.28f));
-            EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), marker);
+            EditorGUI.DrawRect(new Rect(x - 1f, plot.yMin, 2f, plot.height), new Color(marker.r, marker.g, marker.b, 0.28f));
+            if (showBuilt) { var p = ToScreen(plot, i, n, built[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), orange); }
+            if (hasTarget) { var p = ToScreen(plot, i, n, targets[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), milestone ? red : blue); }
 
-            string text = milestone
-                ? $"Level {level}  |  weight {weight}  |  milestone"
-                : $"Level {level}  |  weight {weight}";
+            string text = $"Level {level}"
+                + (hasTarget ? $"  |  target {targets[i]}" : "")
+                + (showBuilt ? $"  |  built {built[i]}" : "")
+                + (milestone ? "  |  milestone" : "");
             var style = new GUIStyle(EditorStyles.helpBox)
             {
                 alignment = TextAnchor.MiddleLeft,
@@ -911,20 +906,35 @@ namespace QueensPuzzle
             if (box.yMin < plot.yMin) box.y = Event.current.mousePosition.y + 12f;
             GUI.Label(box, text, style);
         }
-        // Two points per pixel column (max then min) — spikes and breathers both survive
-        // decimation, and the polyline stays ≤ 2 * plot.width points no matter the range.
+
         void RebuildScreenCache(Rect plot, Rect full)
         {
             cachedRect = full;
-            int n = weights.Length;
+            cacheStale = false;
+            targetLine = showTargets && targets != null ? Polyline(plot, targets) : null;
+            builtLine = showBuilt ? Polyline(plot, built) : null;
+
+            // milestone dots ride the target line, or the built line when targets are hidden
+            var on = showTargets && targets != null ? targets : showBuilt ? built : null;
+            var miles = new System.Collections.Generic.List<Vector3>();
+            if (on != null)
+                for (int i = 0; i < on.Length; i++)
+                    if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone)
+                        miles.Add(ToScreen(plot, i, on.Length, on[i]));
+            milestones = miles.ToArray();
+        }
+
+        // Two points per pixel column (max then min) — spikes and breathers both survive
+        // decimation, and the polyline stays ≤ 2 * plot.width points no matter the range.
+        Vector3[] Polyline(Rect plot, int[] values)
+        {
+            int n = values.Length;
             int cols = Mathf.Max(1, (int)plot.width);
             var pts = new System.Collections.Generic.List<Vector3>(Mathf.Min(n, cols) * 2);
-            var miles = new System.Collections.Generic.List<Vector3>();
-
             if (n <= cols)
             {
                 for (int i = 0; i < n; i++)
-                    pts.Add(ToScreen(plot, i, n, weights[i]));
+                    pts.Add(ToScreen(plot, i, n, values[i]));
             }
             else
             {
@@ -935,19 +945,14 @@ namespace QueensPuzzle
                     int lo = int.MaxValue, hi = int.MinValue;
                     for (int i = i0; i < i1; i++)
                     {
-                        if (weights[i] < lo) lo = weights[i];
-                        if (weights[i] > hi) hi = weights[i];
+                        if (values[i] < lo) lo = values[i];
+                        if (values[i] > hi) hi = values[i];
                     }
                     pts.Add(ToScreen(plot, i0, n, hi));
                     if (lo != hi) pts.Add(ToScreen(plot, i0, n, lo));
                 }
             }
-            for (int i = 0; i < n; i++)
-                if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone)
-                    miles.Add(ToScreen(plot, i, n, weights[i]));
-
-            line = pts.ToArray();
-            milestones = miles.ToArray();
+            return pts.ToArray();
         }
 
         Vector3 ToScreen(Rect plot, int i, int n, int w) => new Vector3(
