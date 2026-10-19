@@ -146,14 +146,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3288012367421474584}
-  - component: {fileID: 8567784314353154032}
+  - component: {fileID: 6456656671624184916}
   m_Layer: 0
   m_Name: $Info
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3288012367421474584
 RectTransform:
   m_ObjectHideFlags: 0
@@ -174,7 +174,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!114 &8567784314353154032
+--- !u!114 &6456656671624184916
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -183,17 +183,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 1077539295818169440}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5e35f090964941909224bf0327e8606e, type: 3}
+  m_Script: {fileID: 11500000, guid: 32ac9bddd2a760e44b9a00ea7ca771f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   RT: {fileID: 3288012367421474584}
   Listeners:
   - {fileID: 1326233046399101151}
   ListneresMethod: 0
-  TopNormal: 0.11968501
-  BottomNormal: 0.119685
-  LeftNormal: 0.044880003
-  RightNormal: 0.044880003
+  _minRatioSize:
+    screenRatio: 0.45
+    TopNormal: 0
+    BottomNormal: 0
+    LeftNormal: 0
+    RightNormal: 0
+  _maxRatioSize:
+    screenRatio: 0.75
+    TopNormal: 0.022485
+    BottomNormal: 0.022485
+    LeftNormal: 0
+    RightNormal: -0
 --- !u!1 &1094682341446195362
 GameObject:
   m_ObjectHideFlags: 0
@@ -378,10 +386,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: d95702b6225093144be17e1d555fc49a, type: 3}
-  m_Type: 0
+  m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
-  m_FillMethod: 4
+  m_FillMethod: 0
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
@@ -997,7 +1005,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4291677559
+    rgba: 13487479
   m_fontColor: {r: 0.4666667, g: 0.80392164, b: 0.80392164, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -1199,7 +1207,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4292279291
+    rgba: 1540815867
   m_fontColor: {r: 0.9843138, g: 0.9843138, b: 0.83921576, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -2081,7 +2089,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 2059.4001}
+  m_AnchoredPosition: {x: 0, y: 2059.3928}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &3080089138243138957
@@ -2916,10 +2924,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: d95702b6225093144be17e1d555fc49a, type: 3}
-  m_Type: 0
+  m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
-  m_FillMethod: 4
+  m_FillMethod: 0
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
@@ -3115,7 +3123,7 @@ MonoBehaviour:
   RT: {fileID: 2177466141629501736}
   Listeners:
   - {fileID: 5806561822617218706}
-  - {fileID: 8567784314353154032}
+  - {fileID: 6456656671624184916}
   ListneresMethod: 0
   IgnoreLeftSide: 0
   IgnoreRightSide: 0
@@ -3436,10 +3444,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: d95702b6225093144be17e1d555fc49a, type: 3}
-  m_Type: 0
+  m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
-  m_FillMethod: 4
+  m_FillMethod: 0
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
