@@ -209,8 +209,7 @@ namespace qp {
                     if (OpenHint()) {
                         _reactions.OnBoost(Time.unscaledTime);
                         CommonSFX.Play(GPSFX.Instance.Hint);
-                        AppData.LastPlayData.hintsUsed++;
-                        AppData.LastPlayData.Save();
+                        CountUp(ref AppData.LastPlayData.hintsUsed);
                         Analytics.BoostUsed("hint");
                         return true;
                     }
@@ -239,7 +238,7 @@ namespace qp {
         }
 
         void CountQueenBoost() {
-            AppData.LastPlayData.queenBoostsUsed++;
+            CountUp(ref AppData.LastPlayData.queenBoostsUsed);
             Analytics.BoostUsed("queen");
         }
 
@@ -248,9 +247,8 @@ namespace qp {
             int r = idx / _n, c = idx % _n;
             var cell = _cells[r, c];
             if (cell.State == MBCell.ECellType.QUEEN) return;
-            cell.MarkCell(MBCell.ECellType.QUEEN);
+            SetCell(cell, MBCell.ECellType.QUEEN);
             PlayQueens(MBCell.QueenState.HAPPY);   // every opened queen (incl. this one) celebrates
-            SaveBoard();
             cell.Pulse();
 
             int placed = CountQueens();
@@ -300,12 +298,11 @@ namespace qp {
             foreach (var e in stroke) {
                 var cell = _cells[e.idx / _n, e.idx % _n];
                 if (cell.State == MBCell.ECellType.QUEEN || cell.State == MBCell.ECellType.WRONG_QUEEN) continue;
-                cell.MarkCell(e.from);
+                SetCell(cell, e.from);
                 any = true;
             }
             if (any) {
-                AppData.LastPlayData.undosUsed++;   // before SaveBoard — it persists the counter too
-                SaveBoard();
+                CountUp(ref AppData.LastPlayData.undosUsed);
                 Analytics.BoostUsed("undo");
                 Haptics.Play(GameHaptic.Tap);
             }
@@ -593,14 +590,13 @@ namespace qp {
         public void ApplyTutorialMark(MBCell cell, MBCell.ECellType target) {
             if (cell == null || cell.State == target) return;
             if (target == MBCell.ECellType.QUEEN) PlaceBoostQueen(cell.Y * _n + cell.X);
-            else { cell.MarkCell(target); SaveBoard(); }
+            else SetCell(cell, target);
         }
 
         // Change a cell's X/empty state as part of the current stroke, remembering its prior state.
         void PaintCell(MBCell cell, MBCell.ECellType to) {
             _stroke?.Add(new CellEdit(cell.Y * _n + cell.X, cell.State));
-            cell.MarkCell(to);
-            SaveBoard();
+            SetCell(cell, to);
             if (to == MBCell.ECellType.X && !cell.IsSolutionQueen) {
                 _pendingX ??= new System.Collections.Generic.Dictionary<MBCell, Coroutine>();
                 if (_pendingX.TryGetValue(cell, out var prev) && prev != null) StopCoroutine(prev);
@@ -622,6 +618,64 @@ namespace qp {
 
         // ---- board persistence: every move is saved; reopening the same level restores it ----
 
+        // How a cell change is shown, and whether it is saved:
+        //   EarlyRevealed  a fresh level's revealed queens — instant (no anims), saved
+        //   Played         a move, boost, undo or applied hint — animated, recorded by GPRecorder, saved
+        //   Instant        restoring a saved board — instant, NOT saved (it already is what is saved)
+        //   Replay         a recorder scrub (editor only) — instant, NOT saved, so a recording's
+        //                  board never lands in the player's save
+        enum MarkHow { EarlyRevealed, Played, Instant, Replay }
+
+        // THE place a cell's state changes — moves, boosts, undo, hints, revealed queens, restore,
+        // replay. A change that must be saved queues the save here, so no caller has to remember to.
+        // A change to the state the cell already has does nothing (and saves nothing).
+        void SetCell(MBCell cell, MBCell.ECellType to, MarkHow how = MarkHow.Played) {
+            if (cell == null) return;
+
+            if (cell.State == to) return;
+
+            switch (how) {
+                case MarkHow.EarlyRevealed: cell.StartWithMark(to); SaveBoard(); break;
+                case MarkHow.Played: cell.MarkCell(to); SaveBoard(); break;
+                case MarkHow.Instant: cell.StartWithMark(to); break;
+#if UNITY_EDITOR
+                case MarkHow.Replay: cell.ReplaySetMark(to); break;
+#endif
+            }
+
+            // Keep the saved board string current the moment the cell changes, so whatever reads or
+            // copies LastPlayData mid-frame — a Save() of the counters, Fail's stash — sees the board
+            // as it is, not as it was at the last end-of-frame flush. A missing or other-size string
+            // (a fresh attempt) is built whole from the cells.
+            void SyncBoardChar() {
+                var data = AppData.LastPlayData;
+                if (data == null || _cells == null) return;
+                string b = data.board;
+                if (b == null || b.Length != _n * _n) { data.board = BoardString(); return; }
+                int idx = cell.Y * _n + cell.X;
+                char c = StateChar(cell.State);
+                if (b[idx] == c) return;
+                var chars = b.ToCharArray();
+                chars[idx] = c;
+                data.board = new string(chars);
+            }
+
+            SyncBoardChar();
+        }
+
+        // THE place the attempt's counters (AppData.LastPlayData: hints, queen boosts, undos, lives)
+        // change — the same rule as SetCell: change it here and the save is queued, written once at
+        // the end of the frame together with the board.
+        void CountUp(ref int counter, int by = 1) { counter += by; SaveBoard(); }
+        void SetCount(ref int counter, int value) { counter = value; SaveBoard(); }
+
+        // The board as the save stores it: one char per cell, row-major.
+        string BoardString() {
+            var sb = new System.Text.StringBuilder(_n * _n);
+            foreach (var cell in _cells) sb.Append(StateChar(cell.State));
+            return sb.ToString();
+        }
+
         // A drag can paint several cells in ONE frame and each PlayerPrefs.Save() is a synchronous
         // disk flush — so SaveBoard only queues, and LateUpdate writes once per frame.
         bool _saveQueued;
@@ -637,12 +691,13 @@ namespace qp {
         void FlushBoardSave() {
             _saveQueued = false;
             if (_cells == null) return;
-            var sb = new System.Text.StringBuilder(_n * _n);
-            foreach (var cell in _cells) sb.Append(StateChar(cell.State));
             var data = AppData.LastPlayData;
             data.forLevelIdx = ProgressKey;   // level index, or the day index on a daily
             data.levelHash = _levelHash;
-            data.board = sb.ToString();
+            // SetCell keeps the string current; it is only missing on a fresh attempt no cell has
+            // changed yet (a hint before the first move) or after Fail() invalidated it (Continue)
+            // — then it is built whole from the cells
+            if (data.board == null || data.board.Length != _n * _n) data.board = BoardString();
             data.Save();   // one write: board + the attempt's counters
         }
 
@@ -652,9 +707,8 @@ namespace qp {
             if (level.revealedRows == null || level.revealedRows.Length == 0) return;
             foreach (int r in level.revealedRows) {
                 var cell = CellAt(r, level.solutionColumns[r]);
-                if (cell != null && cell.State != MBCell.ECellType.QUEEN) cell.StartWithMark(MBCell.ECellType.QUEEN);
+                SetCell(cell, MBCell.ECellType.QUEEN, MarkHow.EarlyRevealed);
             }
-            SaveBoard();
             _topBar.SetProgress(CountQueens());
         }
 
@@ -670,7 +724,7 @@ namespace qp {
             int i = 0;
             foreach (var cell in _cells) {
                 var state = CharState(s[i++]);
-                if (state != MBCell.ECellType.EMPTY) cell.StartWithMark(state);   // instant — no move anims/PS
+                if (state != MBCell.ECellType.EMPTY) SetCell(cell, state, MarkHow.Instant);   // no move anims/PS
             }
             _topBar.SetProgress(CountQueens());
             MaybePrepareReview(CountQueens());   // resuming a board that's already 2-from-win
@@ -757,8 +811,7 @@ namespace qp {
         // follows (progress, win, bone loss, fail). Shared by the double-tap gesture and replay.
         void PlaceQueenAt(MBCell cell) {
             bool correct = cell.IsSolutionQueen;
-            cell.MarkCell(correct ? MBCell.ECellType.QUEEN : MBCell.ECellType.WRONG_QUEEN);
-            SaveBoard();
+            SetCell(cell, correct ? MBCell.ECellType.QUEEN : MBCell.ECellType.WRONG_QUEEN);
             if (correct) {
                 PlayQueens(MBCell.QueenState.HAPPY);   // every opened queen (incl. this one) celebrates
                 int placed = CountQueens();
@@ -794,8 +847,7 @@ namespace qp {
                 const bool allowFail = true;
 #endif
                 if (countBones) {
-                    AppData.LastPlayData.bonesLost++;   // a bone is lost (saved with the board)
-                    AppData.LastPlayData.Save();
+                    CountUp(ref AppData.LastPlayData.bonesLost);   // a bone is lost (saved with the board)
                     _topBar?.SetWrongMoves(AppData.LastPlayData.bonesLost);
                     _reactions.OnWrong(AppData.LastPlayData.bonesLost, _topBar != null ? _topBar.MaxWrongMoves : int.MaxValue);
                 }
@@ -838,7 +890,7 @@ namespace qp {
             // an edited record can unmark a queen — a transition real play never makes, and the
             // queen overlay has no animated out (ActOut throws). Clear it instantly instead.
             if (cell.State == MBCell.ECellType.QUEEN || cell.State == MBCell.ECellType.WRONG_QUEEN) {
-                cell.ReplaySetMark(MBCell.ECellType.EMPTY);
+                SetCell(cell, MBCell.ECellType.EMPTY, MarkHow.Replay);
                 _topBar?.SetProgress(CountQueens());
                 if (to == MBCell.ECellType.EMPTY) return;
             }
@@ -862,7 +914,7 @@ namespace qp {
         /// <summary>Timeline scrub: jump the whole board to a state instantly (no anims).</summary>
         public void ReplaySetBoard(MBCell.ECellType[] states) {   // row-major, n*n
             if (_cells == null || states == null || states.Length != _n * _n) return;
-            foreach (var cell in _cells) cell.ReplaySetMark(states[cell.Y * _n + cell.X]);
+            foreach (var cell in _cells) SetCell(cell, states[cell.Y * _n + cell.X], MarkHow.Replay);
             _undo.Clear(); _stroke = null;   // strokes from before the jump are meaningless now
             _topBar?.SetProgress(CountQueens());
         }
@@ -1034,13 +1086,14 @@ namespace qp {
             _ready = false;   // stop input; Continue or Reset decides what's next
             PlayQueens(MBCell.QueenState.CRY);   // the board mourns (overrides the disappointment)
             Ads.HideBanner();            // banner off while the fail popup is up
-            Analytics.GameLose();   // BEFORE Stash/Invalidate — the counters still belong to the attempt
+            Analytics.GameLose();
 
-            // Failed → the attempt is over: quitting now restarts the level fresh.
-            // But Continue may revive it — it waits in the stash until the popup decides.
-            AppData.LastPlayData.Stash();
+            // Failed → the attempt is gone from disk, so quitting (or Try again) restarts the level
+            // fresh. It stays in memory — counters here, board on screen — for Continue, which only
+            // has to save it again. Nothing saves while the popup is up (the board is locked), and
+            // the write already queued is dropped so it can't put the attempt back.
             AppData.LastPlayData.Invalidate();
-            _saveQueued = false;   // a queued write would resurrect the invalidated attempt
+            _saveQueued = false;
 
             CommonSFX.Play(GPSFX.Instance.Fail);
 
@@ -1060,13 +1113,12 @@ namespace qp {
         }
 
         // Fail-continue: every bone returns, but the wrong queens stay on the board — they're
-        // permanent X's now. Re-saves the board that Fail() invalidated.
+        // permanent X's now. The attempt never left memory: the counters below queue the save, and
+        // its flush writes it back — level index, and the board rebuilt from the cells.
         public void ContinueAfterFail() {
-            AppData.LastPlayData = LastPlayData.Unstash(DailyChallengeManager.InDailyRun);   // the attempt Fail() invalidated is alive again
-            AppData.LastPlayData.bonesLost = 0;
-            AppData.LastPlayData.livesAdded += GameConfig.BonesAddedAfterRewarded;
+            SetCount(ref AppData.LastPlayData.bonesLost, 0);
+            CountUp(ref AppData.LastPlayData.livesAdded, GameConfig.BonesAddedAfterRewarded);
             PlayQueens(MBCell.QueenState.IDLE);   // Cry holds its last frame — un-freeze the mourning
-            SaveBoard();
             Analytics.LivesAdded(GameConfig.BonesAddedAfterRewarded);
             _topBar?.SetWrongMoves(0);
             _reactions.OnBoost(Time.unscaledTime);   // revive: ad time isn't thinking time, don't fake an "unstuck"

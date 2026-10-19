@@ -53,21 +53,6 @@ namespace qp {
             Save();
         }
 
-        // The fail-popup limbo: the attempt is invalidated on fail (quitting restarts fresh),
-        // but Continue must bring it back — so it waits in memory between the two.
-        static LastPlayData _stash;
-
-        /// <summary>Keep an in-memory copy of this attempt (call before Invalidate).</summary>
-        public void Stash() => _stash = (LastPlayData)MemberwiseClone();
-
-        /// <summary>The stashed attempt, alive and saved again; falls back to Load() when empty.</summary>
-        public static LastPlayData Unstash(bool daily = false) {
-            var data = _stash ?? Load(daily);
-            _stash = null;
-            data.Save();
-            return data;
-        }
-
 #if !IGNORE_FIREBASE
         /// <summary>The attempt's meta as Firebase event parameters.</summary>
         public Firebase.Analytics.Parameter[] ToParams() => new[] {
