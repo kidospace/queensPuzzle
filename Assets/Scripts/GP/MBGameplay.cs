@@ -206,9 +206,11 @@ namespace qp {
                     MBToturial.instance?.SetHandVisible(false);   // boost hint: Apply button, no hand
                     MBToturial.instance?.SetApplyVisible(true);
                     // count + sound only here (player's boost) — the tutorial calls OpenHint directly
-                    if (OpenHint()) {
+                    if (OpenHint(out var shown)) {
                         _reactions.OnBoost(Time.unscaledTime);
                         CommonSFX.Play(GPSFX.Instance.Hint);
+                        Trace('H', shown.cells != null && shown.cells.Length > 0 ? shown.cells[0] : 0,
+                              (int)shown.technique, shown.size);
                         CountUp(ref AppData.LastPlayData.hintsUsed);
                         Analytics.BoostUsed("hint");
                         return true;
@@ -227,12 +229,12 @@ namespace qp {
 
             if (SolveTracer.TryQueenBoost(_n, _level.regions, _level.solutionColumns, queens, xs, out int target)) {
                 CountQueenBoost();   // before the place — its SaveBoard persists it, and the event precedes a possible game_win
-                PlaceBoostQueen(target);
+                PlaceBoostQueen(target, ByWhom.QueenBoost);
                 return true;
             }
 
             int fallback = FirstUnplacedSolutionQueen();
-            if (fallback >= 0) { CountQueenBoost(); PlaceBoostQueen(fallback); return true; }
+            if (fallback >= 0) { CountQueenBoost(); PlaceBoostQueen(fallback, ByWhom.QueenBoost); return true; }
             Debug.Log("[MBGameplay] Queen boost: nothing to place.");
             return false;
         }
@@ -243,11 +245,12 @@ namespace qp {
         }
 
         // Place a correct queen from a boost and advance the game (as a manual correct placement).
-        void PlaceBoostQueen(int idx) {
+        // `by`: the queen boost, or an applied hint (the trace tells them apart).
+        void PlaceBoostQueen(int idx, ByWhom by) {
             int r = idx / _n, c = idx % _n;
             var cell = _cells[r, c];
             if (cell.State == MBCell.ECellType.QUEEN) return;
-            SetCell(cell, MBCell.ECellType.QUEEN);
+            SetCell(cell, MBCell.ECellType.QUEEN, MarkHow.Played, by);
             PlayQueens(MBCell.QueenState.HAPPY);   // every opened queen (incl. this one) celebrates
             cell.Pulse();
 
@@ -298,7 +301,7 @@ namespace qp {
             foreach (var e in stroke) {
                 var cell = _cells[e.idx / _n, e.idx % _n];
                 if (cell.State == MBCell.ECellType.QUEEN || cell.State == MBCell.ECellType.WRONG_QUEEN) continue;
-                SetCell(cell, e.from);
+                SetCell(cell, e.from, MarkHow.Played, ByWhom.Undo);
                 any = true;
             }
             if (any) {
@@ -311,13 +314,17 @@ namespace qp {
 
         // Hint: fix a mistake first (cheapest + necessary), else the next deduction from the board.
         // Public: the first-play tutorial drives the same flow, step by step.
-        // Returns true when a hint was actually presented (the boost counts only those).
-        public bool OpenHint() {
+        // Returns true when a hint was actually presented (the boost counts only those); `hint` is the
+        // one presented, for the level trace.
+        public bool OpenHint() => OpenHint(out _);
+
+        bool OpenHint(out Hint hint) {
+            hint = default;
             if (!_ready || _cells == null || _level == null) return false;
             GatherBoard(out var queens, out var xs);
 
             // 1) the next real deduction
-            if (SolveTracer.TryHint(_n, _level.regions, _level.solutionColumns, queens, xs, out var hint, RegionRichName, PieceName, PieceNamePlural)) {
+            if (SolveTracer.TryHint(_n, _level.regions, _level.solutionColumns, queens, xs, out hint, RegionRichName, PieceName, PieceNamePlural)) {
                 PresentHint(hint);
                 return true;
             }
@@ -325,8 +332,9 @@ namespace qp {
             // 2) last resort — a wrong X is hiding a forced queen (strong spoiler, only when stuck)
             foreach (var cell in _cells)
                 if (cell.State == MBCell.ECellType.X && cell.IsSolutionQueen) {
-                    PresentHint(new Hint { kind = HintKind.WrongX, cells = new[] { cell.Y * _n + cell.X },
-                                           note = $"a {PieceName} belongs here — clear this X" });
+                    hint = new Hint { kind = HintKind.WrongX, cells = new[] { cell.Y * _n + cell.X },
+                                      note = $"a {PieceName} belongs here — clear this X" };
+                    PresentHint(hint);
                     return true;
                 }
 
@@ -455,6 +463,8 @@ namespace qp {
 
                 Analytics.GameStart();
             }
+            // back on a saved board: the gap before this is time away, not thinking (saved with the next move)
+            else Trace('R', 0);
 
             _topBar.SetWrongMoves(AppData.LastPlayData.bonesLost);
 
@@ -589,8 +599,8 @@ namespace qp {
         // Apply a tutorial suggestion to a cell the proper way (queens advance progress/win).
         public void ApplyTutorialMark(MBCell cell, MBCell.ECellType target) {
             if (cell == null || cell.State == target) return;
-            if (target == MBCell.ECellType.QUEEN) PlaceBoostQueen(cell.Y * _n + cell.X);
-            else SetCell(cell, target);
+            if (target == MBCell.ECellType.QUEEN) PlaceBoostQueen(cell.Y * _n + cell.X, ByWhom.Hint);
+            else SetCell(cell, target, MarkHow.Played, ByWhom.Hint);
         }
 
         // Change a cell's X/empty state as part of the current stroke, remembering its prior state.
@@ -626,17 +636,21 @@ namespace qp {
         //                  board never lands in the player's save
         enum MarkHow { EarlyRevealed, Played, Instant, Replay }
 
+        // Who made a played change — the level trace tells a move from a queen boost, a hint or an undo.
+        enum ByWhom { Player, QueenBoost, Hint, Undo }
+
         // THE place a cell's state changes — moves, boosts, undo, hints, revealed queens, restore,
-        // replay. A change that must be saved queues the save here, so no caller has to remember to.
-        // A change to the state the cell already has does nothing (and saves nothing).
-        void SetCell(MBCell cell, MBCell.ECellType to, MarkHow how = MarkHow.Played) {
+        // replay. A change that must be saved queues the save here, so no caller has to remember to,
+        // and a played change goes into the level trace. A change to the state the cell already has
+        // does nothing (and saves and records nothing).
+        void SetCell(MBCell cell, MBCell.ECellType to, MarkHow how = MarkHow.Played, ByWhom by = ByWhom.Player) {
             if (cell == null) return;
 
             if (cell.State == to) return;
 
             switch (how) {
                 case MarkHow.EarlyRevealed: cell.StartWithMark(to); SaveBoard(); break;
-                case MarkHow.Played: cell.MarkCell(to); SaveBoard(); break;
+                case MarkHow.Played: cell.MarkCell(to); SaveBoard(); Trace(TraceKind(to, by), cell.Y * _n + cell.X); break;
                 case MarkHow.Instant: cell.StartWithMark(to); break;
 #if UNITY_EDITOR
                 case MarkHow.Replay: cell.ReplaySetMark(to); break;
@@ -644,8 +658,8 @@ namespace qp {
             }
 
             // Keep the saved board string current the moment the cell changes, so whatever reads or
-            // copies LastPlayData mid-frame — a Save() of the counters, Fail's stash — sees the board
-            // as it is, not as it was at the last end-of-frame flush. A missing or other-size string
+            // copies LastPlayData mid-frame — a Save() of the counters — sees the board as it is,
+            // not as it was at the last end-of-frame flush. A missing or other-size string
             // (a fresh attempt) is built whole from the cells.
             void SyncBoardChar() {
                 var data = AppData.LastPlayData;
@@ -662,6 +676,24 @@ namespace qp {
 
             SyncBoardChar();
         }
+
+        // The trace letter of a played change (LevelTrace has the format).
+        static char TraceKind(MBCell.ECellType to, ByWhom by) {
+            bool queen = to == MBCell.ECellType.QUEEN || to == MBCell.ECellType.WRONG_QUEEN;
+            switch (by) {
+                case ByWhom.QueenBoost: return 'B';
+                case ByWhom.Hint: return queen ? 'A' : 'P';
+                case ByWhom.Undo: return 'U';
+                default:
+                    return to == MBCell.ECellType.QUEEN ? 'Q' : to == MBCell.ECellType.WRONG_QUEEN ? 'W'
+                         : to == MBCell.ECellType.X ? 'X' : 'E';
+            }
+        }
+
+        // One token into the attempt's raw trace, stamped with the level's play clock. Saved with
+        // the next board save (every played change queues one).
+        static void Trace(char kind, int cell, int technique = -1, int size = 0) =>
+            LevelTrace.Add(AppData.LastPlayData, kind, cell, Analytics.PlayTimeSec, technique, size);
 
         // THE place the attempt's counters (AppData.LastPlayData: hints, queen boosts, undos, lives)
         // change — the same rule as SetCell: change it here and the save is queued, written once at
@@ -968,6 +1000,7 @@ namespace qp {
             // attempt's) and before LevelIdx++ (the win belongs to the level just solved).
             if (DailyChallengeManager.InDailyRun) DailyChallengeManager.OnSolved();
             Analytics.GameWin();
+            Analytics.SendTrace(true, LevelTrace.Pack(AppData.LastPlayData.trace, _n));
             // The tournament scores the bones still standing, so it has to read them before
             // Invalidate() clears the attempt. Daily counts too — a win is a win.
             _tournamentWin = TournamentManager.OnLevelWin(
@@ -1087,6 +1120,7 @@ namespace qp {
             PlayQueens(MBCell.QueenState.CRY);   // the board mourns (overrides the disappointment)
             Ads.HideBanner();            // banner off while the fail popup is up
             Analytics.GameLose();
+            Analytics.SendTrace(false, LevelTrace.Pack(AppData.LastPlayData.trace, _n));
 
             // Failed → the attempt is gone from disk, so quitting (or Try again) restarts the level
             // fresh. It stays in memory — counters here, board on screen — for Continue, which only
@@ -1118,6 +1152,7 @@ namespace qp {
         public void ContinueAfterFail() {
             SetCount(ref AppData.LastPlayData.bonesLost, 0);
             CountUp(ref AppData.LastPlayData.livesAdded, GameConfig.BonesAddedAfterRewarded);
+            Trace('C', 0);
             PlayQueens(MBCell.QueenState.IDLE);   // Cry holds its last frame — un-freeze the mourning
             Analytics.LivesAdded(GameConfig.BonesAddedAfterRewarded);
             _topBar?.SetWrongMoves(0);

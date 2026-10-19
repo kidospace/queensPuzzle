@@ -35,6 +35,11 @@ namespace qp {
         public int livesAdded;         // fail-continue grants (+3 each, later: video/coins)
         public int bonesLost;          // lives lost; not derivable from cells (continue keeps wrong queens)
 
+        // The attempt move by move, raw — one token per change (LevelTrace, format there). Saved
+        // with the board so an attempt finished days later still has its whole story; packed and
+        // sent by lvl_trace when the attempt ends.
+        public string trace = "";
+
         public static LastPlayData Load(bool daily = false) => HolderOf(daily).Value ?? new LastPlayData { daily = daily };
 
         public void Save() => HolderOf(daily).Save(this);

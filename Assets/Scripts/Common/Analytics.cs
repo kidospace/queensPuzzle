@@ -84,6 +84,41 @@ namespace qp {
             GameEvent("game_lose");
         }
 
+        /// <summary>The level's play clock in whole seconds — what lvl_time_sec reports, and what the
+        /// level trace stamps each move with (daily: the day's timer; campaign: the per-level counter).</summary>
+        public static int PlayTimeSec => DailyChallengeManager.InDailyRun
+            ? (int)DailyChallengeManager.State.timeSec : AppData.LevelTimeSec.Value;
+
+        /// <summary>
+        /// `lvl_trace` — the attempt move by move (<see cref="qp.LevelTrace"/>), right after its game_win
+        /// or game_lose. Only what joins it to that event (same user, lvl_idx, daily, win, a moment
+        /// apart) and what decodes it (level_hash → the board, tr_v → the format); everything else is
+        /// on game_win/lose.
+        /// The packed trace is cut into tr_0 … tr_9, 96 chars each, joined back in order. A lose that
+        /// is continued sends again at the attempt's real end, with all of it — the last one is whole.
+        /// </summary>
+        public static void SendTrace(bool win, string packed) {
+            packed ??= "";
+            CrashLog($"[game] lvl_trace {(win ? "win" : "lose")} level {LevelIdx} | {packed}");
+#if !IGNORE_FIREBASE
+            var ps = new System.Collections.Generic.List<Firebase.Analytics.Parameter> {
+                new Firebase.Analytics.Parameter("lvl_idx", LevelIdx),
+                new Firebase.Analytics.Parameter("daily", DailyChallengeManager.InDailyRun ? 1 : 0),
+                new Firebase.Analytics.Parameter("win", win ? 1 : 0),
+                new Firebase.Analytics.Parameter("level_hash", LevelLoader.CurrentLevelHash),
+                // the trace format (LevelTrace.Version) — a decoder picks its reader by it, not by app version
+                new Firebase.Analytics.Parameter("tr_v", qp.LevelTrace.Version),
+            };
+            const int chunk = 96;   // Firebase keeps 100 chars of a string parameter
+            for (int i = 0, part = 0; i < packed.Length && part < 10; i += chunk, part++)
+                ps.Add(new Firebase.Analytics.Parameter("tr_" + part,
+                    packed.Substring(i, System.Math.Min(chunk, packed.Length - i))));
+            Send("lvl_trace", ps.ToArray());
+#else
+            Send("lvl_trace");
+#endif
+        }
+
         /// <summary>Breadcrumb for the cold start, from the boot stage. The launch EVENT is
         /// `pd_session_start` in FirebaseLaunch, which runs once Firebase is up.</summary>
         public static void SessionStart() => CrashLog($"[session] start #{UserData.Instance.Sessions}");

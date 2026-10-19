@@ -16,5 +16,9 @@ namespace QueensPuzzle
         public int[] cells;       // the cells to mark/unmark — the step's targets
         public int[] causeCells;  // the cells the reasoning is ABOUT (shown tinted, never editable); may be null
         public string note;
+        // Which deduction the step is — for the level trace only, never shown. Trial = no
+        // deduction found: an X proven by contradiction (size 0) or a queen just shown (size 1).
+        public SolveTechnique technique;
+        public int size;          // the trick's k (a subset of k lines/regions); 0 when it has none
     }
 }

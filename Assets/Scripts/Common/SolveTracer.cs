@@ -317,7 +317,9 @@ namespace QueensPuzzle
                         kind = step.kind == NodeKind.Placement ? HintKind.PlaceQueen : HintKind.Eliminate,
                         cells = step.cells,   // one deduction step (may touch several cells)
                         causeCells = step.cause,
-                        note = step.note
+                        note = step.note,
+                        technique = step.tech,
+                        size = step.k
                     };
                     return true;
                 }
@@ -329,6 +331,7 @@ namespace QueensPuzzle
                     // Eliminate, not Guess: the X is proven (by contradiction), and the tutorial
                     // needs a target state — a target-less spotlight has no way to close.
                     hint = new Hint { kind = HintKind.Eliminate, cells = new[] { cell },
+                        technique = SolveTechnique.Trial, size = 0,
                         note = $"a {_piece} here leads to a dead end → mark it X" };
                     return true;
                 }
@@ -342,6 +345,7 @@ namespace QueensPuzzle
                 // PlaceQueen, not Guess: the cell comes from the solution so the move is safe,
                 // and the step must have a target state for Apply/completion to work.
                 hint = new Hint { kind = HintKind.PlaceQueen, cells = new[] { rightCell },
+                    technique = SolveTechnique.Trial, size = 1,
                     note = $"no certain move — best guess: a {_piece} here" };
                 return true;
             }
