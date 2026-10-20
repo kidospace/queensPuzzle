@@ -94,26 +94,37 @@ namespace qp {
         /// or game_lose. Only what joins it to that event (same user, lvl_idx, daily, win, a moment
         /// apart) and what decodes it (level_hash → the board, tr_v → the format); everything else is
         /// on game_win/lose.
-        /// The packed trace is cut into tr_0 … tr_9, 96 chars each, joined back in order. A lose that
-        /// is continued sends again at the attempt's real end, with all of it — the last one is whole.
+        /// The packed trace goes out in events of up to 960 chars (LevelTrace.EventChars), at most
+        /// LevelTrace.MaxEvents of them, all in this frame: tr_part (0, 1, …) of tr_parts. Inside an
+        /// event it is cut into tr_0 … tr_9, 96 chars each. Joined back: the parts by tr_part, the
+        /// pieces by their number. A lose that is continued sends again at the attempt's real end,
+        /// with all of it — the last one is whole.
         /// </summary>
         public static void SendTrace(bool win, string packed) {
             packed ??= "";
             CrashLog($"[game] lvl_trace {(win ? "win" : "lose")} level {LevelIdx} | {packed}");
 #if !IGNORE_FIREBASE
-            var ps = new System.Collections.Generic.List<Firebase.Analytics.Parameter> {
-                new Firebase.Analytics.Parameter("lvl_idx", LevelIdx),
-                new Firebase.Analytics.Parameter("daily", DailyChallengeManager.InDailyRun ? 1 : 0),
-                new Firebase.Analytics.Parameter("win", win ? 1 : 0),
-                new Firebase.Analytics.Parameter("level_hash", LevelLoader.CurrentLevelHash),
-                // the trace format (LevelTrace.Version) — a decoder picks its reader by it, not by app version
-                new Firebase.Analytics.Parameter("tr_v", qp.LevelTrace.Version),
-            };
-            const int chunk = 96;   // Firebase keeps 100 chars of a string parameter
-            for (int i = 0, part = 0; i < packed.Length && part < 10; i += chunk, part++)
-                ps.Add(new Firebase.Analytics.Parameter("tr_" + part,
-                    packed.Substring(i, System.Math.Min(chunk, packed.Length - i))));
-            Send("lvl_trace", ps.ToArray());
+            int size = qp.LevelTrace.EventChars;
+            int parts = System.Math.Max(1, (packed.Length + size - 1) / size);
+            for (int part = 0; part < parts; part++) {
+                string piece = packed.Length > part * size
+                    ? packed.Substring(part * size, System.Math.Min(size, packed.Length - part * size)) : "";
+                var ps = new System.Collections.Generic.List<Firebase.Analytics.Parameter> {
+                    new Firebase.Analytics.Parameter("lvl_idx", LevelIdx),
+                    new Firebase.Analytics.Parameter("daily", DailyChallengeManager.InDailyRun ? 1 : 0),
+                    new Firebase.Analytics.Parameter("win", win ? 1 : 0),
+                    new Firebase.Analytics.Parameter("level_hash", LevelLoader.CurrentLevelHash),
+                    // the trace format (LevelTrace.Version) — a decoder picks its reader by it, not by app version
+                    new Firebase.Analytics.Parameter("tr_v", qp.LevelTrace.Version),
+                    new Firebase.Analytics.Parameter("tr_part", part),
+                    new Firebase.Analytics.Parameter("tr_parts", parts),
+                };
+                const int chunk = 96;   // Firebase keeps 100 chars of a string parameter
+                for (int i = 0, n = 0; i < piece.Length; i += chunk, n++)
+                    ps.Add(new Firebase.Analytics.Parameter("tr_" + n,
+                        piece.Substring(i, System.Math.Min(chunk, piece.Length - i))));
+                Send("lvl_trace", ps.ToArray());
+            }
 #else
             Send("lvl_trace");
 #endif

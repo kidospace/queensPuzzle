@@ -11,35 +11,50 @@ namespace qp {
     /// attempt ends (<see cref="Pack"/>): strokes become one token, a queen double-tap's passing X
     /// goes, and the result is capped to what the event can carry.
     ///
-    /// Tokens — the kind letter, then numbers in base 36 (0-9 a-z); cell = row * size + col,
-    /// seconds = the level's play clock (what lvl_time_sec reports):
-    ///   Q / W   the player put a correct / wrong queen          kind + cell (2) + seconds (3)
-    ///   B       queen boost                                     "
-    ///   A       an applied hint put a queen                     "
-    ///   C       continue after fail (cell 0)                    "
-    ///   R       came back to a saved board (cell 0)             "
-    ///   H       a hint was shown                                " + technique (1) + size (1)
-    ///             technique = SolveTechnique number; Trial size 0 = an X proven by contradiction,
-    ///             Trial size 1 = no certain move, a queen shown; 0 = "clear this wrong X"
-    ///   X / E   the player marked / erased X                    kind + cell (2) + seconds (3)
-    ///   U       undo flipped a mark back                        "
-    ///   P       an applied hint flipped a mark                  "
+    /// Kinds — cell = row * size + col, seconds = the level's play clock (what lvl_time_sec reports):
+    ///   Q / W   the player put a correct / wrong queen
+    ///   B       queen boost
+    ///   A       an applied hint put a queen
+    ///   C       continue after fail (cell 0)
+    ///   R       came back to a saved board (cell 0)
+    ///   H       a hint was shown — with its technique (SolveTechnique number) and size: Trial size 0
+    ///           = an X proven by contradiction, Trial size 1 = no certain move, a queen shown,
+    ///           technique 0 = "clear this wrong X"
+    ///   X / E   the player marked / erased X
+    ///   U       undo flipped a mark back
+    ///   P       an applied hint flipped a mark
     ///   !       some moves were dropped for room (marks first; queens and hints always kept)
-    /// In the PACKED form the four mark kinds (X E U P) of one kind in one second are one token:
-    ///   kind + first cell (2) + seconds (3) + how many cells (1) + one char per further cell —
-    ///   its step from the cell before, (dr+2)*5 + (dc+2) when both steps are within 2 ('0'..'o'),
-    ///   else 'z' + the cell (2). "X0n01m3ii" = on 10x10, cells 23, 34, 45 at 58 seconds.
     /// Marks never touch a queen, so U and P are a flip between X and empty.
+    ///
+    /// RAW (saved): kind + cell (2) + seconds (3), H + technique (1) + size (1). Base 36 (0-9 a-z).
+    ///
+    /// PACKED (sent; tr_v 2):
+    ///   kind + cell (2) + TIME (1, or 4) [H: + technique (1) + size (1)]
+    ///   TIME is the seconds since the token before (since 0 for the first): one char 0..34, or 'z'
+    ///   and the absolute seconds (3) when the gap is 35 s or more.
+    ///   The mark kinds (X E U P) continue the token before while it is the same kind, nothing else
+    ///   came between, and the cell came at most 1 s after the token's first — a drag, even one that
+    ///   crosses a second; no cell's time is more than 1 s off — up to 35 cells. A mark token adds how many cells (1) + one char per
+    ///   further cell: its step from the cell before, (dr+2)*5 + (dc+2) when both steps are within 2
+    ///   ('0'..'o'), else 'z' + the cell (2). Its TIME is its first cell's.
+    ///   "X0n03ii" at the start of a 10x10 trace = cells 23, 34, 45 at 0 s, then next token's time
+    ///   counts from 0 s.
     /// </summary>
     public static class LevelTrace {
 
         // Sent as tr_v. Bump it whenever the PACKED format changes, so old and new can both be read.
-        public const int Version = 1;
+        // 1: absolute 3-char times, marks merged within one second. 2: gap times, drags merged.
+        public const int Version = 2;
 
         const string B36 = "0123456789abcdefghijklmnopqrstuvwxyz";
-        const int RawMax = 6000;              // the saved raw trace — a guard, real attempts stay far below
+        public const int EventChars = 960;    // one lvl_trace event: 10 parameters of 96 chars
+        public const int MaxEvents = 3;       // a long trace goes out as up to this many events
+        public const int PackedMax = EventChars * MaxEvents;
+        // The raw trace exists only to be sent, so it is sized from what can be sent: a raw cell is
+        // 6 chars and a packed one at least 1, so the cut always happens in Pack (which keeps queens
+        // and hints), never here first. Typical attempts stay at 1-2 KB.
+        const int RawMax = PackedMax * 6;
         const int RawMarksStop = RawMax - 600;
-        public const int PackedMax = 960;     // 10 event parameters of 96 chars
 
         static bool IsMark(char k) => k == 'X' || k == 'E' || k == 'U' || k == 'P';
 
@@ -83,47 +98,65 @@ namespace qp {
                 if (j >= 0 && Tap(toks[j], 'X', toks[i])) Drop(toks, j);
             }
 
-            // Encode: everything that is not a mark always goes in; marks fill what is left, in order.
-            var pieces = new List<(string s, bool mark)>();
-            int fixedLen = 0;
+            // Group: a mark run (same kind, nothing between, each cell at most 1 s after the run's FIRST
+            // cell — so the run's one time is never more than 1 s off for any of its cells) is one
+            // group; anything else is a group of its own. A group's time is its first cell's.
+            var groups = new List<(Tok head, List<int> cells)>();
             for (int i = 0; i < toks.Count; i++) {
                 var t = toks[i];
                 if (t.drop) continue;
-                var sb = new StringBuilder(12);
-                sb.Append(t.kind); Num(sb, t.cell, 2); Num(sb, t.sec, 3);
-                if (!IsMark(t.kind)) {
-                    if (t.kind == 'H') { Num(sb, t.technique, 1); Num(sb, t.size, 1); }
-                    pieces.Add((sb.ToString(), false));
-                    fixedLen += sb.Length;
-                    continue;
+                var cells = new List<int> { t.cell };
+                if (IsMark(t.kind)) {
+                    while (i + 1 < toks.Count && cells.Count < 35) {
+                        var u = toks[i + 1];
+                        if (u.drop || u.kind != t.kind || u.sec - t.sec > 1) break;
+                        cells.Add(u.cell); i++;
+                    }
                 }
-                // a run of the same mark kind in the same second → one token
-                int count = 1, prev = t.cell;
-                var steps = new StringBuilder();
-                while (i + 1 < toks.Count && count < 35) {
-                    var u = toks[i + 1];
-                    if (u.drop || u.kind != t.kind || u.sec != t.sec) break;
-                    int dr = u.cell / n - prev / n, dc = u.cell % n - prev % n;
-                    if (dr >= -2 && dr <= 2 && dc >= -2 && dc <= 2) steps.Append(B36[(dr + 2) * 5 + dc + 2]);
-                    else { steps.Append('z'); Num(steps, u.cell, 2); }
-                    prev = u.cell; count++; i++;
-                }
-                sb.Append(B36[count]).Append(steps);
-                pieces.Add((sb.ToString(), true));
+                groups.Add((t, cells));
             }
 
+            // Encode in order, each time as the gap from the last group WRITTEN. Everything that is not
+            // a mark always goes in — its room is held back at the worst size (a 4-char time) — and
+            // marks fill what is left; a mark group that does not fit is dropped and the trace cut.
+            int fixedLeft = 0;
+            foreach (var g in groups) if (!IsMark(g.head.kind)) fixedLeft += g.head.kind == 'H' ? 9 : 7;
             var outSb = new StringBuilder(PackedMax);
-            int markRoom = PackedMax - 1 - fixedLen;
-            foreach (var (s, mark) in pieces) {
-                if (mark) {
-                    if (s.Length > markRoom) { cut = true; continue; }
-                    markRoom -= s.Length;
+            int prevSec = 0;
+            foreach (var (head, cells) in groups) {
+                bool mark = IsMark(head.kind);
+                string s = Encode(head, cells, prevSec, n);
+                if (!mark) fixedLeft -= head.kind == 'H' ? 9 : 7;
+                if (outSb.Length + s.Length + fixedLeft > PackedMax - 1) {
+                    cut = true;
+                    if (mark) continue;   // drop this mark group, keep going
+                    break;                // pathological: queens/hints alone overflow
                 }
-                if (outSb.Length + s.Length > PackedMax - 1) { cut = true; break; }   // pathological: too many queens/hints
                 outSb.Append(s);
+                prevSec = head.sec;
             }
             if (cut) outSb.Append('!');
             return outSb.ToString();
+        }
+
+        // One packed token — see the class summary.
+        static string Encode(Tok head, List<int> cells, int prevSec, int n) {
+            var sb = new StringBuilder(8 + cells.Count);
+            sb.Append(head.kind);
+            Num(sb, head.cell, 2);
+            int gap = head.sec - prevSec;
+            if (gap >= 0 && gap < 35) sb.Append(B36[gap]);
+            else { sb.Append('z'); Num(sb, head.sec, 3); }
+            if (head.kind == 'H') { Num(sb, head.technique, 1); Num(sb, head.size, 1); }
+            if (IsMark(head.kind)) {
+                sb.Append(B36[cells.Count]);
+                for (int i = 1; i < cells.Count; i++) {
+                    int dr = cells[i] / n - cells[i - 1] / n, dc = cells[i] % n - cells[i - 1] % n;
+                    if (dr >= -2 && dr <= 2 && dc >= -2 && dc <= 2) sb.Append(B36[(dr + 2) * 5 + dc + 2]);
+                    else { sb.Append('z'); Num(sb, cells[i], 2); }
+                }
+            }
+            return sb.ToString();
         }
 
         // `mark` of the same cell just before the queen, at most 2 seconds earlier
