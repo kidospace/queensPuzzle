@@ -44,7 +44,9 @@ namespace qp {
     /// </summary>
     public static class LevelTrace {
 
-        // Sent as tr_v. Bump it whenever the PACKED format changes, so old and new can both be read.
+        // Sent as tr_v. Bump it whenever the PACKED format changes, so old and new can both be read —
+        // and teach the reader the new version too: TraceCodec.Decode in the Trace Player
+        // (GPRecorder/Editor/TracePlayerWindow.cs), or it reads the new traces by the old rules.
         // 1: absolute 3-char times, marks merged within one second. 2: gap times, drags merged.
         // 3: R carries the minutes away.
         public const int Version = 3;
