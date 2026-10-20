@@ -39,6 +39,11 @@ namespace qp {
         // with the board so an attempt finished days later still has its whole story; packed and
         // sent by lvl_trace when the attempt ends.
         public string trace = "";
+        public int traceV;             // the raw format the trace is written in (LevelTrace.RawVersion); 0 = an older build's
+
+        // When this attempt was last saved (UTC unix seconds) — set by every board save, so coming
+        // back to the board can tell the trace how long the player was away. 0 = a save from before.
+        public long savedAtUnix;
 
         public static LastPlayData Load(bool daily = false) => HolderOf(daily).Value ?? new LastPlayData { daily = daily };
 

@@ -16,7 +16,8 @@ namespace qp {
     ///   B       queen boost
     ///   A       an applied hint put a queen
     ///   C       continue after fail (cell 0)
-    ///   R       came back to a saved board (cell 0)
+    ///   R       came back to a saved board (cell 0) — with the minutes since it was last saved
+    ///           (3 chars, up to 46655 ≈ 32 days; 46655 also = unknown)
     ///   H       a hint was shown — with its technique (SolveTechnique number) and size: Trial size 0
     ///           = an X proven by contradiction, Trial size 1 = no certain move, a queen shown,
     ///           technique 0 = "clear this wrong X"
@@ -26,10 +27,11 @@ namespace qp {
     ///   !       some moves were dropped for room (marks first; queens and hints always kept)
     /// Marks never touch a queen, so U and P are a flip between X and empty.
     ///
-    /// RAW (saved): kind + cell (2) + seconds (3), H + technique (1) + size (1). Base 36 (0-9 a-z).
+    /// RAW (saved): kind + cell (2) + seconds (3), H + technique (1) + size (1), R + minutes away (3).
+    /// Base 36 (0-9 a-z).
     ///
-    /// PACKED (sent; tr_v 2):
-    ///   kind + cell (2) + TIME (1, or 4) [H: + technique (1) + size (1)]
+    /// PACKED (sent; tr_v 3):
+    ///   kind + cell (2) + TIME (1, or 4) [H: + technique (1) + size (1)] [R: + minutes away (3)]
     ///   TIME is the seconds since the token before (since 0 for the first): one char 0..34, or 'z'
     ///   and the absolute seconds (3) when the gap is 35 s or more.
     ///   The mark kinds (X E U P) continue the token before while it is the same kind, nothing else
@@ -44,12 +46,21 @@ namespace qp {
 
         // Sent as tr_v. Bump it whenever the PACKED format changes, so old and new can both be read.
         // 1: absolute 3-char times, marks merged within one second. 2: gap times, drags merged.
-        public const int Version = 2;
+        // 3: R carries the minutes away.
+        public const int Version = 3;
 
         const string B36 = "0123456789abcdefghijklmnopqrstuvwxyz";
         public const int EventChars = 960;    // one lvl_trace event: 10 parameters of 96 chars
         public const int MaxEvents = 3;       // a long trace goes out as up to this many events
         public const int PackedMax = EventChars * MaxEvents;
+        public const int AwayUnknown = 46655;   // the most 3 chars hold: 'zzz'
+
+        // The RAW (saved) format, kept in LastPlayData.traceV. Bump it whenever Add writes something
+        // an older Pack would misread. A trace saved in another format (the app updated mid-level) is
+        // not read at all: it starts over with '!' — the moves before the update are lost, and the
+        // '!' says so — so Pack only ever knows today's format.
+        // 0/1: builds with tr_v 1-2 (R had no minutes). 2: R + minutes away.
+        public const int RawVersion = 2;
         // The raw trace exists only to be sent, so it is sized from what can be sent: a raw cell is
         // 6 chars and a packed one at least 1, so the cut always happens in Pack (which keeps queens
         // and hints), never here first. Typical attempts stay at 1-2 KB.
@@ -59,8 +70,10 @@ namespace qp {
         static bool IsMark(char k) => k == 'X' || k == 'E' || k == 'U' || k == 'P';
 
         /// <summary>Append one raw token. Marks stop near the cap, so queens and hints always fit.</summary>
-        public static void Add(LastPlayData d, char kind, int cell, int seconds, int technique = -1, int size = 0) {
+        public static void Add(LastPlayData d, char kind, int cell, int seconds, int technique = -1, int size = 0, int awayMin = 0) {
             d.trace ??= "";
+            if (d.trace.Length > 0 && d.traceV != RawVersion) d.trace = "!";   // saved by another build: start over
+            d.traceV = RawVersion;
             if (d.trace.Length > (IsMark(kind) ? RawMarksStop : RawMax)) {
                 if (d.trace.IndexOf('!') < 0) d.trace += "!";
                 return;
@@ -70,10 +83,11 @@ namespace qp {
             Num(sb, cell, 2);
             Num(sb, seconds, 3);
             if (kind == 'H') { Num(sb, technique, 1); Num(sb, size, 1); }
+            if (kind == 'R') Num(sb, awayMin, 3);
             d.trace = sb.ToString();
         }
 
-        struct Tok { public char kind; public int cell, sec, technique, size; public bool drop; }
+        struct Tok { public char kind; public int cell, sec, technique, size, awayMin; public bool drop; }
 
         /// <summary>The raw trace as the event sends it — see the class summary. Pure: testable outside Unity.</summary>
         public static string Pack(string raw, int n) {
@@ -86,6 +100,7 @@ namespace qp {
                 if (p + 5 > raw.Length) break;   // a torn tail (should not happen)
                 var t = new Tok { kind = k, cell = Read(raw, ref p, 2), sec = Read(raw, ref p, 3) };
                 if (k == 'H') { if (p + 2 > raw.Length) break; t.technique = Read(raw, ref p, 1); t.size = Read(raw, ref p, 1); }
+                if (k == 'R') { if (p + 3 > raw.Length) break; t.awayMin = Read(raw, ref p, 3); }
                 toks.Add(t);
             }
 
@@ -120,13 +135,13 @@ namespace qp {
             // a mark always goes in — its room is held back at the worst size (a 4-char time) — and
             // marks fill what is left; a mark group that does not fit is dropped and the trace cut.
             int fixedLeft = 0;
-            foreach (var g in groups) if (!IsMark(g.head.kind)) fixedLeft += g.head.kind == 'H' ? 9 : 7;
+            foreach (var g in groups) if (!IsMark(g.head.kind)) fixedLeft += WorstSize(g.head.kind);
             var outSb = new StringBuilder(PackedMax);
             int prevSec = 0;
             foreach (var (head, cells) in groups) {
                 bool mark = IsMark(head.kind);
                 string s = Encode(head, cells, prevSec, n);
-                if (!mark) fixedLeft -= head.kind == 'H' ? 9 : 7;
+                if (!mark) fixedLeft -= WorstSize(head.kind);
                 if (outSb.Length + s.Length + fixedLeft > PackedMax - 1) {
                     cut = true;
                     if (mark) continue;   // drop this mark group, keep going
@@ -139,6 +154,9 @@ namespace qp {
             return outSb.ToString();
         }
 
+        // The most a token that is not a mark can take (its time at 4 chars) — the room held back for it.
+        static int WorstSize(char kind) => kind == 'H' ? 9 : kind == 'R' ? 10 : 7;
+
         // One packed token — see the class summary.
         static string Encode(Tok head, List<int> cells, int prevSec, int n) {
             var sb = new StringBuilder(8 + cells.Count);
@@ -148,6 +166,7 @@ namespace qp {
             if (gap >= 0 && gap < 35) sb.Append(B36[gap]);
             else { sb.Append('z'); Num(sb, head.sec, 3); }
             if (head.kind == 'H') { Num(sb, head.technique, 1); Num(sb, head.size, 1); }
+            if (head.kind == 'R') Num(sb, head.awayMin, 3);
             if (IsMark(head.kind)) {
                 sb.Append(B36[cells.Count]);
                 for (int i = 1; i < cells.Count; i++) {

@@ -463,8 +463,8 @@ namespace qp {
 
                 Analytics.GameStart();
             }
-            // back on a saved board: the gap before this is time away, not thinking (saved with the next move)
-            else Trace('R', 0);
+            // back on a saved board, after this many minutes since it was last saved (saved with the next move)
+            else Trace('R', 0, awayMin: MinutesSince(AppData.LastPlayData.savedAtUnix));
 
             _topBar.SetWrongMoves(AppData.LastPlayData.bonesLost);
 
@@ -510,7 +510,14 @@ namespace qp {
             SetChromeInteractable(true);   // bloom done — bars usable again
 
             // Level-start social proof, right after the reveal — self-dismissing, never blocks.
-            if (_firstTryPopup != null) _firstTryPopup.TryShow();
+            // Not over a GP Recorder / Trace Player replay (editor only): it would sit on the board.
+            bool replayRun =
+#if UNITY_EDITOR
+                GPReplayer.WantsFreshBoard;
+#else
+                false;
+#endif
+            if (_firstTryPopup != null && !replayRun) _firstTryPopup.TryShow();
 
             // Safety net — should be IMPOSSIBLE: Win()/Fail() call LastPlayData.Invalidate() (and
             // clear the queued save) before anything else can persist, so a finished board should
@@ -692,8 +699,15 @@ namespace qp {
 
         // One token into the attempt's raw trace, stamped with the level's play clock. Saved with
         // the next board save (every played change queues one).
-        static void Trace(char kind, int cell, int technique = -1, int size = 0) =>
-            LevelTrace.Add(AppData.LastPlayData, kind, cell, Analytics.PlayTimeSec, technique, size);
+        static void Trace(char kind, int cell, int technique = -1, int size = 0, int awayMin = 0) =>
+            LevelTrace.Add(AppData.LastPlayData, kind, cell, Analytics.PlayTimeSec, technique, size, awayMin);
+
+        static long NowUnix => System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        // Minutes from a save to now; unknown (a save from an older app) → LevelTrace.AwayUnknown.
+        // A clock set back gives 0, not a negative.
+        static int MinutesSince(long savedAtUnix) => savedAtUnix <= 0 ? LevelTrace.AwayUnknown
+            : (int)System.Math.Min(LevelTrace.AwayUnknown, System.Math.Max(0, (NowUnix - savedAtUnix) / 60));
 
         // THE place the attempt's counters (AppData.LastPlayData: hints, queen boosts, undos, lives)
         // change — the same rule as SetCell: change it here and the save is queued, written once at
@@ -726,6 +740,7 @@ namespace qp {
             var data = AppData.LastPlayData;
             data.forLevelIdx = ProgressKey;   // level index, or the day index on a daily
             data.levelHash = _levelHash;
+            data.savedAtUnix = NowUnix;   // how long the player is away is measured from here (the trace's R)
             // SetCell keeps the string current; it is only missing on a fresh attempt no cell has
             // changed yet (a hint before the first move) or after Fail() invalidated it (Continue)
             // — then it is built whole from the cells
