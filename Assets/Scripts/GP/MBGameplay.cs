@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace qp {
-    public class MBGameplay : MonoBehaviour, IMBTouchesListener {
+    public class MBGameplay : MonoBehaviour, IBoardTouchListener {
 
         static public MBGameplay instance;
 
@@ -31,7 +31,7 @@ namespace qp {
         float _step, _cellSize;
         DragMode _drag;
         Vector3 _lastDragWorld;      // previous drag sample — fill cells skipped between frames
-        MBTouches _touches;
+        BoardTouchInput _input;      // finger events from the Input System (BoardTouchInput.cs)
         bool _ready;                 // input gated until the bloom reveal finishes
         MBWinPopup _winPopup;        // found by type (it lives elsewhere in the scene, inactive)
         readonly ReactionDirector _reactions = new ReactionDirector();   // rare "nice move" reactions
@@ -47,7 +47,7 @@ namespace qp {
         public PSPool WrongQueenMarkPS;    // burst on every wrong queen ($WorngQueenMarkPS — scene name has the typo)
         float _lastTick;             // throttle so drag-paint haptics are distinct ticks, not a buzz
         const float TickInterval = 0.12f;   // gap must be well over the pulse length or ticks merge
-        MBCell _lastTapCell, _prevTapCell;  // last two tapped cells — a double-click must be the same cell
+        MBCell _lastTapCell;         // the last pressed cell — a double-tap's second press must be the same cell
 
         // Undo: each stroke (one tap or one drag of X edits) is a group of cell changes we can revert.
         // Queens / wrong-queens are never recorded, so they can't be undone.
@@ -475,17 +475,8 @@ namespace qp {
             // force repost
             transform.GetComponent<RTResizeInvoker>().ReporteSize();
 
-            // start listening for touches (needs an MBTouches on a scene root)
-            if (_touches == null) {
-                _touches = this.RegisterToRoot();
-                if (_touches != null) {
-                    _touches.DoubleClickDelteTime = 0.3f;   // default 1.5s is far too long
-                    _touches.TrackFingerId = true;   // a second finger must not hijack a paint drag
-                    // default ~1cm rejects sloppy same-cell double-taps; TouchUp's same-cell rule
-                    // does the real gating, so the screen-distance gate can be generous (~3cm)
-                    _touches.DoubleClickTreshold = _touches.ClickTreshold * 6f;
-                }
-            }
+            // start listening for touches
+            _input ??= BoardTouchInput.Attach(this);
 
             // wait for UI to refresh our layout
             yield return new WaitForEndOfFrame();
@@ -565,17 +556,37 @@ namespace qp {
 
         void OnDisable() {
             if (_saveQueued) FlushBoardSave();   // leaving the scene — don't lose the last edits
-            if (_touches != null) { this.UnRegister(_touches); _touches = null; }
+            _input?.Detach(); _input = null;
         }
 
         // ---- touch input: paint X / erase on drag, double-click to place a queen ----------
 
-        public void TouchDown(MBTouches.TouchData touch, bool firstTime) {
-            if (!_ready || InputLocks > 0 || !firstTime) return;
+        // doubleTap: this press came within the double-tap window of the last tap's release
+        // (BoardTouchInput, real time). The queen lands HERE, on the press — never on a release
+        // that could come any time later.
+        public void TouchDown(MBTouches.TouchData touch, bool doubleTap) {
+            // a press the board doesn't take (locked by a popup, still blooming) must not count as the
+            // first half of a double-tap either — e.g. the tap that closes a popup over some cell
+            if (!_ready || InputLocks > 0) { _lastTapCell = null; return; }
             var cell = HitTest(touch.WorldPoint);
             _lastDragWorld = touch.WorldPoint;   // start of the drag path
-            _prevTapCell = _lastTapCell;   // remember the last two taps so we can require same-cell double-clicks
-            _lastTapCell = cell;
+
+            // a real double-tap: both presses on the SAME cell — otherwise it's just two quick taps
+            if (doubleTap && cell != null && cell == _lastTapCell && TutorialAllows(cell, MBCell.ECellType.QUEEN)) {
+                _lastTapCell = null;   // consume it so a third quick tap can't re-trigger
+                _drag = DragMode.None;   // the rest of this press (a move, the release) does nothing
+                _stroke = null;
+                // already holds a queen (right or wrong) — re-tapping must not cost another bone
+                if (cell.State == MBCell.ECellType.QUEEN || cell.State == MBCell.ECellType.WRONG_QUEEN) return;
+                // This gesture is a queen, not an X edit — drop the first tap's X toggle from undo.
+                int qidx = cell.Y * _n + cell.X;
+                if (_undo.Count > 0 && _undo[_undo.Count - 1].Count == 1 && _undo[_undo.Count - 1][0].idx == qidx)
+                    _undo.RemoveAt(_undo.Count - 1);
+                PlaceQueenAt(cell);
+                return;
+            }
+
+            _lastTapCell = cell;   // a double-tap must press the same cell again
             if (cell == null) { _drag = DragMode.None; return; }
 
             switch (cell.State) {
@@ -625,9 +636,10 @@ namespace qp {
 
         // The first tap of a queen double-tap paints a transient X — wait out the double-tap
         // window (with headroom) and count the X only if it survived (a real mark, not half
-        // a queen gesture).
+        // a queen gesture). The X is painted on the first PRESS, and the window runs from its
+        // RELEASE to the second press — so wait the hold of the first tap on top of the window.
         IEnumerator _correctXAfterTapWindow(MBCell cell) {
-            yield return new WaitForSecondsRealtime(_touches.DoubleClickDelteTime * 1.5f);
+            yield return new WaitForSecondsRealtime(BoardTouchInput.DoubleTapDelay * 2f);
             _pendingX.Remove(cell);
             if (cell != null && cell.State == MBCell.ECellType.X)
                 _reactions.OnCorrectX(Time.unscaledTime, cell.transform.position);
@@ -796,8 +808,8 @@ namespace qp {
             }
         }
 
-        public void TouchDrag(MBTouches.TouchData touch, bool samePoint) {
-            if (!_ready || InputLocks > 0 || samePoint || _drag == DragMode.None) return;
+        public void TouchDrag(MBTouches.TouchData touch) {
+            if (!_ready || InputLocks > 0 || _drag == DragMode.None) return;
 
             // Walk from the previous sample to this one and paint every cell along the way, so a
             // fast drag (finger moving several cells per frame) doesn't leave gaps in the row.
@@ -824,28 +836,9 @@ namespace qp {
             }
         }
 
-        public void TouchUp(MBTouches.TouchData touch, bool clicked, bool doubleClick) {
+        public void TouchUp(MBTouches.TouchData touch) {
             if (!_ready || InputLocks > 0) return;
-            // a real double-click means both taps landed on the SAME cell — otherwise it's just two quick taps
-            if (doubleClick && _lastTapCell != null && _lastTapCell == _prevTapCell && TutorialAllows(_lastTapCell, MBCell.ECellType.QUEEN)) {
-                _prevTapCell = null;   // consume it so a third quick tap can't re-trigger
-                var cell = _lastTapCell;
-
-                // already holds a queen (right or wrong) — re-tapping must not cost another bone
-                if (cell.State == MBCell.ECellType.QUEEN || cell.State == MBCell.ECellType.WRONG_QUEEN) {
-                    _drag = DragMode.None;
-                    return;
-                }
-
-                // This gesture is a queen, not X edits — drop the two taps' X toggles from undo.
-                _stroke = null;
-                int qidx = cell.Y * _n + cell.X;
-                if (_undo.Count > 0 && _undo[_undo.Count - 1].Count == 1 && _undo[_undo.Count - 1][0].idx == qidx)
-                    _undo.RemoveAt(_undo.Count - 1);
-
-                PlaceQueenAt(cell);
-            }
-            else if (_stroke != null) {
+            if (_stroke != null) {
                 // a tap or a whole drag of X edits = one undo entry
                 if (_stroke.Count > 0) _undo.Add(_stroke);
                 _stroke = null;

@@ -22,7 +22,8 @@ namespace qp {
         int _i;
 
         void Update() {
-            if (!Input.GetMouseButtonDown(0)) return;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
 
             if (_fx == null) {
                 var list = new System.Collections.Generic.List<IInGameReactionFX>();
@@ -33,7 +34,7 @@ namespace qp {
             }
             if (_fx.Length == 0 || Camera.main == null) return;
 
-            var pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            var pos = Camera.main.ScreenToWorldPoint(mouse.position.ReadValue());
             pos.z = 0f;
             _fx[_i++ % _fx.Length].Play(pos);
         }

@@ -17,11 +17,11 @@ namespace qp {
     public sealed class MBDebugKeys : MonoBehaviour {
 
         /// <summary>Pull the network out from under the game, and put it back.</summary>
-        const KeyCode Offline = KeyCode.F9;
+        const UnityEngine.InputSystem.Key Offline = UnityEngine.InputSystem.Key.F9;
 
         /// <summary>The debug panel itself. Escape closes it again, from the panel's own
         /// Update — it is only there while the panel is.</summary>
-        const KeyCode Panel = KeyCode.F1;
+        const UnityEngine.InputSystem.Key Panel = UnityEngine.InputSystem.Key.F1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot() {
@@ -31,13 +31,15 @@ namespace qp {
         }
 
         void Update() {
-            if (Input.GetKeyDown(Offline)) {
+            var kb = UnityEngine.InputSystem.Keyboard.current;   // the Input System (no keyboard on most phones)
+            if (kb == null) return;
+            if (kb[Offline].wasPressedThisFrame) {
                 InternetConnection.ForceOffline = !InternetConnection.ForceOffline;
                 // Debug.Log and not CDebug.Log: the latter is an analytics event.
                 Debug.Log($"[DebugKeys] network {(InternetConnection.ForceOffline ? "OFF" : "back on")}");
             }
 
-            if (Input.GetKeyDown(Panel)) MBDebugWin.Open();
+            if (kb[Panel].wasPressedThisFrame) MBDebugWin.Open();
         }
     }
 }

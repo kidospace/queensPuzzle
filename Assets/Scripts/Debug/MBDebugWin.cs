@@ -123,7 +123,9 @@ namespace qp {
         /// the other shortcuts because this object only exists while the panel is up, so there
         /// is nothing to ask and nothing to guard.</summary>
         void Update() {
-            if (Input.GetKeyDown(KeyCode.Escape)) Close();
+            // the Input System maps Android's back button to Escape
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) Close();
         }
         void OnDestroy() { if (_instance == this) _instance = null; }
 

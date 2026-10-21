@@ -106,13 +106,12 @@ namespace qp {
                 toks.Add(t);
             }
 
-            // A queen double-tap: the first tap painted an X, the second tap's touch-down erased it,
-            // then the queen landed — all on one cell, within a moment. Only the queen is a move.
+            // A queen double-tap: the first tap painted an X, and the queen landed on the second press
+            // (BoardTouchInput) — one cell, within a moment. Only the queen is a move. (The second
+            // press no longer erases first, so an erase just before a queen is a real one and stays.)
             for (int i = 0; i < toks.Count; i++) {
                 if (toks[i].kind != 'Q' && toks[i].kind != 'W') continue;
-                int j = i - 1;
-                if (j >= 0 && Tap(toks[j], 'E', toks[i])) { Drop(toks, j); j--; }
-                if (j >= 0 && Tap(toks[j], 'X', toks[i])) Drop(toks, j);
+                if (i > 0 && Tap(toks[i - 1], 'X', toks[i])) Drop(toks, i - 1);
             }
 
             // Group: a mark run (same kind, nothing between, each cell at most 1 s after the run's FIRST

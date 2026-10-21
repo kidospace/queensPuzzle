@@ -1143,12 +1143,13 @@ namespace qp {
         GPSpotKey _key;
 
         void Update() {
-            if (_key == null || !Input.GetMouseButtonDown(0)) return;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (_key == null || mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
             var gp = MBGameplay.instance;
             var cam = Camera.main;
             if (gp == null || !gp.Ready || cam == null) return;
 
-            Vector3 wp = cam.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 wp = cam.ScreenToWorldPoint(mouse.position.ReadValue());
             for (int r = 0; r < gp.N; r++)
                 for (int c = 0; c < gp.N; c++) {
                     var cell = gp.CellAt(r, c);

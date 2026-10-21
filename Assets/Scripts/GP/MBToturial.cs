@@ -561,9 +561,12 @@ namespace qp {
 
         // A fresh press this frame — mouse or a touch that just began.
         static bool TapDown() {
-            if (Input.GetMouseButtonDown(0)) return true;
-            for (int i = 0; i < Input.touchCount; i++)
-                if (Input.GetTouch(i).phase == TouchPhase.Began) return true;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame) return true;
+            var screen = UnityEngine.InputSystem.Touchscreen.current;
+            if (screen != null)
+                foreach (var t in screen.touches)
+                    if (t.press.wasPressedThisFrame) return true;
             return false;
         }
 
