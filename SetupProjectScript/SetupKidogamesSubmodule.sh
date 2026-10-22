@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SUB_PATH="Assets/kidogamesCode"
-SUB_URL="git@github.com:zikikido/kidogamesCode.git"
+SUB_URL="git@github.com:kidospace/kidogamesCode.git"
 
 # Commit the superproject pins the submodule to
 COMMIT=$(git ls-tree HEAD "$SUB_PATH" | awk '{print $3}')

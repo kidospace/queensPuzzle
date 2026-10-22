@@ -7,7 +7,7 @@ REM Script lives in SetupProjectScript\ - work from the repo root
 cd /d "%~dp0.."
 
 set SUB_PATH=Assets/kidogamesCode
-set SUB_URL=git@github.com:zikikido/kidogamesCode.git
+set SUB_URL=git@github.com:kidospace/kidogamesCode.git
 
 REM Commit the superproject pins the submodule to
 for /f "tokens=3" %%i in ('git ls-tree HEAD %SUB_PATH%') do set COMMIT=%%i
