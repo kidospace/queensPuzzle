@@ -555,8 +555,43 @@ namespace qp {
 
 
         void OnDisable() {
+            SendLeaveTrace();   // back to the lobby (or the app closing) mid-attempt
             if (_saveQueued) FlushBoardSave();   // leaving the scene — don't lose the last edits
             _input?.Detach(); _input = null;
+        }
+
+        /// <summary>The attempt is being thrown away by a restart (the settings popup): send its trace
+        /// now, or an attempt that ends in neither a win nor a lose is never seen. Call BEFORE the
+        /// attempt is invalidated. Nothing played yet = nothing to send.</summary>
+        public void SendRestartTrace() {
+            var d = AppData.LastPlayData;
+            if (!_ready || d == null || string.IsNullOrEmpty(d.trace)) return;
+            Analytics.SendTrace(false, LevelTrace.Pack(d.trace, _n), restart: true);
+            d.traceSentLen = d.trace.Length;
+        }
+
+        /// <summary>Forget the board write queued for the end of this frame. After the attempt was
+        /// invalidated from outside (a restart, before its interstitial) a queued write would put it
+        /// back on disk — the same guard Win() and Fail() apply to themselves.</summary>
+        public void DropPendingSave() => _saveQueued = false;
+
+        /// <summary>The player is leaving mid-attempt — the app going to the background, or the scene
+        /// closing (back to the lobby). Send the attempt so far: if they never come back, this is the
+        /// only trace of where they stopped. Only a live attempt, only when there is something new
+        /// since the last report. Logged now, while the game still runs; Firebase keeps it on the
+        /// device and uploads it on its own, in the background.</summary>
+        void SendLeaveTrace() {
+            var d = AppData.LastPlayData;
+            if (!_ready || d == null || _n == 0) return;
+            if (d.forLevelIdx != ProgressKey) return;   // no live attempt (won, failed, restarted)
+            if (string.IsNullOrEmpty(d.trace) || d.trace.Length <= d.traceSentLen) return;   // nothing new
+            Analytics.SendTrace(false, LevelTrace.Pack(d.trace, _n), left: true);
+            d.traceSentLen = d.trace.Length;
+            d.Save();   // going to the background: write now, not at the next frame
+        }
+
+        void OnApplicationPause(bool paused) {
+            if (paused) SendLeaveTrace();
         }
 
         // ---- touch input: paint X / erase on drag, double-click to place a queen ----------
@@ -1009,6 +1044,7 @@ namespace qp {
             if (DailyChallengeManager.InDailyRun) DailyChallengeManager.OnSolved();
             Analytics.GameWin();
             Analytics.SendTrace(true, LevelTrace.Pack(AppData.LastPlayData.trace, _n));
+            AppData.LastPlayData.traceSentLen = AppData.LastPlayData.trace?.Length ?? 0;
             // The tournament scores the bones still standing, so it has to read them before
             // Invalidate() clears the attempt. Daily counts too — a win is a win.
             _tournamentWin = TournamentManager.OnLevelWin(
@@ -1129,6 +1165,7 @@ namespace qp {
             Ads.HideBanner();            // banner off while the fail popup is up
             Analytics.GameLose();
             Analytics.SendTrace(false, LevelTrace.Pack(AppData.LastPlayData.trace, _n));
+            AppData.LastPlayData.traceSentLen = AppData.LastPlayData.trace?.Length ?? 0;
 
             // Failed → the attempt is gone from disk, so quitting (or Try again) restarts the level
             // fresh. It stays in memory — counters here, board on screen — for Continue, which only

@@ -271,7 +271,11 @@ namespace qp {
                     daily = (JsonInt(text, "daily") ?? 0) != 0;
                     int? win = JsonInt(text, "win");
                     string ver = JsonString(text, "version");
-                    if (win.HasValue) extra += win == 1 ? " · win" : " · lose";
+                    bool restart = (JsonInt(text, "restart") ?? 0) != 0;
+                    bool left = (JsonInt(text, "left") ?? 0) != 0;
+                    if (left) extra += " · left mid-level (the attempt so far)";
+                    else if (restart) extra += " · restart (the attempt was thrown away)";
+                    else if (win.HasValue) extra += win == 1 ? " · win" : " · lose";
                     if (ver != null) extra += " · app " + ver;
                 } else {
                     trace = text; version = _manualVersion; lvlIdx = _manualLevel - 1; daily = _manualDaily;

@@ -30,6 +30,13 @@ namespace qp {
             if (_restarting) return;
             _restarting = true;
 
+            // the attempt ends on the press, before any interstitial: its trace goes out, and it is gone
+            // from disk (clean board: without this Replay() restores it — wrong queens, bones). So the
+            // ad finds no live attempt to report as "left", and a game killed during it starts fresh.
+            MBGameplay.instance?.SendRestartTrace();
+            AppData.LastPlayData.Invalidate();
+            MBGameplay.instance?.DropPendingSave();   // no queued write may put it back before the Replay
+
             if (AppData.LevelIdx.Value + 1 >= GameConfig.StartShowInterAtLevel && Ads.CanShowInterstitial)
                 Ads.ShowInterstitial("settings_restart", Restart);
             else
@@ -37,8 +44,6 @@ namespace qp {
         }
 
         void Restart() {
-            // clean board: without this Replay() restores the saved attempt (wrong queens, bones)
-            AppData.LastPlayData.Invalidate();
             Close();   // out animation; Closed → the top bar releases its input lock
             MBGameplay.instance?.Replay();
         }
