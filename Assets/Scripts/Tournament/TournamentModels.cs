@@ -18,6 +18,10 @@ namespace qp {
         /// the server does not say. Named in full because `set` is a keyword in C# and a reserved
         /// word in SQL, and this value ends up in both.</summary>
         public string difficulty = "";
+        /// <summary>The score the group was built around — what the server expected this player
+        /// to make in the window. Reported with the result next to the score itself. 0 when the
+        /// server does not say.</summary>
+        public int baseScore;
         public bool isFinal;      // the server closed it — its table is the final ranking. Closing is
                                   // instant at end time, so there is no "results are being calculated"
 

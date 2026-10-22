@@ -251,13 +251,17 @@ namespace qp {
         /// bots are built from recorded players and multipliers picked by hand, and only the
         /// spread of final places says whether that guess was fair.
         /// </summary>
-        public static void TournamentEnd(int day, int place, int score, bool prize, string difficulty) {
-            CrashLog($"[tournament] end day {day} place {place} score {score} prize {(prize ? 1 : 0)} {difficulty}");
+        public static void TournamentEnd(int day, int place, int score, bool prize, string difficulty,
+                                         int baseScore) {
+            CrashLog($"[tournament] end day {day} place {place} score {score} base {baseScore} prize {(prize ? 1 : 0)} {difficulty}");
 #if !IGNORE_FIREBASE
             Send("tournament_end",
                 new Firebase.Analytics.Parameter("t_day", day),
                 new Firebase.Analytics.Parameter("t_place", place),
                 new Firebase.Analytics.Parameter("t_score", score),
+                // What the group was built around, so t_score / t_base says how this window
+                // compared to what the player was expected to do. 0 = unknown (an older save).
+                new Firebase.Analytics.Parameter("t_base", baseScore),
                 new Firebase.Analytics.Parameter("t_prize", prize ? 1 : 0),
                 // The difficulty the group was drawn from. Without it a result is unreadable: a
                 // 7th place in an Easy group and a 7th in a Hard one are different events, and the

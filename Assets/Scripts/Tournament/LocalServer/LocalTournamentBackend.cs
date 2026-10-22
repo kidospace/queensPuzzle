@@ -191,6 +191,7 @@ namespace qp {
             _state.startTicks = now.Ticks;
             _state.endTicks = now.AddHours(WindowHours).Ticks;
             _state.myScore = 0;
+            _state.baseScore = usual;
             _state.acceptedIds.Clear();
             _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
                                              level, _state.setKind, out var kind);
@@ -215,6 +216,7 @@ namespace qp {
             _state.closedEndTicks = _state.endTicks;
             _state.closedMyScore = _state.myScore;
             _state.closedSetKind = _state.setKind;   // the result event is sent after this
+            _state.closedBaseScore = _state.baseScore;
             _state.closedTable = _table(WindowMinutes, _state.myScore);
             _state.RecordScore(_state.myScore);   // what the next groups are sized against
         }
@@ -281,20 +283,20 @@ namespace qp {
             var rows = _table(minutes, _state.myScore);
 
             return _snapshot(_state.currentId, _state.startTicks, _state.endTicks, rows, false,
-                             _state.setKind);
+                             _state.setKind, _state.baseScore);
         }
 
         TournamentSnapshot _closedSnapshot() {
             if (string.IsNullOrEmpty(_state.closedId)) return _noTournament();
             return _snapshot(_state.closedId, _state.closedStartTicks, _state.closedEndTicks,
-                             _state.closedTable, true, _state.closedSetKind);
+                             _state.closedTable, true, _state.closedSetKind, _state.closedBaseScore);
         }
 
         static TournamentSnapshot _noTournament() => new TournamentSnapshot { etag = "none" };
 
         TournamentSnapshot _snapshot(
             string id, long startTicks, long endTicks, List<LocalEntry> rows, bool isFinal,
-            RivalGroup.Kind kind) {
+            RivalGroup.Kind kind, int baseScore) {
 
             var entries = new TournamentEntry[rows.Count];
             int myIndex = -1;
@@ -313,6 +315,7 @@ namespace qp {
                     isFinal = isFinal,
                     // Unknown travels as empty, and the event turns that into "?".
                     difficulty = kind == RivalGroup.Kind.Unknown ? "" : kind.ToString(),
+                    baseScore = baseScore,
                 },
                 standings = new TournamentStandings { myIndex = myIndex, entries = entries },
             };

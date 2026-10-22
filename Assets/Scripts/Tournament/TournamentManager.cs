@@ -302,7 +302,8 @@ namespace qp {
             // for the spread of places exactly as much as one that was celebrated.
             Analytics.TournamentEnd(ClosedDay, ClosedPlace,
                                     _state.lastSyncClosed.standings.Me?.score ?? 0, ClosedWonPrize,
-                                    _state.lastSyncClosed.info?.difficulty);
+                                    _state.lastSyncClosed.info?.difficulty,
+                                    _state.lastSyncClosed.info?.baseScore ?? 0);
         }
 
 

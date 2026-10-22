@@ -13,13 +13,17 @@ namespace qp {
     ///
     /// Targets are multiples of what THIS player usually scores in 48 hours, so the climb costs a
     /// weak player and a strong one the same effort. A set of nineteen multipliers is a whole
-    /// tournament's difficulty in one line:
+    /// tournament's difficulty in one line.
     ///
-    ///     normal:  1.8  1.5  1.25 │ 1.15  1.08  1.03 │ (player = 1.0) │ 0.96 …
+    /// The multipliers are MEASURED, not picked: they sit on the 5%, 10% … 95% points of how far a
+    /// real 48 hours lands from the player's usual — from a third of it to four times it (Oct 2026,
+    /// tournament_end over the rebuilt base). Placed there, every final place would come out ~5%
+    /// of the time, which is what a group of twenty real players gives. Each set is that spread
+    /// scaled: below 1 is kinder than real, above 1 harder.
     ///
-    /// Four rivals above them, so playing as usual finishes around 7th and third place — the last
-    /// prize — costs about 25% more. Every win moves them a row, because a win is worth ~2.4 points
-    /// and the rivals just above are a point or two apart.
+    /// The first sets were hand-picked around 1.0 (top rival at 1.2x / 1.8x) on the assumption
+    /// that a player's pace barely moves. It moves a lot — so anyone with a good two days passed
+    /// the whole table at once, 1st came out 35–45% of the time and places 2–8 stayed empty.
     ///
     /// Which set is drawn VARIES, and that matters more than the sets do. A player who is always
     /// 7th, always 25% from a prize, is looking at a pattern; a player who comes 3rd without trying
@@ -47,25 +51,28 @@ namespace qp {
         // many sit above 1.0 is the whole design: that is where the player lands by doing nothing
         // differently. The last slot is not a multiplier — see DeadAccountScore.
 
-        /// <summary>Four above: finishes ~5th by default, a prize within reach of a normal week.</summary>
+        /// <summary>The measured spread x0.6. Five above: playing as usual finishes ~6th, third
+        /// place costs about 55% more play. A prize about a third of the time.</summary>
         static readonly float[] Easy = {
-            1.20f, 1.10f,
-            0.95f, 0.89f, 0.83f, 0.77f, 0.71f, 0.65f, 0.59f, 0.53f,
-            0.47f, 0.41f, 0.35f, 0.29f, 0.23f, 0.17f, 0.11f, 0.06f, 0.03f,
+            2.64f, 1.80f, 1.55f, 1.25f, 1.11f,
+            0.99f, 0.87f, 0.79f, 0.70f, 0.61f, 0.54f, 0.49f, 0.45f, 0.41f,
+            0.35f, 0.31f, 0.24f, 0.19f, 0.11f,
         };
 
-        /// <summary>Six above: finishes ~7th, third place costs about 25% more play.</summary>
+        /// <summary>The measured spread x0.8 — a little kinder than a real group, because a real
+        /// one (a prize 15% of the time) reads as never winning. Eight above: finishes ~9th, third
+        /// place costs about twice the usual. A prize about a fifth of the time.</summary>
         static readonly float[] Normal = {
-            1.80f, 1.50f, 1.25f, 1.15f, 1.08f, 1.03f,
-            0.96f, 0.90f, 0.84f, 0.77f, 0.69f, 0.60f, 0.50f,
-            0.41f, 0.32f, 0.24f, 0.16f, 0.09f, 0.04f,
+            3.52f, 2.40f, 2.06f, 1.67f, 1.48f, 1.32f, 1.16f, 1.06f,
+            0.94f, 0.81f, 0.72f, 0.66f, 0.60f, 0.54f, 0.47f, 0.41f, 0.32f, 0.25f, 0.15f,
         };
 
-        /// <summary>Ten above, one of them far out of reach. This is the week the prize is gone —
-        /// and the reason winning one means something.</summary>
+        /// <summary>The measured spread x1.2. Eleven above: finishes ~12th, and a prize under one
+        /// time in ten. This is the week the prize is nearly gone — and the reason winning one
+        /// means something.</summary>
         static readonly float[] Hard = {
-            5.50f, 3.40f, 2.50f, 2.10f, 1.80f, 1.60f, 1.45f, 1.30f, 1.20f, 1.10f,
-            0.92f, 0.84f, 0.75f, 0.65f, 0.55f, 0.44f, 0.33f, 0.22f, 0.11f,
+            5.28f, 3.60f, 3.10f, 2.51f, 2.22f, 1.98f, 1.74f, 1.58f, 1.40f, 1.21f, 1.08f,
+            0.98f, 0.90f, 0.82f, 0.71f, 0.61f, 0.48f, 0.37f, 0.23f,
         };
 
         const float EasyChance = 0.25f;
@@ -245,9 +252,10 @@ namespace qp {
             // rises as the game grows, and a player this strong deserves real opponents, which
             // is what a real server will bring.
             //
-            // Today this is under 1% of players (the ceiling bites above ~470 points in 48
-            // hours). When that stops being true, "how many players score above the bank's top"
-            // is one BigQuery query away — no instrumentation needed here.
+            // Today the bank tops out near 1000 points, so the top rival hits it in ~3% of Normal
+            // groups and ~5% of Hard ones (Oct 2026, with the measured sets). When that grows,
+            // t_score against t_base on tournament_end says by how much — no instrumentation
+            // needed here.
             int best = -1, bestGap = int.MaxValue;
             for (int i = 0; i < RivalsBlob.Count; i++) {
                 if (used.Contains(i) || RivalsBlob.OwnerAt(i) == myOwner) continue;

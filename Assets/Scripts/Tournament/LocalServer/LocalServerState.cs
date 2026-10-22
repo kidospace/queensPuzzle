@@ -52,6 +52,13 @@ namespace qp {
         public RivalGroup.Kind setKind = RivalGroup.Kind.Unknown;
         public RivalGroup.Kind closedSetKind = RivalGroup.Kind.Unknown;
 
+        /// <summary>The score the open group was built around (<see cref="UsualScore"/>, or the
+        /// population median for a first tournament), and the closed one's. Reported with the
+        /// result, because a place cannot be judged without it: 1st on 3x the usual pace and 1st
+        /// on the usual pace are different findings. 0 = a save from before this existed.</summary>
+        public int baseScore;
+        public int closedBaseScore;
+
         public string closedId = "";
         public long closedStartTicks;
         public long closedEndTicks;
