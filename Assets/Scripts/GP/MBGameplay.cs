@@ -585,7 +585,7 @@ namespace qp {
             if (!_ready || d == null || _n == 0) return;
             if (d.forLevelIdx != ProgressKey) return;   // no live attempt (won, failed, restarted)
             if (string.IsNullOrEmpty(d.trace) || d.trace.Length <= d.traceSentLen) return;   // nothing new
-            Analytics.SendTrace(false, LevelTrace.Pack(d.trace, _n), left: true);
+            Analytics.SendTrace(false, LevelTrace.Pack(d.trace, _n), leave: true);
             d.traceSentLen = d.trace.Length;
             d.Save();   // going to the background: write now, not at the next frame
         }

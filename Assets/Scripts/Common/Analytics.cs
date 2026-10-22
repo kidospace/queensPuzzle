@@ -102,13 +102,13 @@ namespace qp {
         /// </summary>
         /// <paramref name="restart"/>: the attempt ended by a restart, not a win or a lose — sent with
         /// win 0 and restart 1, and there is no game_win / game_lose beside it.
-        /// <paramref name="left"/>: the player left mid-attempt (the app went to the background, or back
-        /// to the lobby) — the attempt so far, whole, win 0 and left 1. Every report of an attempt
+        /// <paramref name="leave"/>: the player left mid-attempt (the app went to the background, or back
+        /// to the lobby) — the attempt so far, whole, win 0 and leave 1. Every report of an attempt
         /// carries all of it so far, so a lost one costs nothing: read the LAST report of each attempt
-        /// (lvl_attempts) — a final "left" with nothing after it is where a player stopped.
-        public static void SendTrace(bool win, string packed, bool restart = false, bool left = false) {
+        /// (lvl_attempts) — a final "leave" with nothing after it is where a player stopped.
+        public static void SendTrace(bool win, string packed, bool restart = false, bool leave = false) {
             packed ??= "";
-            CrashLog($"[game] lvl_trace {(left ? "left" : restart ? "restart" : win ? "win" : "lose")} level {LevelIdx} | {packed}");
+            CrashLog($"[game] lvl_trace {(leave ? "leave" : restart ? "restart" : win ? "win" : "lose")} level {LevelIdx} | {packed}");
 #if !IGNORE_FIREBASE
             int size = qp.LevelTrace.EventChars;
             int parts = System.Math.Max(1, (packed.Length + size - 1) / size);
@@ -120,7 +120,7 @@ namespace qp {
                     new Firebase.Analytics.Parameter("daily", DailyChallengeManager.InDailyRun ? 1 : 0),
                     new Firebase.Analytics.Parameter("win", win ? 1 : 0),
                     new Firebase.Analytics.Parameter("restart", restart ? 1 : 0),
-                    new Firebase.Analytics.Parameter("left", left ? 1 : 0),
+                    new Firebase.Analytics.Parameter("leave", leave ? 1 : 0),
                     new Firebase.Analytics.Parameter("lvl_attempts", Attempts),   // which attempt — its reports pair by it
                     new Firebase.Analytics.Parameter("level_hash", LevelLoader.CurrentLevelHash),
                     // the trace format (LevelTrace.Version) — a decoder picks its reader by it, not by app version

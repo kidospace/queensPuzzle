@@ -32,7 +32,7 @@ namespace qp {
 
             // the attempt ends on the press, before any interstitial: its trace goes out, and it is gone
             // from disk (clean board: without this Replay() restores it — wrong queens, bones). So the
-            // ad finds no live attempt to report as "left", and a game killed during it starts fresh.
+            // ad finds no live attempt to report as "leave", and a game killed during it starts fresh.
             MBGameplay.instance?.SendRestartTrace();
             AppData.LastPlayData.Invalidate();
             MBGameplay.instance?.DropPendingSave();   // no queued write may put it back before the Replay

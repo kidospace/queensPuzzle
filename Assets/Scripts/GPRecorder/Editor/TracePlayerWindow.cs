@@ -272,8 +272,8 @@ namespace qp {
                     int? win = JsonInt(text, "win");
                     string ver = JsonString(text, "version");
                     bool restart = (JsonInt(text, "restart") ?? 0) != 0;
-                    bool left = (JsonInt(text, "left") ?? 0) != 0;
-                    if (left) extra += " · left mid-level (the attempt so far)";
+                    bool leave = (JsonInt(text, "leave") ?? 0) != 0;
+                    if (leave) extra += " · left mid-level (the attempt so far)";
                     else if (restart) extra += " · restart (the attempt was thrown away)";
                     else if (win.HasValue) extra += win == 1 ? " · win" : " · lose";
                     if (ver != null) extra += " · app " + ver;

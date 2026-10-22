@@ -45,7 +45,7 @@ namespace qp {
         // back to the board can tell the trace how long the player was away. 0 = a save from before.
         public long savedAtUnix;
 
-        // How long the trace was when it was last sent — a "left" report goes out only when there is
+        // How long the trace was when it was last sent — a "leave" report goes out only when there is
         // something new since (lvl_trace on leaving mid-level, see MBGameplay.SendLeaveTrace).
         public int traceSentLen;
 
