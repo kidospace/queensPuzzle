@@ -198,8 +198,8 @@ MonoBehaviour:
     RightNormal: 0
   _maxRatioSize:
     screenRatio: 0.75
-    TopNormal: 0.022485
-    BottomNormal: 0.022485
+    TopNormal: 0.06924
+    BottomNormal: 0.06924
     LeftNormal: 0
     RightNormal: -0
 --- !u!1 &1094682341446195362
@@ -1005,7 +1005,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 13487479
+    rgba: 4291677559
   m_fontColor: {r: 0.4666667, g: 0.80392164, b: 0.80392164, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -1207,7 +1207,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 1540815867
+    rgba: 4292279291
   m_fontColor: {r: 0.9843138, g: 0.9843138, b: 0.83921576, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
