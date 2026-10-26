@@ -26,15 +26,16 @@ namespace qp {
         /// <summary>Rewinds and plays the opening. Driven by MBTournamentLeaderboard.Show.</summary>
         public void PlayIn() => _play(ShowState);
 
-        /// <summary>True once the clip has played through (a one-shot, so it holds at the end).</summary>
+        /// <summary>True once the clip has played through and the animator is back in the empty
+        /// Idle default — which, with Write Defaults on, is the prefab exactly as authored.</summary>
         public bool IsFinished() => _done(Show);
 
         /// <summary>The info panel revealing itself a step at a time.</summary>
         public void PlayInfo() => _play(InfoInState);
 
-        /// <summary>And taking it all back. Its own state, because the state that brought it in
-        /// holds its last frame for as long as it is the current one — fading those colours from
-        /// code would be overwritten on the next frame.</summary>
+        /// <summary>And taking it all back. The only state that holds its last frame (everything
+        /// faded out) — the panel is switched off right after, and Keep Animator State On Disable
+        /// stops that held frame from being captured as the new defaults.</summary>
         public void PlayInfoOut() => _play(InfoOutState);
 
         public bool IsInfoOutDone() => _done(InfoOut);

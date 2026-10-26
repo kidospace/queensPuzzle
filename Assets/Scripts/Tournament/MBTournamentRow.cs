@@ -13,8 +13,8 @@ namespace qp {
     /// on the list or in what order, and it has no idea how many rows there are. That keeps the
     /// list free to be built, reordered and reused without this having an opinion about it.
     ///
-    /// Every variation is already in the prefab — two backgrounds, three medals, two name styles,
-    /// two score pills, three prizes — so all this does is turn the right ones on. Nothing here
+    /// Every variation is already in the prefab — a plain, a selected and three podium backgrounds,
+    /// three medals, two name styles, three prizes — so all this does is turn the right ones on. Nothing here
     /// swaps a sprite, tints a colour or sets a font: the look belongs to the art, and the art can
     /// change without touching this file.
     /// </summary>
@@ -24,9 +24,9 @@ namespace qp {
         public const int MedalRanks = 3;
 
         GameObject _bg, _bgMe;
-        GameObject[] _medals, _prizes;
-        GameObject _pill, _pillMe;
-        TMP_Text _place, _name, _nameMe, _score, _scoreMe;
+        GameObject[] _bgPlaces, _medals, _prizes;
+        GameObject _pill;
+        TMP_Text _place, _name, _nameMe, _score;
 
         // What is on screen, so setting a row to what it already shows costs nothing. A TMP label
         // assigned the string it already holds still dirties its mesh and rebuilds the layout.
@@ -38,16 +38,15 @@ namespace qp {
             _bg     = Child("$BG");
             _bgMe   = Child("$BGSelected");
             _pill   = Child("$ScorePill");
-            _pillMe = Child("$ScorePillSelected");
 
-            _medals = new[] { Child("$Medal1"), Child("$Medal2"), Child("$Medal3") };
-            _prizes = new[] { Child("$Prize1"), Child("$Prize2"), Child("$Prize3") };
+            _bgPlaces = new[] { Child("$BGPlace1"), Child("$BGPlace2"), Child("$BGPlace3") };
+            _medals   = new[] { Child("$Medal1"), Child("$Medal2"), Child("$Medal3") };
+            _prizes   = new[] { Child("$Prize1"), Child("$Prize2"), Child("$Prize3") };
 
             _place   = Label("$Place");
             _name    = Label("$Name");
             _nameMe  = Label("$NameSelected");
             _score   = Label("$Score");
-            _scoreMe = Label("$ScoreSelected");
         }
 
         /// <summary>
@@ -64,13 +63,19 @@ namespace qp {
             // the one row the player is actually looking at until the next one.
             if (isMe && !string.IsNullOrEmpty(ProfileManager.Name)) name = ProfileManager.Name;
 
+            // One background at a time. The player's own row wins over the podium colours — it is
+            // the row they are looking for.
+            if (first || isMe != _meShown || rank != _rankShown) {
+                bool podium = !isMe && rank <= MedalRanks;
+                Show(_bg, !isMe && !podium);
+                Show(_bgMe, isMe);
+                for (int i = 0; i < _bgPlaces.Length; i++) Show(_bgPlaces[i], !isMe && rank == i + 1);
+            }
+
             if (first || isMe != _meShown) {
-                Show(_bg, !isMe);   Show(_bgMe, isMe);
-                Show(_pill, !isMe); Show(_pillMe, isMe);
                 Show(_name, !isMe); Show(_nameMe, isMe);
                 _meShown = isMe;
                 _nameShown = null;          // the label in use changed, so it has to be written
-                _scoreShown = -1;
             }
 
             if (first || rank != _rankShown) {
@@ -91,7 +96,7 @@ namespace qp {
             }
 
             if (score != _scoreShown) {
-                SetText(isMe ? _scoreMe : _score, score.ToString());
+                SetText(_score, score.ToString());
                 _scoreShown = score;
             }
         }
@@ -114,7 +119,7 @@ namespace qp {
         static void Show(TMP_Text label, bool on) { if (label != null) Show(label.gameObject, on); }
         static void SetText(TMP_Text label, string value) { if (label != null) label.text = value; }
 
-        public TMP_Text ScoreLabel => _meShown ? _scoreMe : _score;
+        public TMP_Text ScoreLabel => _score;
 
         public void SetScore(int score) {
             SetText(ScoreLabel, score.ToString());
@@ -123,15 +128,14 @@ namespace qp {
 
         /// <summary>
         /// Change the score behind a dip to nothing and back, instead of swapping the digits
-        /// where the player is looking. The row owns this because the row is the only thing that
-        /// knows which of its two pills is showing.
+        /// where the player is looking.
         ///
         /// Out and back in rather than a dissolve: there is one label, and a number cannot cross
         /// over itself. Half the time going, half coming back.
         /// </summary>
         public IEnumerator FadeScoreTo(int score, float seconds) {
-            var pill = _meShown ? _pillMe : _pill;
-            if (pill == null) { _scoreShown = score; SetText(_meShown ? _scoreMe : _score, score.ToString()); yield break; }
+            var pill = _pill;
+            if (pill == null) { _scoreShown = score; SetText(_score, score.ToString()); yield break; }
 
             var group = pill.GetComponent<CanvasGroup>();
             if (group == null) group = pill.AddComponent<CanvasGroup>();
@@ -143,7 +147,7 @@ namespace qp {
             }
 
             group.alpha = 0f;
-            SetText(_meShown ? _scoreMe : _score, score.ToString());
+            SetText(_score, score.ToString());
             _scoreShown = score;
 
             for (float e = 0f; e < half; e += Time.unscaledDeltaTime) {
