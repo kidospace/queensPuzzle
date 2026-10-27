@@ -148,7 +148,11 @@ namespace qp {
             float w = Screen.width / scale, h = Screen.height / scale;
 
             GUILayout.BeginArea(new Rect(10, 10, w - 20, h - 20), GUI.skin.box);
+            // Close up here as well, outside the scroll: the one at the bottom is a long way down.
+            GUILayout.BeginHorizontal();
             GUILayout.Label($"DEBUG | level {AppData.LevelIdx + 1}/{LevelLoader.LevelCount} | attempts {AppData.LevelAttempts.Value} | bones lost {AppData.LastPlayData.bonesLost} | firebase {FirebaseState()}");
+            if (GUILayout.Button("Close", GUILayout.Height(44), GUILayout.Width(100))) Close();
+            GUILayout.EndHorizontal();
             _scroll = GUILayout.BeginScrollView(_scroll);
 
             GUILayout.Label($"Firebase events: {(Analytics.EventsOn ? "ON" : "OFF — debug mode")}");

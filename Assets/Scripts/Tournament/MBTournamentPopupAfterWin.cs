@@ -88,6 +88,7 @@ namespace qp {
 
         string _clockShown;
         bool _laidOut, _open, _closing, _offlineShown;
+        bool _canClose;                     // only once the opening is over and "Tap to Continue" is up
         bool _scrollVertical;               // as authored — the climb turns dragging off for its duration
 
         void Awake() {
@@ -122,7 +123,7 @@ namespace qp {
 
             var close = transform.RecursiveFindChild("$CloseBtn")?.GetComponent<Button>();
             if (close == null) Debug.LogError("[AfterWin] $CloseBtn has no Button — it cannot be closed");
-            else close.onClick.AddListener(() => { if (!_closing && _open) StartCoroutine(Close()); });
+            else close.onClick.AddListener(() => { if (_canClose && !_closing && _open) StartCoroutine(Close()); });
         }
 
         // Alive but invisible for the first frames so the list lays out at its real size, then
@@ -138,21 +139,37 @@ namespace qp {
 
         // ---- the one thing this screen is for --------------------------------------------
 
-        /// <summary>Show it, and finish when it is gone. Opening it twice does nothing.</summary>
+        /// <summary>
+        /// Show it, and finish when it is gone. Opening it twice does nothing.
+        ///
+        /// This runs in the CALLER's coroutine, so it only waits. Everything that happens on the
+        /// screen runs in <see cref="_run"/>, a coroutine of this object — closing switches the
+        /// object off, which stops that on the spot. Run from here instead, it would carry on
+        /// after the close: stuck for good on an opening that can no longer finish, or playing
+        /// out the whole climb on a screen nobody can see while the game waits behind it.
+        /// </summary>
         public IEnumerator Show(TournamentWinResult win) {
             if (_open) yield break;
             _open = true;
             _closing = false;
+            _canClose = false;
 
-            // A climb cut short by a close never got to hand dragging back.
+            // A climb cut short by a close never got to hand dragging back, or its row.
             if (_scroll != null) _scroll.vertical = _scrollVertical;
 
             gameObject.SetActive(true);
+            _putBackLifted();
             Fill(win);
             InvokeRepeating(nameof(Tick), 0f, ClockSeconds);
 
-            while (!_laidOut) yield return null;
+            while (!_laidOut && _open) yield return null;
+            if (!_open) yield break;
 
+            StartCoroutine(_run(win));
+            while (_open) yield return null;   // until the player taps out
+        }
+
+        IEnumerator _run(TournamentWinResult win) {
             _group.alpha = 1f;
 
             // The opening clip brings in both the panel and the table; all this decides is which
@@ -166,6 +183,10 @@ namespace qp {
 
             _anim?.PlayIn();
             if (_anim != null) yield return new WaitUntil(() => _anim.IsFinished());
+
+            // The opening ends on "Tap to Continue" fully in. From here a tap closes — during the
+            // offline wait or the climb too.
+            _canClose = true;
 
             // The decision point, taken HERE and not when the screen opened: a player who came
             // back online while the opening played has earned the climb.
@@ -187,8 +208,18 @@ namespace qp {
             // And from here it is settled. Losing the line again mid-climb does not undo a win
             // that has already been counted, so nothing below asks a second time.
             if (Climbable) yield return Climb(win);
+        }
 
-            while (_open) yield return null;   // until the player taps out
+        /// <summary>A climb cut short by a close leaves the player's row out of the list, over
+        /// the mask, and the arrows riding it. Put both back before anything is drawn.</summary>
+        void _putBackLifted() {
+            if (_content != null)
+                foreach (var row in _rows)
+                    if (row.transform.parent != _content) row.transform.SetParent(_content, false);
+            if (_arrows != null && _overlay != null && _arrows.parent != _overlay) {
+                _arrows.SetParent(_overlay, false);
+                _arrows.gameObject.SetActive(false);
+            }
         }
 
         IEnumerator Close() {
@@ -218,6 +249,7 @@ namespace qp {
             CancelInvoke(nameof(Tick));
             _open = false;
             _closing = false;
+            _canClose = false;
         }
 
         /// <summary>The tournament is still running while the player reads this, and a countdown
