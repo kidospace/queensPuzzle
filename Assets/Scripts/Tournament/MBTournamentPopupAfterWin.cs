@@ -58,8 +58,8 @@ namespace qp {
         RectTransform _content;
         ScrollRect _scroll;
         TMP_Text _clock, _rankUp, _pendingBones;
-        GameObject _rankUpRoot, _offline;
-        Transform _overlay;                 // Container — outside the scroll view, over the mask
+        GameObject _rankUpRoot, _offline, _online;
+        Transform _overlay;                 // $Online — outside the scroll view, over the mask
         Transform _arrows;                  // $RankUpPS — ridden by the card on its way up
         MBTournamentPopupAfterWinAnim _anim;
         [SerializeField] MBTournamentBonesEffect _bonesEffect;
@@ -111,6 +111,11 @@ namespace qp {
             _offline = offline != null ? offline.gameObject : null;
             if (_offline == null) Debug.LogError("[AfterWin] $Offline is missing from the prefab");
 
+            // The table and its header. Never on screen together with the offline panel.
+            var online = transform.RecursiveFindChild("$Online");
+            _online = online != null ? online.gameObject : null;
+            if (_online == null) Debug.LogError("[AfterWin] $Online is missing from the prefab");
+
             _anim = GetComponent<MBTournamentPopupAfterWinAnim>();
 
             var close = transform.RecursiveFindChild("$CloseBtn")?.GetComponent<Button>();
@@ -145,13 +150,13 @@ namespace qp {
 
             _group.alpha = 1f;
 
-            // The opening clip brings the panel in along with everything else; all this decides
-            // is whether it is there to be brought in. A curve on an inactive object draws
-            // nothing, so online it simply does not appear.
+            // The opening clip brings in both the panel and the table; all this decides is which
+            // of the two is there to be brought in. A curve on an inactive object draws nothing.
             //
             // Still only a presentation choice - the decision that matters is taken after the
             // opening, so a line that comes back while it plays earns the climb anyway.
             if (_offline != null) { _offline.SetActive(Offline); _offlineShown = Offline; }
+            if (_online != null) _online.SetActive(!_offlineShown);
             if (_offlineShown) Tick();                 // the pending count, before it is seen
 
             _anim?.PlayIn();
@@ -254,23 +259,26 @@ namespace qp {
         /// come through here — the one that waited for it, and the one where it arrived during
         /// the opening.
         ///
-        /// Its own animator state, because the opening state holds its last frame for as long as
-        /// it is the current one, and that frame has this panel at full.
+        /// The table is switched on first and the clip crossfades: the panel fades out while the
+        /// list and its header fade in. The clip holds its last frame (panel at zero) only until
+        /// the panel is switched off below.
         /// </summary>
         IEnumerator HideOffline() {
+            if (_online != null) _online.SetActive(true);
             _anim?.PlayOfflineGone();
             if (_anim != null) yield return new WaitUntil(() => _anim.IsOfflineGone());
             _offline.SetActive(false);
             _offlineShown = false;
         }
 
-        /// <summary>Bring the panel up for a line that dropped AFTER the opening. The Show state
-        /// is still the current one and still holding its last frame, which has this at full —
-        /// so it only has to exist again.</summary>
+        /// <summary>Bring the panel up for a line that dropped AFTER the opening, in place of the
+        /// table. The animator is resting in Idle, which holds the prefab's values — the panel at
+        /// full — so it only has to exist again.</summary>
         void ShowOfflinePanel() {
             if (_offline == null || _offlineShown) return;
             _offlineShown = true;
             _offline.SetActive(true);
+            if (_online != null) _online.SetActive(false);
             Tick();
         }
 
@@ -477,6 +485,7 @@ namespace qp {
                     if (!standings.IsMe(i)) _rivals.Add(entries[i]);
 
             if (_offline != null && !_offlineShown) _offline.SetActive(false);
+            if (_online != null && !_offlineShown) _online.SetActive(true);
             if (_rankUpRoot != null) _rankUpRoot.SetActive(false);
             _clockShown = null;          // reopened later, the time it last showed is wrong
             Tick();

@@ -50,7 +50,7 @@ namespace qp {
 
             _podium = new MBTournamentRow[PodiumPlaces];
             for (int i = 0; i < PodiumPlaces; i++) _podium[i] = Row(panel, "$" + (i + 1));
-            _myRow = Row(panel, "$MyRow");
+            _myRow = Row(transform, "$MyRow");      // under the podium, not inside it
 
             var button = transform.RecursiveFindChild("$LvlButton")?.GetComponent<Button>();
             if (button == null) Debug.LogError("[EndNoClaim] $LvlButton has no Button — it cannot be pressed");
@@ -156,9 +156,9 @@ namespace qp {
 
         // ---- the prefab ---------------------------------------------------------------------
 
-        MBTournamentRow Row(Transform panel, string name) {
-            var found = panel.RecursiveFindChild(name);
-            if (found == null) { Debug.LogError($"[EndNoClaim] {name} is missing from $RowsPannel"); return null; }
+        MBTournamentRow Row(Transform under, string name) {
+            var found = under.RecursiveFindChild(name);
+            if (found == null) { Debug.LogError($"[EndNoClaim] {name} is missing under {under.name}"); return null; }
             return found.GetComponent<MBTournamentRow>();
         }
 

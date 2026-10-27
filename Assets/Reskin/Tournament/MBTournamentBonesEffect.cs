@@ -24,8 +24,9 @@ namespace qp {
             transform.SetParent(badge, false);
             transform.position = badge.TransformPoint(badge.rect.center);
             transform.SetAsFirstSibling();
-            if (rim != null) {
-                var background = badge.GetComponent<Image>();
+            var background = PillArt(badge);
+            if (rim != null) rim.gameObject.SetActive(background != null);
+            if (rim != null && background != null) {
                 rim.sprite = background.sprite;
                 rim.type = background.type;
                 rim.pixelsPerUnitMultiplier = background.pixelsPerUnitMultiplier;
@@ -35,6 +36,18 @@ namespace qp {
             motes.transform.SetParent(badge, false);
             motes.transform.position = transform.position;
             motes.transform.SetAsLastSibling();
+        }
+
+        /// <summary>The image the rim traces. The pill's own, or — when the row draws one pill per
+        /// background — whichever BackBone is showing, which sits exactly on the pill.</summary>
+        static Image PillArt(RectTransform badge) {
+            var own = badge.GetComponent<Image>();
+            if (own != null) return own;
+            var row = badge.GetComponentInParent<MBTournamentRow>();
+            if (row == null) return null;
+            foreach (var image in row.GetComponentsInChildren<Image>())
+                if (image.name == "BackBone") return image;    // inactive ones are not returned
+            return null;
         }
 
         public void Play() {

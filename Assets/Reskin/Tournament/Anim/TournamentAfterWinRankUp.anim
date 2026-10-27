@@ -40,7 +40,7 @@ AnimationClip:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP
   m_FloatCurves:
   - serializedVersion: 2
     curve:
@@ -86,7 +86,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP/Arrow
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP/Arrow
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -99,7 +99,7 @@ AnimationClip:
   m_ClipBindingConstant:
     genericBindings:
     - serializedVersion: 2
-      path: 1292412891
+      path: 3545618618
       attribute: 3
       script: {fileID: 0}
       typeID: 4
@@ -108,7 +108,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 2682567025
+      path: 3911471125
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -164,7 +164,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.x
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -194,7 +194,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.y
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -224,7 +224,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_LocalScale.z
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -272,7 +272,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/PopopStrech/Scaler/Container/Top/$RankUP/Arrow
+    path: SafeArea/PopopStrech/Scaler/Container/$Online/Top/$RankUP/Arrow
     classID: 224
     script: {fileID: 0}
     flags: 16

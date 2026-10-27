@@ -83,10 +83,12 @@ namespace qp {
             _poof = transform.RecursiveFindChild("$CFXR Magic Poof");
             _anim = GetComponent<MBTournamentEndClaimAnim>();
 
-            _button = transform.RecursiveFindChild("$LvlButton")?.GetComponent<Button>();
-            _buttonText = Label("$Text");
-            if (_button == null) Debug.LogError("[EndClaim] $LvlButton has no Button — it cannot be pressed");
-            else _button.onClick.AddListener(OnButton);
+            _button = transform.RecursiveFindChild("$ClaimButton")?.GetComponent<Button>();
+            if (_button == null) Debug.LogError("[EndClaim] $ClaimButton has no Button — it cannot be pressed");
+            else {
+                _buttonText = _button.transform.RecursiveFindChild("$Text")?.GetComponent<TMP_Text>();
+                _button.onClick.AddListener(OnButton);
+            }
         }
 
         // Stay active but invisible for the first frames so everything lays out at its real size,
@@ -151,14 +153,6 @@ namespace qp {
             if (_button != null) _button.interactable = true;
         }
 
-        /// <summary>
-        /// Everything the clip cannot know, set on the one frame the burst is covering: this
-        /// player's box is now an open one, its glow is lit, and the rewards it holds are in the
-        /// scene. The motion over all of it belongs to <see cref="MBTournamentEndClaimAnim"/>.
-        ///
-        /// Without that component nothing would ever fade the rewards up, so they are simply put
-        /// on screen — a skin with no clip still pays out and still reads.
-        /// </summary>
         /// <summary>How much of one boost this place just handed over. Read off the prize that
         /// was granted, so the event says what the player actually got rather than what the place
         /// happens to be worth whenever the numbers are read back.</summary>
@@ -172,22 +166,26 @@ namespace qp {
             return total;
         }
 
+        /// <summary>
+        /// Everything the clip cannot know, set on the one frame the burst is covering: this
+        /// player's box is now an open one, and the rewards it holds are in the scene. The motion
+        /// over all of it belongs to <see cref="MBTournamentEndClaimAnim"/>.
+        ///
+        /// Nothing here touches alpha or scale — the animator owns those, and at rest it holds the
+        /// prefab's values, so a skin with no clip still shows the rewards as authored.
+        /// </summary>
         void OpenBox() {
             var box = Box(Rank);
             if (box != null) {
                 Show(box.transform.RecursiveFindChild("GiftBoxIconClose"), false);
                 Show(box.transform.RecursiveFindChild("GiftBoxIconOpen"), true);
-                Show(box.transform.RecursiveFindChild("%Light"), true);
             }
 
             if (_rewards != null) _rewards.gameObject.SetActive(true);
 
             var rewards = TournamentConfig.Instance?.PrizeFor(Rank)?.rewards;
             int shown = rewards != null ? Mathf.Min(rewards.Length, _slots.Count) : 0;
-            for (int i = 0; i < shown; i++) {
-                _slots[i].gameObject.SetActive(true);
-                if (_anim == null) _slots[i].alpha = 1f;
-            }
+            for (int i = 0; i < shown; i++) _slots[i].gameObject.SetActive(true);
         }
 
         /// <summary>The burst, and the sound the daily streak's gift opens on — the same gift
@@ -249,8 +247,8 @@ namespace qp {
                 if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine);
             }
 
-            // Only this player's box, closed, with the glow still off. Everything OpenBox sets is
-            // put back here, so opening the screen twice starts the same way.
+            // Only this player's box, closed. Everything OpenBox sets is put back here, so opening
+            // the screen twice starts the same way.
             for (int i = 0; i < _boxes.Length; i++) {
                 if (_boxes[i] == null) continue;
                 bool ours = i + 1 == Rank;
@@ -258,7 +256,6 @@ namespace qp {
                 if (!ours) continue;
                 Show(_boxes[i].transform.RecursiveFindChild("GiftBoxIconClose"), true);
                 Show(_boxes[i].transform.RecursiveFindChild("GiftBoxIconOpen"), false);
-                Show(_boxes[i].transform.RecursiveFindChild("%Light"), false);
             }
 
             // What is inside, dressed but hidden until the box opens.
@@ -266,7 +263,6 @@ namespace qp {
             for (int i = 0; i < _slots.Count; i++) {
                 bool has = rewards != null && i < rewards.Length;
                 _slots[i].gameObject.SetActive(false);        // OpenBox turns them on
-                _slots[i].alpha = 0f;
                 if (has) Dress(_slots[i].transform, rewards[i]);
             }
             if (_rewards != null) _rewards.gameObject.SetActive(false);

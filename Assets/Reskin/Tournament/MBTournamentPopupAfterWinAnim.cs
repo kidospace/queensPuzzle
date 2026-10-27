@@ -32,7 +32,8 @@ namespace qp {
             if (_animator.isInitialized) _animator.Update(0f);
         }
 
-        /// <summary>True once the clip has played through (a one-shot, so it holds at the end).</summary>
+        /// <summary>True once the clip has played through and the animator is back in the empty
+        /// Idle default — which, with Write Defaults on, is the prefab exactly as authored.</summary>
         public bool IsFinished() {
             if (_animator == null || !_animator.isInitialized) return true;
             var st = _animator.GetCurrentAnimatorStateInfo(0);
@@ -46,9 +47,9 @@ namespace qp {
             if (_animator.isInitialized) _animator.Update(0f);
         }
 
-        /// <summary>The no-connection panel leaving, once the line is back. Its own state
-        /// because Show holds its last frame for as long as it is the current one — anything
-        /// fading this from code would be overwritten on the very next frame.</summary>
+        /// <summary>The no-connection panel leaving, once the line is back, while the table
+        /// fades in. The one state that holds its last frame — the panel is switched off right
+        /// after, and Keep Animator State On Disable keeps that frame out of the defaults.</summary>
         public void PlayOfflineGone() {
             _animator.Play(OfflineGoneState, 0, 0f);
             if (_animator.isInitialized) _animator.Update(0f);

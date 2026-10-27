@@ -2146,7 +2146,6 @@ GameObject:
   - component: {fileID: 723844610359014616}
   - component: {fileID: 6888798983686796056}
   - component: {fileID: 685383962936688009}
-  - component: {fileID: 3273928434725192662}
   m_Layer: 0
   m_Name: LeadText
   m_TagString: Untagged
@@ -2273,20 +2272,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &3273928434725192662
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5139226569974572704}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f579f6d092354014a95581cf418665ce, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _arcHeight: 20
-  _tiltScale: 1
 --- !u!1 &5143247616557130341
 GameObject:
   m_ObjectHideFlags: 0
@@ -3403,7 +3388,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.0052490234}
   m_SizeDelta: {x: 40.082, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &5337129227323353628

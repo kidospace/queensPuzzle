@@ -27,7 +27,8 @@ namespace qp {
             if (_animator.isInitialized) _animator.Update(0f);
         }
 
-        /// <summary>True once the clip has played through (a one-shot, so it holds at the end).</summary>
+        /// <summary>True once the clip has played through and the animator is back in the empty
+        /// Idle default — which, with Write Defaults on, is the prefab exactly as authored.</summary>
         public bool IsFinished() {
             if (_animator == null || !_animator.isInitialized) return true;
             var st = _animator.GetCurrentAnimatorStateInfo(0);

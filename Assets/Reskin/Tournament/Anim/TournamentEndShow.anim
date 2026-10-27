@@ -15,7 +15,41 @@ AnimationClip:
   m_CompressedRotationCurves: []
   m_EulerCurves: []
   m_PositionCurves: []
-  m_ScaleCurves: []
+  m_ScaleCurves:
+  - curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: {x: 0.9, y: 0.9, z: 0.9}
+        inSlope: {x: 0, y: 0, z: 0}
+        outSlope: {x: 0, y: 0, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: {x: 0, y: 0, z: 0}
+        outWeight: {x: 0, y: 0, z: 0}
+      - serializedVersion: 3
+        time: 0.08
+        value: {x: 0.9, y: 0.9, z: 0.9}
+        inSlope: {x: 0, y: 0, z: 0}
+        outSlope: {x: 0, y: 0, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: {x: 0, y: 0, z: 0}
+        outWeight: {x: 0, y: 0, z: 0}
+      - serializedVersion: 3
+        time: 0.4
+        value: {x: 1, y: 1, z: 1}
+        inSlope: {x: 0, y: 0, z: 0}
+        outSlope: {x: 0, y: 0, z: 0}
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: {x: 0, y: 0, z: 0}
+        outWeight: {x: 0, y: 0, z: 0}
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
   m_FloatCurves:
   - serializedVersion: 2
     curve:
@@ -82,7 +116,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/$TopText
+    path: SafeArea/Popup/Scaler/Conatiner/Top/$TopText
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -92,7 +126,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -227
+        value: -209
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -101,7 +135,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.06
-        value: -227
+        value: -209
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -110,7 +144,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.42
-        value: -215
+        value: -197
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -121,7 +155,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/$TopText
+    path: SafeArea/Popup/Scaler/Conatiner/Top/$TopText
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -160,7 +194,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/LeadText
+    path: SafeArea/Popup/Scaler/Top
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -170,7 +204,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 149.00032
+        value: -12
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -179,7 +213,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.14
-        value: 149.00032
+        value: -12
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -188,7 +222,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.5
-        value: 161.00032
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -199,7 +233,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/LeadText
+    path: SafeArea/Popup/Scaler/Top
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -238,7 +272,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ListStrech/Scaler/$RowsPannel
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/$RowsPannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -248,7 +282,55 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -12
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.3
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.7
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Alpha
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/Me
+    classID: 225
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -257,7 +339,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.22
-        value: -12
+        value: 249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -266,7 +348,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.62
-        value: 0
+        value: 261
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -277,7 +359,55 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ListStrech/Scaler/$RowsPannel
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/$RowsPannel
+    classID: 224
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.3
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.7
+        value: -297.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_AnchoredPosition.y
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/Me
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -316,7 +446,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/Scaler/Conatiner/$LvlButton
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -326,7 +456,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -12
+        value: -131.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -335,7 +465,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.32
-        value: -12
+        value: -131.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -344,7 +474,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.74
-        value: 0
+        value: -119.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -355,9 +485,48 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/Scaler/Conatiner/$LvlButton
     classID: 224
     script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.36
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
     flags: 16
   m_PPtrCurves: []
   m_SampleRate: 60
@@ -368,6 +537,15 @@ AnimationClip:
   m_ClipBindingConstant:
     genericBindings:
     - serializedVersion: 2
+      path: 2117835664
+      attribute: 3
+      script: {fileID: 0}
+      typeID: 4
+      customType: 0
+      isPPtrCurve: 0
+      isIntCurve: 0
+      isSerializeReferenceCurve: 0
+    - serializedVersion: 2
       path: 2547325164
       attribute: 304273561
       script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -377,7 +555,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1126840582
+      path: 154563764
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -386,7 +564,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 1126840582
+      path: 154563764
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -395,7 +573,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3780803804
+      path: 1631785939
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -404,7 +582,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3780803804
+      path: 1631785939
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
@@ -413,7 +591,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3033525147
+      path: 309745543
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -422,16 +600,7 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 3033525147
-      attribute: 538195251
-      script: {fileID: 0}
-      typeID: 224
-      customType: 28
-      isPPtrCurve: 0
-      isIntCurve: 0
-      isSerializeReferenceCurve: 0
-    - serializedVersion: 2
-      path: 272278642
+      path: 2935246660
       attribute: 1574349066
       script: {fileID: 0}
       typeID: 225
@@ -440,11 +609,47 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     - serializedVersion: 2
-      path: 272278642
+      path: 309745543
       attribute: 538195251
       script: {fileID: 0}
       typeID: 224
       customType: 28
+      isPPtrCurve: 0
+      isIntCurve: 0
+      isSerializeReferenceCurve: 0
+    - serializedVersion: 2
+      path: 2935246660
+      attribute: 538195251
+      script: {fileID: 0}
+      typeID: 224
+      customType: 28
+      isPPtrCurve: 0
+      isIntCurve: 0
+      isSerializeReferenceCurve: 0
+    - serializedVersion: 2
+      path: 3487508510
+      attribute: 1574349066
+      script: {fileID: 0}
+      typeID: 225
+      customType: 0
+      isPPtrCurve: 0
+      isIntCurve: 0
+      isSerializeReferenceCurve: 0
+    - serializedVersion: 2
+      path: 3487508510
+      attribute: 538195251
+      script: {fileID: 0}
+      typeID: 224
+      customType: 28
+      isPPtrCurve: 0
+      isIntCurve: 0
+      isSerializeReferenceCurve: 0
+    - serializedVersion: 2
+      path: 2117835664
+      attribute: 304273561
+      script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+      typeID: 114
+      customType: 0
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
@@ -535,7 +740,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/$TopText
+    path: SafeArea/Popup/Scaler/Conatiner/Top/$TopText
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -545,7 +750,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -227
+        value: -209
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -554,7 +759,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.06
-        value: -227
+        value: -209
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -563,7 +768,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.42
-        value: -215
+        value: -197
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -574,7 +779,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/$TopText
+    path: SafeArea/Popup/Scaler/Conatiner/Top/$TopText
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -613,7 +818,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/LeadText
+    path: SafeArea/Popup/Scaler/Top
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -623,7 +828,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 149.00032
+        value: -12
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -632,7 +837,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.14
-        value: 149.00032
+        value: -12
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -641,7 +846,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.5
-        value: 161.00032
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -652,7 +857,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/TopBannerStrech/Scaler/UIContainer/LeadText
+    path: SafeArea/Popup/Scaler/Top
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -691,7 +896,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ListStrech/Scaler/$RowsPannel
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/$RowsPannel
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -701,7 +906,55 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -12
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.3
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.7
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Alpha
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/Me
+    classID: 225
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -710,7 +963,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.22
-        value: -12
+        value: 249
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -719,7 +972,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.62
-        value: 0
+        value: 261
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -730,7 +983,55 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ListStrech/Scaler/$RowsPannel
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/$RowsPannel
+    classID: 224
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.3
+        value: -309.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.7
+        value: -297.12366
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_AnchoredPosition.y
+    path: SafeArea/Popup/Scaler/Conatiner/Mid/Me
     classID: 224
     script: {fileID: 0}
     flags: 16
@@ -769,7 +1070,7 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_Alpha
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/Scaler/Conatiner/$LvlButton
     classID: 225
     script: {fileID: 0}
     flags: 16
@@ -779,7 +1080,7 @@ AnimationClip:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: -12
+        value: -131.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -788,7 +1089,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.32
-        value: -12
+        value: -131.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -797,7 +1098,7 @@ AnimationClip:
         outWeight: 0
       - serializedVersion: 3
         time: 0.74
-        value: 0
+        value: -119.9924
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -808,7 +1109,163 @@ AnimationClip:
       m_PostInfinity: 2
       m_RotationOrder: 4
     attribute: m_AnchoredPosition.y
-    path: SafeArea/ButtonStrech/Scaler/$LvlButton
+    path: SafeArea/Popup/Scaler/Conatiner/$LvlButton
+    classID: 224
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.36
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_Color.a
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
+    classID: 114
+    script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.4
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_LocalScale.x
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
+    classID: 224
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.4
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_LocalScale.y
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
+    classID: 224
+    script: {fileID: 0}
+    flags: 16
+  - serializedVersion: 2
+    curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.08
+        value: 0.9
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.4
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    attribute: m_LocalScale.z
+    path: SafeArea/Popup/Scaler/Conatiner/Top/Image
     classID: 224
     script: {fileID: 0}
     flags: 16
