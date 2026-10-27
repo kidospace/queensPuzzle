@@ -88,6 +88,7 @@ namespace qp {
 
         string _clockShown;
         bool _laidOut, _open, _closing, _offlineShown;
+        bool _scrollVertical;               // as authored — the climb turns dragging off for its duration
 
         void Awake() {
             _group = GetComponent<CanvasGroup>();
@@ -95,6 +96,7 @@ namespace qp {
 
             _scroll  = GetComponentInChildren<ScrollRect>(true);
             _content = _scroll != null ? _scroll.content : null;
+            _scrollVertical = _scroll != null && _scroll.vertical;
             _rows    = _content != null ? _content.GetComponentsInChildren<MBTournamentRow>(true)
                                         : new MBTournamentRow[0];
             if (_rows.Length > 0) _rowHeight = ((RectTransform)_rows[0].transform).rect.height;
@@ -141,6 +143,9 @@ namespace qp {
             if (_open) yield break;
             _open = true;
             _closing = false;
+
+            // A climb cut short by a close never got to hand dragging back.
+            if (_scroll != null) _scroll.vertical = _scrollVertical;
 
             gameObject.SetActive(true);
             Fill(win);
@@ -319,9 +324,15 @@ namespace qp {
                 yield break;
             }
 
+            // The list is about to scroll on its own; a drag would fight it. Only a climb moves
+            // it, so standing still above never locks.
+            if (_scroll != null) _scroll.vertical = false;
+
             ShowRankUp(from - to);
             yield return new WaitForSecondsRealtime(MoveLead);
             yield return MakeRoom(from, to, win.newScore);
+
+            if (_scroll != null) _scroll.vertical = _scrollVertical;
 
             // Everyone is now standing under the number they have been wearing since it opened,
             // so this settles the positions and changes nothing anybody can see.
