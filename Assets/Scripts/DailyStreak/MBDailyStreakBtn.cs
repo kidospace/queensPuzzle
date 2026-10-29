@@ -1,3 +1,4 @@
+using System.Collections;
 using Common;
 using Puzzby;
 using TMPro;
@@ -11,6 +12,10 @@ namespace qp {
     /// Exactly one child root is active for the current status:
     ///   $DailyButtonActive     Status == Active  — streak count + progress
     ///   $DailyButtonOffline    Status == Offline — no trusted server time
+    ///   $DailyButtonBroken     Status == Broken  — the LOST streak, still savable; its own
+    ///                          $CurrentDay (and bar, if it has one). Tapping it opens the repair
+    ///                          offer: watched, the streak is saved on the spot; "No thanks", it is
+    ///                          gone, as it would be after a win.
     ///
     /// The bar itself is <see cref="MBDailyStreakProgress"/> (a reusable widget); this only picks the
     /// status root, sets $CurrentDay, and pushes the streak into the widget. It ticks slowly so a
@@ -22,11 +27,14 @@ namespace qp {
         // of running into it. The font tag loads from Resources/Fonts & Materials — keep it there.
         const string DaysSuffix = "<space=7><font=\"Mitr-SemiBold SDF\"><size=52>Days";
 
-        GameObject _active, _offline;
+        GameObject _active, _offline, _broken;
         TMP_Text _currentDay;                 // the 🔥 streak number + "Days"
         MBDailyStreakProgress _progress;      // the bar widget under $DailyButtonActive
+        TMP_Text _brokenDay;                  // the lost streak, on $DailyButtonBroken
+        MBDailyStreakProgress _brokenProgress;   // its bar, if the Broken face has one
         MBDailyStreakInfoPopup _infoPopup;    // opened on tap (found lazily)
         MBWiggle _wifiWiggle;                 // on $IconWifi — rocks when the offline button is tapped
+        MBDailyStreakRepairPopup _repairPopup;   // opened by the Broken face (found lazily)
 
         // What the UI currently shows. Sentinels so the first tick always paints.
         EStreakStatus _shownStatus = (EStreakStatus)(-1);
@@ -38,8 +46,22 @@ namespace qp {
             _active = activeT != null ? activeT.gameObject : null;
             _offline = offlineT != null ? offlineT.gameObject : null;
 
-            _currentDay = transform.RecursiveFindChild<TMP_Text>("$CurrentDay");
-            _progress = GetComponentInChildren<MBDailyStreakProgress>(true);
+            var brokenT = transform.RecursiveFindChild("$DailyButtonBroken");
+
+            // The Broken face has a $CurrentDay and maybe a bar of its own, so the Active ones are
+            // looked up away from it: the number under $DailyButtonActive, the bar as before — the
+            // first one in the button — but never the Broken face's.
+            _currentDay = activeT != null ? activeT.RecursiveFindChild<TMP_Text>("$CurrentDay") : null;
+            foreach (var p in GetComponentsInChildren<MBDailyStreakProgress>(true))
+                if (brokenT == null || !p.transform.IsChildOf(brokenT)) { _progress = p; break; }
+
+            if (brokenT != null) {
+                _broken = brokenT.gameObject;
+                _brokenDay = brokenT.RecursiveFindChild<TMP_Text>("$CurrentDay");
+                _brokenProgress = brokenT.GetComponentInChildren<MBDailyStreakProgress>(true);
+                var brokenBtn = brokenT.GetComponent<Button>();
+                if (brokenBtn != null) brokenBtn.onClick.AddListener(_openRepair);
+            }
 
             // Tapping the active button opens the streak info popup (current streak, entrance only).
             var btn = activeT != null ? activeT.GetComponent<Button>() : null;
@@ -57,6 +79,23 @@ namespace qp {
             if (_wifiWiggle != null) _wifiWiggle.Play();
         }
 
+        void _openRepair() {
+            if (_repairPopup == null)
+                _repairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
+            if (_repairPopup == null || _repairPopup.IsShowing || !DailyStreakManager.CanRepair) return;
+            StartCoroutine(_repairFlow());
+        }
+
+        // The offer, then the answer: watched — saved, back to Active on the same number; "No thanks"
+        // — gone, Active at 0.
+        IEnumerator _repairFlow() {
+            _repairPopup.Show(DailyStreakManager.LostStreak, fromLobby: true);
+            yield return new WaitWhile(() => _repairPopup.IsShowing);
+            if (_repairPopup.Result == ERepairResult.Watched) DailyStreakManager.RepairFromLobby();
+            else DailyStreakManager.DeclineFromLobby();
+            _apply();
+        }
+
         void _openInfo() {
             if (_infoPopup == null)
                 _infoPopup = FindAnyObjectByType<MBDailyStreakInfoPopup>(FindObjectsInactive.Include);
@@ -70,23 +109,26 @@ namespace qp {
 
         void OnDisable() => CancelInvoke(nameof(_apply));
 
-        // Runs each second. SyncDayChange breaks the streak if server-midnight passed while the lobby
-        // sat open; then we repaint — but only when the status or streak actually changed, not every tick.
+        // Runs each second, so a server-midnight that breaks the streak while the lobby sits open
+        // shows at once; repaints only when the status or streak actually changed, not every tick.
         void _apply() {
-            DailyStreakManager.SyncDayChange();
-
             var status = DailyStreakManager.Status;
-            int streak = DailyStreakManager.Streak;
+            int streak = status == EStreakStatus.Broken ? DailyStreakManager.LostStreak : DailyStreakManager.Streak;
             if (status == _shownStatus && streak == _shownStreak) return;
             _shownStatus = status;
             _shownStreak = streak;
 
             if (_active != null) _active.SetActive(status == EStreakStatus.Active);
             if (_offline != null) _offline.SetActive(status == EStreakStatus.Offline);
+            if (_broken != null) _broken.SetActive(status == EStreakStatus.Broken);
 
             if (status == EStreakStatus.Active) {
                 if (_currentDay != null) _currentDay.text = streak + DaysSuffix;
                 if (_progress != null) _progress.ApplyImmediately(streak);
+            }
+            else if (status == EStreakStatus.Broken) {
+                if (_brokenDay != null) _brokenDay.text = streak + DaysSuffix;
+                if (_brokenProgress != null) _brokenProgress.ApplyImmediately(streak);
             }
         }
     }

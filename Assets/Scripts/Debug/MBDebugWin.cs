@@ -192,6 +192,9 @@ namespace qp {
             if (Button("Set streak") && int.TryParse(_streakInput, out int streak)) DailyStreakManager.DebugSetStreak(streak);
             GUILayout.EndHorizontal();
             if (Button("Last win = yesterday (win to ++)")) DailyStreakManager.DebugSetLastWinYesterday();
+            // Back after missing one day: the lobby card turns Broken, the next win offers the video.
+            if (Button($"Missed 1 day (repairable{(DailyStreakManager.CanRepair ? $": {DailyStreakManager.LostStreak}" : "")})"))
+                DailyStreakManager.DebugMakeRepairable();
             if (Button("Simulate win (streak++ & grant reward)")) {
                 DailyStreakManager.DebugSetLastWinYesterday();
                 var r = DailyStreakManager.RegisterWin();

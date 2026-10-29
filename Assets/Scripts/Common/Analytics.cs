@@ -244,6 +244,56 @@ namespace qp {
         /// <summary>A booster earned by watching a rewarded ad (no boost left → video).</summary>
         public static void BoostEarned(string boost) => GameEvent("boost_earned", "boost", boost);
 
+        // ---- daily streak --------------------------------------------------------------------
+        // Every one carries s_level (the campaign level, 1-based), so a question like "do veterans
+        // save their streaks" is one GROUP BY. The streak itself is only ever told through these:
+        // nothing else knows what the player's streak was.
+
+        /// <summary>Today's first win counted: <paramref name="streak"/> is the new value.
+        /// <paramref name="gift"/> = a milestone gift came with it; <paramref name="saved"/> = this
+        /// advance came straight after a repair.</summary>
+        public static void StreakAdvance(int streak, bool gift, bool saved) =>
+            _streakEvent("streak_advance", ("s_streak", streak), ("s_gift", gift ? 1 : 0), ("s_saved", saved ? 1 : 0));
+
+        /// <summary>A streak broke for good, reported at the win that starts the next run: how long
+        /// it was, how many days were missed, and whether the player turned down saving it.
+        /// A player who never wins again sends none — that is churn, not a broken streak.</summary>
+        public static void StreakLost(int length, int missed, bool declined) =>
+            _streakEvent("streak_lost", ("s_length", length), ("s_missed", missed), ("s_declined", declined ? 1 : 0));
+
+        /// <summary>The repair popup is on screen; <paramref name="adReady"/> = a video could be played;
+        /// s_lobby = opened from the lobby's Broken card (1) or after a win (0).</summary>
+        public static void StreakRepairOffer(int length, bool adReady, bool fromLobby) =>
+            _streakEvent("streak_repair_offer", ("s_length", length), ("s_ad_ready", adReady ? 1 : 0), ("s_lobby", fromLobby ? 1 : 0));
+
+        /// <summary>What happened to a repair offer, sent as s_result: "watched" / "declined" — the
+        /// answer, from the lobby card (s_lobby=1) or after a win (0) — or "ad_failed" (the video
+        /// failed or was closed early; the offer stays open).</summary>
+        public static void StreakRepair(int length, ERepairResult result, bool fromLobby) =>
+            _streakEvent("streak_repair", ("s_length", length), ("s_result", _resultName(result)), ("s_lobby", fromLobby ? 1 : 0));
+
+        static string _resultName(ERepairResult result) => result switch {
+            ERepairResult.Watched  => "watched",
+            ERepairResult.Declined => "declined",
+            ERepairResult.AdFailed => "ad_failed",
+            _ => result.ToString().ToLowerInvariant(),
+        };
+
+        static void _streakEvent(string name, params (string key, object value)[] values) {
+            int level = AppData.LevelIdx.Value + 1;
+            CrashLog($"[streak] {name} " + string.Join(" ", System.Linq.Enumerable.Select(values, v => $"{v.key}={v.value}")) + $" level {level}");
+#if !IGNORE_FIREBASE
+            var ps = new System.Collections.Generic.List<Firebase.Analytics.Parameter>();
+            foreach (var (key, value) in values)
+                ps.Add(value is int i ? new Firebase.Analytics.Parameter(key, i)
+                                      : new Firebase.Analytics.Parameter(key, value?.ToString() ?? ""));
+            ps.Add(new Firebase.Analytics.Parameter("s_level", level));
+            Send(name, ps.ToArray());
+#else
+            Send(name);
+#endif
+        }
+
         /// <summary>
         /// A tournament the player took part in has closed and been marked seen.
         ///

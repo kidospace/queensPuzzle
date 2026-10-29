@@ -28,6 +28,12 @@ namespace qp {
             if (streakProgressPopup != null) streakProgressPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBDailyStreakInGamePopup missing in the scene");
 
+            // The repair offer the Broken streak card opens — woken the same way, so it lays out at
+            // real size before the first tap.
+            var streakRepairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
+            if (streakRepairPopup != null) streakRepairPopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBLobby] MBDailyStreakRepairPopup missing in the scene");
+
             // Awake so it lays out at real size and hides itself, the same deal the streak popup
             // makes. A screen first measured while hidden comes up with zero-high rows.
             _leaderboard = FindAnyObjectByType<MBTournamentLeaderboard>(FindObjectsInactive.Include);

@@ -38,6 +38,7 @@ namespace qp {
         MBFirstTryPopup _firstTryPopup;   // level-start "XX% pass on their first try" toast (optional)
         MBDailyStreakInfoPopup _streakProgressPopup;          // shown when the streak advanced
         MBDailyStreakInGameRewordedPopup _streakRewardPopup;    // shown when a milestone was hit
+        MBDailyStreakRepairPopup _streakRepairPopup;            // offered when a broken streak can be saved
         MBTournamentEndClaim _tournamentEndPopup;               // a finished tournament that pays
         MBTournamentPopupAfterWin _tournamentAfterWin;          // what this win did to the live one
         MBFailPopup _failPopup;      // same pattern as the win popup — shows when the bones run out
@@ -124,6 +125,10 @@ namespace qp {
             _streakRewardPopup = FindAnyObjectByType<MBDailyStreakInGameRewordedPopup>(FindObjectsInactive.Include);
             if (_streakRewardPopup != null) _streakRewardPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBDailyStreakInGameRewordedPopup missing in the scene");
+
+            _streakRepairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
+            if (_streakRepairPopup != null) _streakRepairPopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBGameplay] MBDailyStreakRepairPopup missing in the scene");
 
             // A tournament the player won can close while they are mid-level, so the prize is
             // handed over here as well as in the lobby — whichever they reach first.
@@ -1133,12 +1138,21 @@ namespace qp {
                 InputLocks--;
             }
 
-            // Reward popup when a milestone was hit, progress popup when the streak just advanced,
-            // otherwise (offline / already won today) nothing. Show it and wait until it closes,
-            // then fall through to the win popup.
+            // The streak, then the win popup. A streak broken to one missed day comes first as the
+            // repair offer: this win has not touched it yet, and only the answer counts it — saved
+            // (12 → 13) or not (→ 1). Then the reward popup when a milestone was hit, the progress
+            // popup when the streak advanced, otherwise (offline / already won today) nothing.
+            // Each is waited on before the next.
 
             // only if won level not 0
             if (AppData.LevelIdx.Value > 1) {
+                if (streak.repair > 0) {
+                    _streakRepairPopup.Show(streak.repair);
+                    yield return new WaitWhile(() => _streakRepairPopup.IsShowing);
+                    streak = DailyStreakManager.ResolveRepair(_streakRepairPopup.Result);
+                    if (streak.reward != null) MBBoostButton.SuppressUpdate = true;
+                }
+
                 if (streak.reward != null) {
                     _streakRewardPopup.Show(streak.previous, streak.streak, streak.reward);
                     yield return new WaitWhile(() => _streakRewardPopup.IsShowing);
