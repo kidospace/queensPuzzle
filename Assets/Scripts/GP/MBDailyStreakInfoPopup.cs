@@ -25,6 +25,12 @@ namespace qp {
         RectTransform _streakScroll;            // their shared parent (Container) — scrolled old→new
         MBDailyStreakProgress _progress;        // the bar widget in DailyStreakProgressContainer
 
+        // $GreatJobText: "Great Job! You kept your streak!" — true from day 2 on, wrong on day 1,
+        // which is a streak that just started (or started over after a break).
+        TMP_Text _greatJob;
+        string _keptText;                       // the prefab's own text, used from day 2 on
+        const string NewStreakText = "A new streak!\nWin a level every day to grow it.";
+
         /// <summary>True while the popup is open — the win flow waits on this before continuing.</summary>
         public bool IsShowing => _showing;
 
@@ -39,6 +45,9 @@ namespace qp {
             
             _progress = GetComponentInChildren<MBDailyStreakProgress>(true);
             if (_progress == null) CDebug.LogError("[MBDailyStreakInfoPopup] MBDailyStreakProgress missing under the popup");
+
+            _greatJob = transform.RecursiveFindChild<TMP_Text>("$GreatJobText");
+            if (_greatJob != null) _keptText = _greatJob.text;
 
             // Continue button carries both markers: $ (found from code) and % (used by the animator).
             var cont = transform.RecursiveFindChild<Button>("$%ContinueButton");
@@ -62,6 +71,7 @@ namespace qp {
             gameObject.SetActive(true);
 
             _streakOld.text = _streakNew.text = streak.ToString();
+            _setGreatJob(streak);
             _streakScroll.anchoredPosition = new Vector2(_streakScroll.anchoredPosition.x, 0f);   // new in view
             if (_progress != null) _progress.ApplyImmediately(streak);
 
@@ -75,6 +85,7 @@ namespace qp {
 
             _streakOld.text = oldStreak.ToString();
             _streakNew.text = newStreak.ToString();
+            _setGreatJob(newStreak);
             // start with the old number in view + the old streak's checks already on the bar
             _streakScroll.anchoredPosition = new Vector2(_streakScroll.anchoredPosition.x, ScrollFrom);
             if (_progress != null) _progress.ApplyImmediately(oldStreak);
@@ -102,6 +113,11 @@ namespace qp {
                 yield return null;
             }
             rt.anchoredPosition = new Vector2(x, toY);
+        }
+
+        // Day 1 (or nothing yet) gets the new-streak line; from day 2 the prefab's "kept your streak".
+        void _setGreatJob(int streak) {
+            if (_greatJob != null) _greatJob.text = streak <= 1 ? NewStreakText : _keptText;
         }
 
         void _close() {
