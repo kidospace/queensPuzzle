@@ -40,6 +40,7 @@ namespace qp {
         MBDailyStreakInGameRewordedPopup _streakRewardPopup;    // shown when a milestone was hit
         MBDailyStreakRepairPopup _streakRepairPopup;            // offered when a broken streak can be saved
         MBTournamentEndClaim _tournamentEndPopup;               // a finished tournament that pays
+        MBGiftPopup _giftPopup;                                 // opens a gift box and hands out its rewards
         MBTournamentPopupAfterWin _tournamentAfterWin;          // what this win did to the live one
         MBFailPopup _failPopup;      // same pattern as the win popup — shows when the bones run out
         MBTopBar _topBar;            // "queens placed / total" HUD
@@ -129,6 +130,10 @@ namespace qp {
             _streakRepairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
             if (_streakRepairPopup != null) _streakRepairPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBDailyStreakRepairPopup missing in the scene");
+
+            _giftPopup = FindAnyObjectByType<MBGiftPopup>(FindObjectsInactive.Include);
+            if (_giftPopup != null) _giftPopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBGameplay] MBGiftPopup missing in the scene");
 
             // A tournament the player won can close while they are mid-level, so the prize is
             // handed over here as well as in the lobby — whichever they reach first.
@@ -1154,8 +1159,14 @@ namespace qp {
                 }
 
                 if (streak.reward != null) {
-                    _streakRewardPopup.Show(streak.previous, streak.streak, streak.reward);
-                    yield return new WaitWhile(() => _streakRewardPopup.IsShowing);
+                    // granted already (RegisterWin); on Claim the streak popup's box flies on into
+                    // the gift popup while the streak popup fades away
+                    _streakRewardPopup.Show(streak.previous, streak.streak);
+                    yield return new WaitUntil(() => _streakRewardPopup.IsClaimed || !_streakRewardPopup.IsShowing);
+                    if (_giftPopup != null)
+                        GiftsManager.ShowGift(_giftPopup, EGiftBox.DailyStreak, new[] { streak.reward }, _streakRewardPopup.GiftBox);
+                    _streakRewardPopup.HandOff();
+                    if (_giftPopup != null) yield return new WaitWhile(() => _giftPopup.IsShowing);
                 } else if (streak.advanced) {
                     _streakProgressPopup.Show(streak.previous, streak.streak);
                     yield return new WaitWhile(() => _streakProgressPopup.IsShowing);

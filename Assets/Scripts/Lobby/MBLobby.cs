@@ -17,6 +17,7 @@ namespace qp {
         MBTournamentEndNoClaim _endScreen;
         MBTournamentEndClaim _claimScreen;
         MBTournamentCard _card;
+        MBGiftPopup _giftPopup;      // opens a gift box and hands out its rewards
 
         private void Awake() {
             var lvlBtn = transform.RecursiveFindChild<MBLevelButton>("$LvlButton");
@@ -33,6 +34,11 @@ namespace qp {
             var streakRepairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
             if (streakRepairPopup != null) streakRepairPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBLobby] MBDailyStreakRepairPopup missing in the scene");
+
+            // Woken the same way, so Show() is instant and blocks the UI from the first tap.
+            _giftPopup = FindAnyObjectByType<MBGiftPopup>(FindObjectsInactive.Include);
+            if (_giftPopup != null) _giftPopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBLobby] MBGiftPopup missing in the scene");
 
             // Awake so it lays out at real size and hides itself, the same deal the streak popup
             // makes. A screen first measured while hidden comes up with zero-high rows.

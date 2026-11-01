@@ -15,30 +15,13 @@ namespace qp {
         public int cycleLength = 7;
 
         [Tooltip("Possible gifts — one is chosen at random when the streak completes.")]
-        public Reward[] rewards;
+        public BoostReward[] rewards;
 
         [Tooltip("A streak lost to ONE missed day can be saved with a rewarded video if it was at least this long — the whole streak, not the day on the bar. Losing a 1–2 day streak costs nothing worth a video. One save per cycleLength stretch of the streak (days 1–7, 8–14, …).")]
         public int repairMinStreak = 3;
 
         /// <summary>A random reward from the list, or null when the list is empty.</summary>
-        public Reward RewardRandom() =>
+        public BoostReward RewardRandom() =>
             rewards != null && rewards.Length > 0 ? rewards[Random.Range(0, rewards.Length)] : null;
-
-        [Tooltip("Sprite shown for each boost type in the reward UI — swap here to change dynamically.")]
-        public BoostSprite[] boostSprites;
-
-        /// <summary>The configured sprite for a boost type, or null if none is set.</summary>
-        public Sprite SpriteFor(EBoostType type) {
-            if (boostSprites != null)
-                foreach (var b in boostSprites)
-                    if (b.type == type) return b.sprite;
-            return null;
-        }
-
-        [System.Serializable]
-        public class BoostSprite {
-            public EBoostType type;
-            public Sprite sprite;
-        }
     }
 }

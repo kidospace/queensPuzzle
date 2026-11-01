@@ -24,7 +24,7 @@ namespace qp {
         public bool advanced;    // the streak went up this call (online, first win today) — show streak UI
         public int previous;     // the streak value before this win (for the old→new reveal)
         public int streak;       // the streak value after this win
-        public Reward reward;    // null = no milestone; non-null = milestone reached, show reward UI
+        public BoostReward reward;    // null = no milestone; non-null = milestone reached, show reward UI
         /// <summary>&gt; 0: this win is the first since a streak of that length broke to one
         /// missed day, and nothing has happened to the streak YET. The win flow offers the repair
         /// and calls <see cref="DailyStreakManager.ResolveRepair"/>, which returns the real result.</summary>
@@ -199,9 +199,6 @@ namespace qp {
             _repairedAt.Value = 0;
         }
 
-        /// <summary>The configured sprite for a boost type (reward UI), or null.</summary>
-        public static UnityEngine.Sprite SpriteFor(EBoostType type) => Config != null ? Config.SpriteFor(type) : null;
-
         /// <summary>Days per reward cycle (from config; 7 if config missing). The streak keeps
         /// climbing forever; a random gift drops every time it hits a multiple of this.</summary>
         public static int CycleLength => Config != null ? Config.cycleLength : 7;
@@ -257,15 +254,15 @@ namespace qp {
             _streak.Value = s;
             _lastWinDay.Value = Today;
 
-            Reward reward = _milestoneRewardFor(s);   // null unless s is a milestone day
-            reward?.Grant();
+            BoostReward reward = _milestoneRewardFor(s);   // null unless s is a milestone day
+            GiftsManager.Grant(reward);
 
             Analytics.StreakAdvance(s, reward != null, saved);
             return new StreakResult { advanced = true, previous = prev, streak = s, reward = reward };
         }
 
         // The gift for a given streak day: a random reward every Nth day (7, 14, 21, …), null otherwise.
-        static Reward _milestoneRewardFor(int streak) =>
+        static BoostReward _milestoneRewardFor(int streak) =>
             Config != null && streak > 0 && streak % CycleLength == 0 ? Config.RewardRandom() : null;
 
         /// <summary>

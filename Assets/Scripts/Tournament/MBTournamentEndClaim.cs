@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using Common;
 using TMPro;
 using UnityEngine;
@@ -10,31 +9,28 @@ namespace qp {
     /// <summary>
     /// The screen a finished tournament opens on when there IS something to collect — the player
     /// placed inside the paying spots. It shows where they came, the podium, and a closed gift
-    /// box; pressing Claim grants the prize and opens the box.
+    /// box; pressing Claim grants the prize, fades this screen out and opens the gift popup on
+    /// this place's box.
     ///
     ///     yield return claimScreen.Show();
-    ///     // granted, marked seen, and gone
+    ///     // granted, marked seen, the gift claimed, and gone
     ///
     /// The grant happens the moment Claim is pressed, in the same breath as marking the result
     /// seen — BEFORE any of the animation. Nothing a player is owed should depend on an effect
     /// finishing, or on them staying to watch it.
     ///
-    /// The box opening is a swap between two images, and the burst of particles exists to cover
-    /// exactly that frame. Which is also why the particles are fired first.
-    ///
-    /// This screen sets WHAT is on it — which box, open or closed, which rewards. The motion over
-    /// that belongs to <see cref="MBTournamentEndClaimAnim"/> in the reskin, like every other popup
-    /// in the game.
+    /// The motion over this screen belongs to <see cref="MBTournamentEndClaimAnim"/> in the
+    /// reskin, like every other popup in the game; the gift opening is the gift popup's.
     /// </summary>
     public sealed class MBTournamentEndClaim : MonoBehaviour {
 
-        const float FadeOut = 0.15f;
-
-        /// <summary>How long the poof runs before the lid is swapped under it.</summary>
-        const float PoofLead = 0.18f;
+        const float FadeOut = 0.35f;   // crossfades with the gift popup's cover fading in
 
         /// <summary>The gift boxes in the prefab, one per paying place.</summary>
         static readonly string[] BoxNames = { "1Place", "2Place", "3Place" };
+
+        /// <summary>The gift each paying place opens, best first.</summary>
+        static readonly EGiftBox[] GiftBoxes = { EGiftBox.Tournament1, EGiftBox.Tournament2, EGiftBox.Tournament3 };
 
         CanvasGroup _group;
         TMP_Text _topText, _buttonText;
@@ -42,10 +38,8 @@ namespace qp {
         MBTournamentRow[] _podium;
 
         GameObject[] _boxes;
-        Transform _rewards;                 // $Rewords
-        List<CanvasGroup> _slots;           // $%1, $%2 …
-        Transform _poof;                    // $CFXR Magic Poof
         MBTournamentEndClaimAnim _anim;     // the reskin's opening clip — absent in a skin without one
+        MBGiftPopup _gift;                  // the shared gift popup (found lazily)
 
         bool _claimed, _closing, _laidOut, _opened;
 
@@ -71,16 +65,6 @@ namespace qp {
                 else _boxes[i] = box.gameObject;
             }
 
-            _rewards = transform.RecursiveFindChild("$Rewords");
-            _slots = new List<CanvasGroup>();
-            if (_rewards != null)
-                for (int i = 0; i < _rewards.childCount; i++) {
-                    var slot = _rewards.GetChild(i).GetComponent<CanvasGroup>();
-                    if (slot != null) _slots.Add(slot);
-                }
-            else Debug.LogError("[EndClaim] $Rewords is missing from the prefab");
-
-            _poof = transform.RecursiveFindChild("$CFXR Magic Poof");
             _anim = GetComponent<MBTournamentEndClaimAnim>();
 
             _button = transform.RecursiveFindChild("$ClaimButton")?.GetComponent<Button>();
@@ -117,16 +101,16 @@ namespace qp {
             // Filled before the first frame of the opening: the clip plays over a screen that is
             // already right, never one still settling behind it.
             _group.alpha = 1f;
+            _group.blocksRaycasts = true;
             _anim?.PlayIn();
 
             while (_opened) yield return null;
         }
 
-        /// <summary>One button, two jobs: claim, then leave.</summary>
+        /// <summary>The one button: claim.</summary>
         void OnButton() {
-            if (_closing) return;
-            if (!_claimed) { StartCoroutine(Claim()); return; }
-            StartCoroutine(Close());
+            if (_closing || _claimed) return;
+            StartCoroutine(Claim());
         }
 
         // ---- claiming ---------------------------------------------------------------------
@@ -141,16 +125,20 @@ namespace qp {
             Analytics.TournamentClaim(TournamentManager.ClosedDay, Rank,
                                       Granted(EBoostType.UNDO), Granted(EBoostType.HINT), Granted(EBoostType.QUEEN));
 
-            // Particles first, lid second: the burst is what hides the swap.
-            PlayPoof();
-            yield return new WaitForSecondsRealtime(PoofLead);
-            OpenBox();
+            // Our box flies on into the gift popup (its box starts right over ours, so ours goes
+            // on the same frame) while we fade out; whoever waits on Show() is held until the
+            // player has claimed the gift too.
+            if (_gift == null) _gift = FindAnyObjectByType<MBGiftPopup>(FindObjectsInactive.Include);
+            var box = Rank >= 1 && Rank <= GiftBoxes.Length ? GiftBoxes[Rank - 1] : EGiftBox.Tournament3;
+            var place = Rank >= 1 && Rank <= _boxes.Length ? _boxes[Rank - 1] : null;
+            var art = place != null && place.transform.childCount > 0 ? place.transform.GetChild(0) as RectTransform : null;
+            if (_gift != null) {
+                GiftsManager.ShowGift(_gift, box, TournamentConfig.Instance?.PrizeFor(Rank)?.rewards, art);
+                if (place != null) place.SetActive(false);   // Fill turns it back on next time
+            }
+            else Debug.LogError("[EndClaim] MBGiftPopup missing in the scene - the prize is granted but not shown");
 
-            _anim?.PlayReward();
-            if (_anim != null) yield return new WaitUntil(() => _anim.IsRewardFinished());
-
-            if (_buttonText != null) _buttonText.text = "Continue";
-            if (_button != null) _button.interactable = true;
+            yield return Close(() => _gift == null || !_gift.IsShowing);
         }
 
         /// <summary>How much of one boost this place just handed over. Read off the prize that
@@ -166,51 +154,17 @@ namespace qp {
             return total;
         }
 
-        /// <summary>
-        /// Everything the clip cannot know, set on the one frame the burst is covering: this
-        /// player's box is now an open one, and the rewards it holds are in the scene. The motion
-        /// over all of it belongs to <see cref="MBTournamentEndClaimAnim"/>.
-        ///
-        /// Nothing here touches alpha or scale — the animator owns those, and at rest it holds the
-        /// prefab's values, so a skin with no clip still shows the rewards as authored.
-        /// </summary>
-        void OpenBox() {
-            var box = Box(Rank);
-            if (box != null) {
-                Show(box.transform.RecursiveFindChild("GiftBoxIconClose"), false);
-                Show(box.transform.RecursiveFindChild("GiftBoxIconOpen"), true);
-            }
-
-            if (_rewards != null) _rewards.gameObject.SetActive(true);
-
-            var rewards = TournamentConfig.Instance?.PrizeFor(Rank)?.rewards;
-            int shown = rewards != null ? Mathf.Min(rewards.Length, _slots.Count) : 0;
-            for (int i = 0; i < shown; i++) _slots[i].gameObject.SetActive(true);
-        }
-
-        /// <summary>The burst, and the sound the daily streak's gift opens on — the same gift
-        /// opening should not sound like two different ones.
-        ///
-        /// A particle system under a Canvas is driven by UIParticle, which renders it in the UI's
-        /// draw order — calling Play on the ParticleSystem alone leaves it behind the screen. The
-        /// plain system is the fallback for a prefab without the wrapper.</summary>
-        void PlayPoof() {
-            var sfx = CommonSFX.Instance?.RewordOpen;
-            if (sfx != null) CommonSFX.Play(sfx);
-
-            if (_poof == null) return;
-            var ui = _poof.GetComponent<Coffee.UIExtensions.UIParticle>();
-            if (ui != null) { ui.Play(); return; }
-            _poof.GetComponent<ParticleSystem>()?.Play();
-        }
-
-        IEnumerator Close() {
+        /// <summary>Fade out (letting taps through to what is on top), hold until
+        /// <paramref name="done"/>, then switch off and release Show().</summary>
+        IEnumerator Close(System.Func<bool> done) {
             _closing = true;
+            _group.blocksRaycasts = false;
             for (float e = 0f; e < FadeOut; e += Time.unscaledDeltaTime) {
                 _group.alpha = 1f - Mathf.Clamp01(e / FadeOut);
                 yield return null;
             }
             _group.alpha = 0f;
+            while (!done()) yield return null;
             gameObject.SetActive(false);
             _opened = false;                       // releases Show()
         }
@@ -247,44 +201,13 @@ namespace qp {
                 if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine);
             }
 
-            // Only this player's box, closed. Everything OpenBox sets is put back here, so opening
-            // the screen twice starts the same way.
-            for (int i = 0; i < _boxes.Length; i++) {
-                if (_boxes[i] == null) continue;
-                bool ours = i + 1 == Rank;
-                _boxes[i].SetActive(ours);
-                if (!ours) continue;
-                Show(_boxes[i].transform.RecursiveFindChild("GiftBoxIconClose"), true);
-                Show(_boxes[i].transform.RecursiveFindChild("GiftBoxIconOpen"), false);
-            }
-
-            // What is inside, dressed but hidden until the box opens.
-            var rewards = TournamentConfig.Instance?.PrizeFor(Rank)?.rewards;
-            for (int i = 0; i < _slots.Count; i++) {
-                bool has = rewards != null && i < rewards.Length;
-                _slots[i].gameObject.SetActive(false);        // OpenBox turns them on
-                if (has) Dress(_slots[i].transform, rewards[i]);
-            }
-            if (_rewards != null) _rewards.gameObject.SetActive(false);
+            // Only this player's box (the Gifts/Boxes art) — it opens in the gift popup.
+            for (int i = 0; i < _boxes.Length; i++)
+                if (_boxes[i] != null) _boxes[i].SetActive(i + 1 == Rank);
 
             if (_buttonText != null) _buttonText.text = "Claim";
             if (_button != null) _button.interactable = true;
         }
-
-        static void Dress(Transform slot, Reward reward) {
-            var icon = slot.RecursiveFindChild("$Icon")?.GetComponent<Image>();
-            if (icon != null) {
-                var sprite = TournamentConfig.Instance?.SpriteFor(reward.type);
-                if (sprite != null) icon.sprite = sprite;
-            }
-            var amount = slot.RecursiveFindChild("$AmountText")?.GetComponent<TMP_Text>();
-            if (amount != null) amount.text = reward.Label;
-        }
-
-        GameObject Box(int rank) =>
-            rank >= 1 && rank <= _boxes.Length ? _boxes[rank - 1] : null;
-
-        static void Show(Transform t, bool on) { if (t != null) t.gameObject.SetActive(on); }
 
         /// <summary>1st, 2nd, 3rd … including the teens, which break the simple rule.</summary>
         static string Ordinal(int n) {

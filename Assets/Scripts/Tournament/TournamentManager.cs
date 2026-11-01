@@ -291,8 +291,7 @@ namespace qp {
             if (_state == null || !_state.lastSyncClosed.Exists || _state.closedShown) return;
 
             var prize = TournamentConfig.Instance?.PrizeFor(ClosedPlace);
-            if (prize?.rewards != null)
-                foreach (var reward in prize.rewards) reward?.Grant();
+            GiftsManager.Grant(prize?.rewards);
 
             _state.closedShown = true;
             _state.Save();
