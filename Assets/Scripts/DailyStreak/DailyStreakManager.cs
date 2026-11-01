@@ -115,7 +115,6 @@ namespace qp {
             // player paid for it; a decline then is just a plain win.
             if (!saved && !CanRepair) return RegisterWin();
 
-            Analytics.StreakRepair(_streak.Value, result, fromLobby: false);
             if (saved) {
                 _repairedAt.Value = _streak.Value;
                 _lastWinDay.Value = Today - 1;
@@ -131,7 +130,6 @@ namespace qp {
         public static void RepairFromLobby() {
             _toLocalDaysOnce();
             if (!CanRepair) return;
-            Analytics.StreakRepair(_streak.Value, ERepairResult.Watched, fromLobby: true);
             _repairedAt.Value = _streak.Value;
             _lastWinDay.Value = Today - 1;
         }
@@ -141,20 +139,9 @@ namespace qp {
         public static void DeclineFromLobby() {
             _toLocalDaysOnce();
             if (!CanRepair) return;
-            Analytics.StreakRepair(_streak.Value, ERepairResult.Declined, fromLobby: true);
             Analytics.StreakLost(_streak.Value, _daysSinceWin - 1, true);
             _streak.Value = 0;   // reported lost here, so the next win starts at 1 without reporting it again
         }
-
-        /// <summary>The repair popup is on screen, where (the lobby card or after a win), and whether
-        /// a video was ready — so a low watch rate can be told apart from ads that never loaded.</summary>
-        public static void NoteRepairOffered(bool adReady, bool fromLobby) =>
-            Analytics.StreakRepairOffer(_streak.Value, adReady, fromLobby);
-
-        /// <summary>The player pressed watch but the video failed or was closed early; the offer
-        /// stays open.</summary>
-        public static void NoteRepairAdFailed(bool fromLobby) =>
-            Analytics.StreakRepair(_streak.Value, ERepairResult.AdFailed, fromLobby);
 
         /// <summary>Offline / Broken (a streak lost to one missed day that can still be saved) / Active.
         /// Broken needs only the trusted clock, not the line: an offline player still sees the

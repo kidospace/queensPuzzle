@@ -37,6 +37,7 @@ namespace qp {
         GameObject _flame, _flameOffline;   // $Flame / $FlameOffline — the broken flame, faded under wifi when offline
         MBDailyStreakProgress _progress;
         bool _hasLast, _lastReady, _lastOffline;   // last applied button state — redraw only on change
+        int _length;            // the streak at stake, reported with every answer
 
         /// <summary>True while the popup is open — the win flow waits on this.</summary>
         public bool IsShowing => _showing;
@@ -86,6 +87,7 @@ namespace qp {
 
         public void Show(int lostStreak, bool fromLobby = false) {
             _fromLobby = fromLobby;
+            _length = lostStreak;
             _showing = true;
             _watching = false;
             Result = ERepairResult.Declined;
@@ -97,7 +99,6 @@ namespace qp {
             if (_progress != null) _progress.ApplyImmediately(lostStreak);
             _updateWatch();
 
-            DailyStreakManager.NoteRepairOffered(Ads.IsRewardedReady, _fromLobby);
             GetComponent<IPopupAnim>()?.PlayIn();
         }
 
@@ -129,16 +130,24 @@ namespace qp {
             _watching = true;
             Ads.ShowRewarded("streak_repair", earned => {
                 _watching = false;
-                if (earned) { Result = ERepairResult.Watched; _close(); }
-                else DailyStreakManager.NoteRepairAdFailed(_fromLobby);   // stays open: try again or decline
+                if (earned) { Result = ERepairResult.Watched; _report(Result, "ready"); _close(); }
+                else _report(ERepairResult.AdFailed, "ready");   // stays open: try again or decline
             });
         }
 
         void _onNoThanks() {
             if (_watching) return;
             Result = ERepairResult.Declined;
+            _report(Result, _state());
             _close();
         }
+
+        // Every answer is reported here, the moment it is given, with what the button showed then —
+        // a "No thanks" with no video on offer is not the same choice as one with a video ready.
+        void _report(ERepairResult result, string state) =>
+            Analytics.StreakRepair(_length, result, _fromLobby, state);
+
+        string _state() => _lastReady ? "ready" : _lastOffline ? "offline" : "loading";
 
         void _close() {
             _showing = false;

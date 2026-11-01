@@ -261,16 +261,15 @@ namespace qp {
         public static void StreakLost(int length, int missed, bool declined) =>
             _streakEvent("streak_lost", ("s_length", length), ("s_missed", missed), ("s_declined", declined ? 1 : 0));
 
-        /// <summary>The repair popup is on screen; <paramref name="adReady"/> = a video could be played;
-        /// s_lobby = opened from the lobby's Broken card (1) or after a win (0).</summary>
-        public static void StreakRepairOffer(int length, bool adReady, bool fromLobby) =>
-            _streakEvent("streak_repair_offer", ("s_length", length), ("s_ad_ready", adReady ? 1 : 0), ("s_lobby", fromLobby ? 1 : 0));
-
-        /// <summary>What happened to a repair offer, sent as s_result: "watched" / "declined" — the
-        /// answer, from the lobby card (s_lobby=1) or after a win (0) — or "ad_failed" (the video
-        /// failed or was closed early; the offer stays open).</summary>
-        public static void StreakRepair(int length, ERepairResult result, bool fromLobby) =>
-            _streakEvent("streak_repair", ("s_length", length), ("s_result", _resultName(result)), ("s_lobby", fromLobby ? 1 : 0));
+        /// <summary>Every answer to the repair popup, the moment it is given (offline too): s_result
+        /// "watched" / "declined" / "ad_failed" (the video failed or was closed early; the popup
+        /// stays open, so more answers can follow), s_lobby = the lobby's Broken card (1) or after a
+        /// win (0), and s_state = what the Save button showed then — "ready" (a video), "loading"
+        /// (online, the ad not loaded yet) or "offline". From the first version after 1.5; 1.5 sent
+        /// streak_repair_offer as well and no s_state.</summary>
+        public static void StreakRepair(int length, ERepairResult result, bool fromLobby, string state) =>
+            _streakEvent("streak_repair", ("s_length", length), ("s_result", _resultName(result)),
+                         ("s_lobby", fromLobby ? 1 : 0), ("s_state", state));
 
         static string _resultName(ERepairResult result) => result switch {
             ERepairResult.Watched  => "watched",
