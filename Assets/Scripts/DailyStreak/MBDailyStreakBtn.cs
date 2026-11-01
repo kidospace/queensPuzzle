@@ -82,7 +82,9 @@ namespace qp {
         void _openRepair() {
             if (_repairPopup == null)
                 _repairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
-            if (_repairPopup == null || _repairPopup.IsShowing || !DailyStreakManager.CanRepair) return;
+            // Broken, not CanRepair: offline the card still opens the offer, which then says No
+            // connection — and neither answer changes the streak until the line is back.
+            if (_repairPopup == null || _repairPopup.IsShowing || DailyStreakManager.Status != EStreakStatus.Broken) return;
             StartCoroutine(_repairFlow());
         }
 

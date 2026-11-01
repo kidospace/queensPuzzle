@@ -34,6 +34,7 @@ namespace qp {
         TMP_Text _streakNumber;
         Button _watch;
         GameObject _showVideo, _videoLoading, _offline;
+        GameObject _flame, _flameOffline;   // $Flame / $FlameOffline — the broken flame, faded under wifi when offline
         MBDailyStreakProgress _progress;
         bool _hasLast, _lastReady, _lastOffline;   // last applied button state — redraw only on change
 
@@ -50,6 +51,8 @@ namespace qp {
 
             _streakNumber = transform.RecursiveFindChild<TMP_Text>("$StreakNumber");
             _progress = GetComponentInChildren<MBDailyStreakProgress>(true);
+            _flame = transform.RecursiveFindChild("$Flame")?.gameObject;
+            _flameOffline = transform.RecursiveFindChild("$FlameOffline")?.gameObject;
 
             _watch = transform.RecursiveFindChild<Button>("$BtnWatch");
             if (_watch != null) {
@@ -116,6 +119,8 @@ namespace qp {
             if (_showVideo != null) _showVideo.SetActive(ready);
             if (_offline != null) _offline.SetActive(offline);
             if (_videoLoading != null) _videoLoading.SetActive(!ready && !offline);
+            if (_flame != null) _flame.SetActive(!offline);
+            if (_flameOffline != null) _flameOffline.SetActive(offline);
             _watch.interactable = ready;
         }
 

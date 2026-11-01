@@ -90,13 +90,17 @@ namespace qp {
         /// <see cref="StreakResult.repair"/> &gt; 0, the win flow asks the player, and
         /// <see cref="ResolveRepair"/> counts the win once they have answered.</summary>
         public static StreakResult RegisterWin() {
-            if (Config == null || !IsOnline || _daysSinceWin == 0)   // off/offline; one win/day
-                return new StreakResult { advanced = false, previous = Streak, streak = Streak, reward = null };
+            // offered offline too (the popup then says No connection) — the answer waits for the line
+            if (Config != null && _repairable) return new StreakResult { repair = _streak.Value };
 
-            if (CanRepair) return new StreakResult { repair = _streak.Value };
+            if (Config == null || !IsOnline || _daysSinceWin == 0)   // off/offline; one win/day
+                return _unchanged();
 
             return _advance(saved: false, declined: false);
         }
+
+        static StreakResult _unchanged() =>
+            new StreakResult { advanced = false, previous = Streak, streak = Streak, reward = null };
 
         /// <summary>The player answered the repair offer that <see cref="RegisterWin"/> raised:
         /// Watched — yesterday counts, and today's win carries the streak on (12 → 13); Declined —
@@ -104,6 +108,9 @@ namespace qp {
         public static StreakResult ResolveRepair(ERepairResult result) {
             _toLocalDaysOnce();
             bool saved = result == ERepairResult.Watched;
+            // Offline nothing can be answered (no video, no streak change): the offer stays for
+            // the next win online, and this win counts as offline wins do — not at all.
+            if (!IsOnline && !saved) return _unchanged();
             // The day can turn while the popup is open. A video watched is honoured anyway — the
             // player paid for it; a decline then is just a plain win.
             if (!saved && !CanRepair) return RegisterWin();
@@ -149,10 +156,13 @@ namespace qp {
         public static void NoteRepairAdFailed(bool fromLobby) =>
             Analytics.StreakRepair(_streak.Value, ERepairResult.AdFailed, fromLobby);
 
-        /// <summary>Offline / Broken (a streak lost to one missed day that can still be saved) / Active.</summary>
+        /// <summary>Offline / Broken (a streak lost to one missed day that can still be saved) / Active.
+        /// Broken needs only the trusted clock, not the line: an offline player still sees the
+        /// streak they can save (the repair popup then says No connection) — saving it, or letting
+        /// it go, still waits for <see cref="CanRepair"/>.</summary>
         public static EStreakStatus Status =>
+            _repairable ? EStreakStatus.Broken :
             !IsOnline ? EStreakStatus.Offline :
-            CanRepair ? EStreakStatus.Broken :
             EStreakStatus.Active;
 
         /// <summary>The streak as it stands: the run while it is alive (last win today or
@@ -160,15 +170,20 @@ namespace qp {
         public static int Streak => _daysSinceWin <= 1 ? _streak.Value : 0;
 
         /// <summary>The streak that broke and can still be saved — what the Broken card shows
-        /// instead of 0. 0 when there is none.</summary>
-        public static int LostStreak => CanRepair ? _streak.Value : 0;
+        /// instead of 0, online or not. 0 when there is none.</summary>
+        public static int LostStreak => _repairable ? _streak.Value : 0;
 
-        /// <summary>The streak can be saved right now: exactly one day missed, at least
-        /// <see cref="DailyStreakConfig.repairMinStreak"/> long, and no save yet in its current
-        /// 7-day stretch (streaks 1–7 are one stretch, 8–14 the next — the stretches the bar fills).</summary>
-        public static bool CanRepair {
+        /// <summary>The streak can be saved right now: <see cref="_repairable"/>, and online —
+        /// saving (or letting it go) needs the line, like every other streak change.</summary>
+        public static bool CanRepair => IsOnline && _repairable;
+
+        /// <summary>A streak lost to exactly one missed day, at least
+        /// <see cref="DailyStreakConfig.repairMinStreak"/> long, with no save yet in its current
+        /// 7-day stretch (streaks 1–7 are one stretch, 8–14 the next — the stretches the bar fills).
+        /// Needs only the trusted clock — without it the missed day can't be told.</summary>
+        static bool _repairable {
             get {
-                if (Config == null || !IsOnline || _daysSinceWin != 2) return false;
+                if (Config == null || !MBServerTimeManagerV2.IsTimeSynced || _daysSinceWin != 2) return false;
                 int s = _streak.Value;
                 int at = _repairedAt.Value;
                 return s >= Config.repairMinStreak

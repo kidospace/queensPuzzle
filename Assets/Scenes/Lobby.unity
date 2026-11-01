@@ -1043,6 +1043,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4229942534816074309, guid: 1c38d832b17583e4b83ed90c4d1ac116, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 4380151499398585144, guid: 1c38d832b17583e4b83ed90c4d1ac116, type: 3}
       propertyPath: m_Name
       value: DailyStreakBtn
