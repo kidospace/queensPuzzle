@@ -45,9 +45,15 @@ namespace qp {
         /// ahead of the space it is heading for and lands on somebody. They go first.</summary>
         const float ClearBy = 0.55f;
 
-        /// <summary>The score changes while the row is on its way up, not as a beat of its own —
-        /// a separate punch on the number is what made the whole thing feel hard.</summary>
+        /// <summary>The score's own change, for a skin with no bones effect.</summary>
         const float ScoreFade = 0.55f;
+
+        /// <summary>The bones leaving for the score: one after the other, so each flight overlaps
+        /// the next only a little.</summary>
+        const float BoneStagger = 0.16f, BoneFlySeconds = 0.5f, BonesFadeSeconds = 0.3f;
+
+        /// <summary>How high a bone's arc rises, in the row's own units, and how small it lands.</summary>
+        const float BoneHop = 120f, BoneLandScale = 0.7f;
 
         /// <summary>Barely raised. Enough to read as held above the list, not enough to read as
         /// a row that changed size.</summary>
@@ -63,6 +69,12 @@ namespace qp {
         Transform _arrows;                  // $RankUpPS — ridden by the card on its way up
         MBTournamentPopupAfterWinAnim _anim;
         [SerializeField] MBTournamentBonesEffect _bonesEffect;
+
+        RectTransform _bones;               // $Bones — laid exactly over the top bar's row
+        CanvasGroup _bonesGroup;
+        Transform _bonesSource;             // the top bar's row on screen: campaign or daily
+        readonly List<RectTransform> _boneIcons = new List<RectTransform>();    // left to right
+        readonly List<Vector2> _boneHomes = new List<Vector2>();
 
         /// <summary>
         /// The shape of the list, in code, because nothing else holds it any more.
@@ -121,7 +133,18 @@ namespace qp {
 
             _anim = GetComponent<MBTournamentPopupAfterWinAnim>();
 
-            var close = transform.RecursiveFindChild("$CloseBtn")?.GetComponent<Button>();
+            _bones = transform.RecursiveFindChild("$Bones") as RectTransform;
+            if (_bones == null) Debug.LogError("[AfterWin] $Bones is missing from the prefab");
+            else {
+                _bonesGroup = _bones.gameObject.AddComponent<CanvasGroup>();
+                _bonesGroup.blocksRaycasts = false;        // a tap on them still closes the screen
+                foreach (Transform child in _bones)
+                    if (child.name.StartsWith("$Bone")) _boneIcons.Add((RectTransform)child);
+                _boneIcons.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
+                foreach (var icon in _boneIcons) _boneHomes.Add(icon.anchoredPosition);
+            }
+
+            var close =transform.RecursiveFindChild("$CloseBtn")?.GetComponent<Button>();
             if (close == null) Debug.LogError("[AfterWin] $CloseBtn has no Button — it cannot be closed");
             else close.onClick.AddListener(() => { if (_canClose && !_closing && _open) StartCoroutine(Close()); });
         }
@@ -148,11 +171,12 @@ namespace qp {
         /// after the close: stuck for good on an opening that can no longer finish, or playing
         /// out the whole climb on a screen nobody can see while the game waits behind it.
         /// </summary>
-        public IEnumerator Show(TournamentWinResult win) {
+        public IEnumerator Show(TournamentWinResult win, Transform bonesOnScreen) {
             if (_open) yield break;
             _open = true;
             _closing = false;
             _canClose = false;
+            _bonesSource = bonesOnScreen;
 
             // A climb cut short by a close never got to hand dragging back, or its row.
             if (_scroll != null) _scroll.vertical = _scrollVertical;
@@ -170,6 +194,7 @@ namespace qp {
         }
 
         IEnumerator _run(TournamentWinResult win) {
+            _putBonesOverTopBar();
             _group.alpha = 1f;
 
             // The opening clip brings in both the panel and the table; all this decides is which
@@ -345,12 +370,13 @@ namespace qp {
             int from = Place(before);
             int to = Place(win.newScore);
 
-            // The score becomes the new one and the row takes the hit for it. There is nothing
-            // to count up to — the player knows what they just won; what they have not seen yet
-            // is where it puts them, and that is what comes after.
-            // Standing still: nowhere to carry the change, so it happens here.
+            // The bones fly to the score and the score becomes the new one, before anything else
+            // moves. There is nothing to count up to — the player knows what they just won; what
+            // they have not seen yet is where it puts them, and that is what comes after.
+            if (from < _rows.Length) yield return _flyBones(_rows[from], before, win.newScore);
+
+            // Standing still: nothing left to show but the table as it now stands.
             if (to >= from) {
-                if (from < _rows.Length) yield return ChangeScore(_rows[from], win.newScore);
                 Draw(win.newScore, to);
                 ScrollToMe(to);
                 yield break;
@@ -362,7 +388,7 @@ namespace qp {
 
             ShowRankUp(from - to);
             yield return new WaitForSecondsRealtime(MoveLead);
-            yield return MakeRoom(from, to, win.newScore);
+            yield return MakeRoom(from, to);
 
             if (_scroll != null) _scroll.vertical = _scrollVertical;
 
@@ -389,7 +415,7 @@ namespace qp {
         /// view in draw order and outside the mask, so it is never clipped at the edge of the
         /// viewport — which is exactly where a row about to move usually sits.
         /// </summary>
-        IEnumerator MakeRoom(int from, int to, int score) {
+        IEnumerator MakeRoom(int from, int to) {
             if (_content == null || _scroll == null || from >= _rows.Length || to >= _rows.Length) yield break;
 
             float step = _rowHeight + RowSpacing;
@@ -429,10 +455,6 @@ namespace qp {
             }
 
             yield return Scale(me, 1f, LiftScale, LiftSeconds);
-
-            // The score changes on the way up rather than before it. One movement instead of a
-            // punch followed by a journey.
-            StartCoroutine(ChangeScore(_rows[from], score));
 
             // Where the list can actually end up: the slot the player is heading for, put where
             // ScrollToMe would put it, and then clamped to the ends of the list.
@@ -483,6 +505,91 @@ namespace qp {
             me.sizeDelta = sizeDelta;
             me.anchoredPosition = new Vector2(anchoredX, me.anchoredPosition.y);
             Place(me, to);
+        }
+
+        /// <summary>
+        /// Lay $Bones exactly over the row the player has just been looking at, so the screen
+        /// darkens around the same bones. Copied at runtime: the row's place and scale come from
+        /// the game's layout, and it is a different row in campaign and in daily. Both canvases
+        /// are world space, so world position and scale are all it takes.
+        /// </summary>
+        void _putBonesOverTopBar() {
+            if (_bones == null) return;
+            _bones.gameObject.SetActive(_bonesSource != null);
+            if (_bonesSource == null) return;
+
+            var parent = _bones.parent.lossyScale;
+            var scale = _bonesSource.lossyScale;
+            _bones.position = _bonesSource.position;
+            _bones.localScale = new Vector3(scale.x / parent.x, scale.y / parent.y, scale.z / parent.z);
+            _bonesGroup.alpha = 1f;
+
+            for (int i = 0; i < _boneIcons.Count; i++) {
+                var icon = _boneIcons[i];
+                icon.anchoredPosition = _boneHomes[i];
+                icon.localScale = Vector3.one;
+                var same = _bonesSource.Find(icon.name);
+                icon.gameObject.SetActive(same != null && same.gameObject.activeSelf);
+            }
+        }
+
+        /// <summary>
+        /// The bones still standing leave for the score one after the other. Each is worth a
+        /// point, so each landing adds one, and the aura starts on the first of them. The last
+        /// lands on the real score, whatever the count came to. Finishes when the aura does.
+        /// </summary>
+        IEnumerator _flyBones(MBTournamentRow row, int before, int score) {
+            var flying = _bones != null && _bones.gameObject.activeSelf && row.ScoreLabel != null
+                ? _boneIcons.FindAll(b => b.gameObject.activeSelf)
+                : new List<RectTransform>();
+            if (flying.Count == 0) {
+                yield return ChangeScore(row, score);
+                yield break;
+            }
+
+            int landed = 0;
+            System.Action land = () => {
+                landed++;
+                if (landed == 1 && _bonesEffect != null) {
+                    _bonesEffect.Attach(row.ScoreLabel);
+                    _bonesEffect.Play();
+                }
+                row.SetScore(landed == flying.Count ? score : before + landed);
+            };
+
+            Vector3 target = row.ScoreLabel.transform.position;
+            for (int i = 0; i < flying.Count; i++) {
+                if (i > 0) yield return new WaitForSecondsRealtime(BoneStagger);
+                StartCoroutine(_flyBone(flying[i], target, land));
+            }
+            while (landed < flying.Count) yield return null;
+
+            StartCoroutine(_fadeBones());
+            while (_bonesEffect != null && _bonesEffect.IsPlaying) yield return null;
+        }
+
+        IEnumerator _flyBone(RectTransform bone, Vector3 target, System.Action land) {
+            Vector3 start = bone.position;
+            float hop = BoneHop * _bones.lossyScale.y;
+            for (float e = 0f; e < BoneFlySeconds; e += Time.unscaledDeltaTime) {
+                float raw = e / BoneFlySeconds;
+                float p = Ease(raw);
+                bone.position = Vector3.Lerp(start, target, p) + Vector3.up * (Mathf.Sin(raw * Mathf.PI) * hop);
+                bone.localScale = Vector3.one * Mathf.Lerp(1f, BoneLandScale, p);
+                yield return null;
+            }
+            bone.gameObject.SetActive(false);
+            land();
+        }
+
+        /// <summary>What is left of the row — its background and the empty slots — clears out of
+        /// the way before the table starts moving.</summary>
+        IEnumerator _fadeBones() {
+            for (float e = 0f; e < BonesFadeSeconds; e += Time.unscaledDeltaTime) {
+                _bonesGroup.alpha = 1f - Ease(e / BonesFadeSeconds);
+                yield return null;
+            }
+            _bones.gameObject.SetActive(false);
         }
 
         IEnumerator ChangeScore(MBTournamentRow row, int score) {

@@ -1149,7 +1149,7 @@ namespace qp {
             // tournament, and this win landed in it.
             if (_tournamentAfterWin != null && _showsClimb) {
                 InputLocks++;
-                yield return _tournamentAfterWin.Show(_tournamentWin);
+                yield return _tournamentAfterWin.Show(_tournamentWin, _topBar.GetBonesTransform());
                 InputLocks--;
             }
 
