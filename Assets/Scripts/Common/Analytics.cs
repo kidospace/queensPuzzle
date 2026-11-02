@@ -272,9 +272,11 @@ namespace qp {
                          ("s_lobby", fromLobby ? 1 : 0), ("s_state", state));
 
         /// <summary>The answer to the "connect to count today" popup after an offline win: s_result
-        /// "connected" (the line came back while it was open) or "not_now".</summary>
-        public static void StreakOffline(bool connected) =>
-            _streakEvent("streak_offline", ("s_result", connected ? "connected" : "not_now"));
+        /// "connected" (the line came back while it was open) or "not_now", and s_stake = what it
+        /// said was at stake: "none", "keep" or "save".</summary>
+        public static void StreakOffline(bool connected, EOfflineStake stake) =>
+            _streakEvent("streak_offline", ("s_result", connected ? "connected" : "not_now"),
+                         ("s_stake", stake.ToString().ToLowerInvariant()));
 
         static string _resultName(ERepairResult result) => result switch {
             ERepairResult.Watched  => "watched",

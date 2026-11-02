@@ -52,13 +52,16 @@ namespace qp {
         /// </summary>
         void TournamentPanel() {
             // Outside the backend check: pulling the network is the device's business, not the
-            // tournament's, and it is worth having whatever is behind this window.
+            // tournament's, and it is worth having whatever is behind this window. Not on a release
+            // build: ForceOffline does nothing there, and a device tests with a real network drop.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             GUILayout.BeginHorizontal();
             GUILayout.Label(InternetConnection.ForceOffline ? "OFFLINE (forced)" : "online",
                             GUILayout.Width(160));
             if (Button(InternetConnection.ForceOffline ? "Go online" : "Go OFFLINE"))
                 InternetConnection.ForceOffline = !InternetConnection.ForceOffline;
             GUILayout.EndHorizontal();
+#endif
 
             var dbg = TournamentManager.Debug;
             if (dbg == null) { GUILayout.Label("Tournament — this backend has no debug hooks"); return; }
@@ -109,6 +112,62 @@ namespace qp {
             if (Button("CLEAR all")) Do(dbg.Clear);
             GUILayout.EndHorizontal();
         }
+
+        string _skipHours = "", _skipMinutes = "", _skipSeconds = "";
+
+        /// <summary>A saved offset comes back on every run, until debug mode is exited.</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void _applySavedTimeOffset() {
+            if (AppData.DebugMode.Value)
+                MBServerTimeManagerV2.DebugOffset = TimeSpan.FromSeconds(AppData.DebugTimeOffsetSec.Value);
+        }
+
+        /// <summary>
+        /// Moves server time forward for everything that reads it — streak, daily challenge and
+        /// tournament together, the way a real day passing would. Anything saved during the jump
+        /// stays in the "future" after Reset: Set streak, DC reset today and Restart clear it.
+        /// </summary>
+        void _timePanel() {
+            var offset = MBServerTimeManagerV2.DebugOffset;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"Time offset: +{offset.Days}d {offset:hh\\:mm\\:ss}", GUILayout.Width(220));
+            if (Button("Reset")) _setTimeOffset(TimeSpan.Zero);
+            GUILayout.EndHorizontal();
+
+            _dayRow("Streak day", DailyStreakManager.TimeLeftToday);
+            _dayRow("DC day", DailyChallengeManager.TimeLeft);
+
+            GUILayout.BeginHorizontal();
+            _skipHours = GUILayout.TextField(_skipHours, GUILayout.Height(44), GUILayout.Width(60));
+            GUILayout.Label("h", GUILayout.Width(16));
+            _skipMinutes = GUILayout.TextField(_skipMinutes, GUILayout.Height(44), GUILayout.Width(60));
+            GUILayout.Label("m", GUILayout.Width(16));
+            _skipSeconds = GUILayout.TextField(_skipSeconds, GUILayout.Height(44), GUILayout.Width(60));
+            GUILayout.Label("s", GUILayout.Width(16));
+            if (Button("Skip"))
+                _setTimeOffset(offset + new TimeSpan(_skipPart(_skipHours), _skipPart(_skipMinutes), _skipPart(_skipSeconds)));
+            GUILayout.EndHorizontal();
+        }
+
+        // One day's countdown, and a jump to 30 seconds before it turns. Inside the last 30 seconds
+        // the jump goes to the same moment of the next day, because time never moves back here.
+        static void _dayRow(string name, TimeSpan left) {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{name} in {left:hh\\:mm\\:ss}", GUILayout.Width(220));
+            if (Button("in 30s")) {
+                var skip = left - TimeSpan.FromSeconds(30);
+                if (skip < TimeSpan.Zero) skip += TimeSpan.FromDays(1);
+                _setTimeOffset(MBServerTimeManagerV2.DebugOffset + skip);
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        static void _setTimeOffset(TimeSpan offset) {
+            AppData.DebugTimeOffsetSec.Value = (int)offset.TotalSeconds;
+            MBServerTimeManagerV2.DebugOffset = TimeSpan.FromSeconds(AppData.DebugTimeOffsetSec.Value);
+        }
+
+        static int _skipPart(string text) => int.TryParse(text, out int n) ? Mathf.Max(0, n) : 0;
 
         /// <summary>Change the server, then sync — nothing shows up until the client asks.</summary>
         static void Do(Action change) {
@@ -182,6 +241,9 @@ namespace qp {
             if (Button("Restore bones")) { AppData.LastPlayData.bonesLost = 0; AppData.LastPlayData.Save(); }
 
             GUILayout.Space(16);
+            _timePanel();
+
+            GUILayout.Space(16);
             GUILayout.Label($"Daily Streak (now {DailyStreakManager.Streak}, {DailyStreakManager.Status})");
             GUILayout.BeginHorizontal();
             if (Button("Streak -1")) DailyStreakManager.DebugSetStreak(DailyStreakManager.Streak - 1);
@@ -236,7 +298,7 @@ namespace qp {
 #endif
 
             GUILayout.Space(16);
-            if (Button("EXIT DEBUG MODE")) { AppData.DebugMode.Value = false; Close(); }
+            if (Button("EXIT DEBUG MODE")) { _setTimeOffset(TimeSpan.Zero); AppData.DebugMode.Value = false; Close(); }
             if (Button("Close")) Close();
 
             GUILayout.EndScrollView();

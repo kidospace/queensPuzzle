@@ -18,6 +18,13 @@ namespace qp {
         AdFailed,
     }
 
+    /// <summary>What connecting would do for a player offline — picks the offline popup and its text.</summary>
+    public enum EOfflineStake {
+        None,
+        Keep,
+        Save,
+    }
+
     /// <summary>What a win did to the streak — returned by <see cref="DailyStreakManager.RegisterWin"/>
     /// so the win flow can show the right UI.</summary>
     public struct StreakResult {
@@ -175,13 +182,32 @@ namespace qp {
         public static bool AskToConnect =>
             Config != null && !IsOnline && _dayOf(System.DateTime.UtcNow) != _lastWinDay.Value;
 
-        /// <summary>A streak lost to exactly one missed day, at least
-        /// <see cref="DailyStreakConfig.repairMinStreak"/> long, with no save yet in its current
-        /// 7-day stretch (streaks 1–7 are one stretch, 8–14 the next — the stretches the bar fills).
-        /// Needs only the trusted clock — without it the missed day can't be told.</summary>
-        static bool _repairable {
+        /// <summary>What connecting would do for the streak, by the same device clock as
+        /// <see cref="AskToConnect"/>: Keep — last win yesterday, it goes on; Save — one missed day
+        /// and the repair offer would come; None — nothing left to lose.</summary>
+        public static EOfflineStake OfflineStake {
             get {
-                if (Config == null || !MBServerTimeManagerV2.IsTimeSynced || _daysSinceWin != 2) return false;
+                int days = _dayOf(System.DateTime.UtcNow) - _lastWinDay.Value;
+                if (days == 1 && _streak.Value > 0) return EOfflineStake.Keep;
+                if (days == 2 && _savable) return EOfflineStake.Save;
+                return EOfflineStake.None;
+            }
+        }
+
+        /// <summary>The length of the last run, alive or not — what <see cref="OfflineStake"/> is about.</summary>
+        public static int LastRun => _streak.Value;
+
+        /// <summary>A streak lost to exactly one missed day, and <see cref="_savable"/>.
+        /// Needs only the trusted clock — without it the missed day can't be told.</summary>
+        static bool _repairable =>
+            MBServerTimeManagerV2.IsTimeSynced && _daysSinceWin == 2 && _savable;
+
+        /// <summary>The run is at least <see cref="DailyStreakConfig.repairMinStreak"/> long, with no
+        /// save yet in its current 7-day stretch (streaks 1–7 are one stretch, 8–14 the next — the
+        /// stretches the bar fills).</summary>
+        static bool _savable {
+            get {
+                if (Config == null) return false;
                 int s = _streak.Value;
                 int at = _repairedAt.Value;
                 return s >= Config.repairMinStreak
@@ -287,6 +313,15 @@ namespace qp {
         /// by a few hours at most, which is not worth guarding against.
         /// </summary>
         static int Today => _dayOf(MBServerTimeManagerV2.UTCNow);
+
+        /// <summary>Countdown to when <see cref="Today"/> turns (the debug panel shows it).</summary>
+        public static System.TimeSpan TimeLeftToday {
+            get {
+                var utc = System.DateTime.SpecifyKind(MBServerTimeManagerV2.UTCNow, System.DateTimeKind.Utc);
+                var local = utc + _localOffset(utc);
+                return local.Date.AddDays(1) - local;
+            }
+        }
 
         static int _dayOf(System.DateTime time) {
             var utc = System.DateTime.SpecifyKind(time, System.DateTimeKind.Utc);

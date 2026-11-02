@@ -45,6 +45,10 @@ namespace qp {
         // the short open-code works on every later run until explicitly exited in MBDebugWin.
         public static readonly PlayerPrefsHelper.BoolHolder DebugMode = new PlayerPrefsHelper.BoolHolder("qp_debug_mode", false);
 
+        // How far the debug panel moved server time forward (whole seconds). Only read while
+        // DebugMode is on — see MBDebugWin.
+        public static readonly PlayerPrefsHelper.IntHolder DebugTimeOffsetSec = new PlayerPrefsHelper.IntHolder("qp_debug_time_offset_sec", 0);
+
         // FPS overlay on/off (MBFpsOverlay) — persists so it's already up on the next run.
         public static readonly PlayerPrefsHelper.BoolHolder ShowFps = new PlayerPrefsHelper.BoolHolder("qp_show_fps", false);
 
