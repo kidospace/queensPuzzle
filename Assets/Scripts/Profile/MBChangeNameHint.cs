@@ -38,8 +38,9 @@ namespace qp {
 
         void OnEnable() {
             // Already named — including on a relaunch, where there is nothing to fade and the
-            // hint should simply never appear.
-            if (ProfileManager.Named) { gameObject.SetActive(false); return; }
+            // hint should simply never appear. Nor before the tournament opens: the name is for
+            // its leaderboard. The win that unlocks it comes back through a fresh lobby.
+            if (ProfileManager.Named || !TournamentManager.IsUnlocked) { gameObject.SetActive(false); return; }
 
             _leaving = false;
             _group.alpha = 1f;
