@@ -103,14 +103,24 @@ namespace qp {
         }
 
         void Update() {
-            if (_showing) _updateWatch();
+            if (!_showing) return;
+            // The offer ran out while open (midnight, a phone locked for days): no video for a
+            // streak that can't be saved anymore. Not the player's answer, so not reported. A video
+            // already playing is honoured instead: the player started it while the offer stood.
+            if (!_watching && DailyStreakManager.RepairExpired) {
+                Result = ERepairResult.Declined;
+                _close();
+                return;
+            }
+            _updateWatch();
         }
 
         // Ready → $ShowVideo; else offline → $Offline; else (online, still loading) → $VideoLoading.
-        // Only $ShowVideo is clickable.
+        // Only $ShowVideo is clickable, and only on a trusted clock: without one (just back from
+        // sleep) the offer may be over already, and a saved streak would land on the wrong day.
         void _updateWatch() {
             if (_watch == null) return;
-            bool ready = Ads.IsRewardedReady;
+            bool ready = Ads.IsRewardedReady && MBServerTimeManagerV2.IsTimeSynced;
             bool offline = !ready && InternetConnection.Instance != null && !InternetConnection.Instance.HasInternet;
             if (_hasLast && ready == _lastReady && offline == _lastOffline) return;
             _hasLast = true;

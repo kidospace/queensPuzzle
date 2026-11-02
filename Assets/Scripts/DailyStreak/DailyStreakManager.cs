@@ -125,11 +125,12 @@ namespace qp {
         /// <summary>
         /// The video was watched from the lobby (the Broken card opens the same offer): the streak
         /// is saved now — yesterday counts, the card is back on its number, and today's first win
-        /// carries it on like any other day.
+        /// carries it on like any other day. Called only for a video watched, so it is honoured
+        /// whatever has happened since it started (the day turned, the line dropped) — the popup
+        /// already refuses to start one once the offer is over (<see cref="RepairExpired"/>).
         /// </summary>
         public static void RepairFromLobby() {
             _toLocalDaysOnce();
-            if (!CanRepair) return;
             _repairedAt.Value = _streak.Value;
             _lastWinDay.Value = Today - 1;
         }
@@ -163,6 +164,16 @@ namespace qp {
         /// <summary>The streak can be saved right now: <see cref="_repairable"/>, and online —
         /// saving (or letting it go) needs the line, like every other streak change.</summary>
         public static bool CanRepair => IsOnline && _repairable;
+
+        /// <summary>The trusted clock says the offer is over — an open repair popup closes on this.
+        /// An untrusted clock says nothing yet: the popup waits for the sync.</summary>
+        public static bool RepairExpired => MBServerTimeManagerV2.IsTimeSynced && !_repairable;
+
+        /// <summary>This offline win would have counted, so connecting is worth asking for. Today
+        /// comes from the device clock, as no other is trusted offline: it only decides whether to
+        /// ask. A wrong clock gets a wrong question; the streak itself still waits for the server.</summary>
+        public static bool AskToConnect =>
+            Config != null && !IsOnline && _dayOf(System.DateTime.UtcNow) != _lastWinDay.Value;
 
         /// <summary>A streak lost to exactly one missed day, at least
         /// <see cref="DailyStreakConfig.repairMinStreak"/> long, with no save yet in its current
@@ -214,7 +225,7 @@ namespace qp {
         /// connection is a product call: nothing is monetisable without one, so days are not
         /// handed out — and rewards not granted — while there is no line.
         /// </summary>
-        static bool IsOnline => MBServerTimeManagerV2.IsTimeSynced
+        public static bool IsOnline => MBServerTimeManagerV2.IsTimeSynced
                              && InternetConnection.Instance != null
                              && InternetConnection.Instance.HasInternet;
 
@@ -275,11 +286,11 @@ namespace qp {
         /// server, so changing the device DATE does nothing; changing the time ZONE moves the day
         /// by a few hours at most, which is not worth guarding against.
         /// </summary>
-        static int Today {
-            get {
-                var utc = System.DateTime.SpecifyKind(MBServerTimeManagerV2.UTCNow, System.DateTimeKind.Utc);
-                return (int)((utc + _localOffset(utc)).Date - Epoch).TotalDays;
-            }
+        static int Today => _dayOf(MBServerTimeManagerV2.UTCNow);
+
+        static int _dayOf(System.DateTime time) {
+            var utc = System.DateTime.SpecifyKind(time, System.DateTimeKind.Utc);
+            return (int)((utc + _localOffset(utc)).Date - Epoch).TotalDays;
         }
 
         // The device's offset from UTC at that moment (DST included), within the real ±14h; UTC if

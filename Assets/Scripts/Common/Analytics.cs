@@ -271,6 +271,11 @@ namespace qp {
             _streakEvent("streak_repair", ("s_length", length), ("s_result", _resultName(result)),
                          ("s_lobby", fromLobby ? 1 : 0), ("s_state", state));
 
+        /// <summary>The answer to the "connect to count today" popup after an offline win: s_result
+        /// "connected" (the line came back while it was open) or "not_now".</summary>
+        public static void StreakOffline(bool connected) =>
+            _streakEvent("streak_offline", ("s_result", connected ? "connected" : "not_now"));
+
         static string _resultName(ERepairResult result) => result switch {
             ERepairResult.Watched  => "watched",
             ERepairResult.Declined => "declined",

@@ -39,6 +39,7 @@ namespace qp {
         MBDailyStreakInfoPopup _streakProgressPopup;          // shown when the streak advanced
         MBDailyStreakInGameRewordedPopup _streakRewardPopup;    // shown when a milestone was hit
         MBDailyStreakRepairPopup _streakRepairPopup;            // offered when a broken streak can be saved
+        MBDailyStreakOfflinePopup _streakOfflinePopup;          // asks to connect after an offline win that would count
         MBTournamentEndClaim _tournamentEndPopup;               // a finished tournament that pays
         MBGiftPopup _giftPopup;                                 // opens a gift box and hands out its rewards
         MBTournamentPopupAfterWin _tournamentAfterWin;          // what this win did to the live one
@@ -130,6 +131,10 @@ namespace qp {
             _streakRepairPopup = FindAnyObjectByType<MBDailyStreakRepairPopup>(FindObjectsInactive.Include);
             if (_streakRepairPopup != null) _streakRepairPopup.gameObject.SetActive(true);
             else Debug.LogError("[MBGameplay] MBDailyStreakRepairPopup missing in the scene");
+
+            _streakOfflinePopup = FindAnyObjectByType<MBDailyStreakOfflinePopup>(FindObjectsInactive.Include);
+            if (_streakOfflinePopup != null) _streakOfflinePopup.gameObject.SetActive(true);
+            else Debug.LogError("[MBGameplay] MBDailyStreakOfflinePopup missing in the scene");
 
             _giftPopup = FindAnyObjectByType<MBGiftPopup>(FindObjectsInactive.Include);
             if (_giftPopup != null) _giftPopup.gameObject.SetActive(true);
@@ -1151,6 +1156,17 @@ namespace qp {
 
             // only if won level not 0
             if (AppData.LevelIdx.Value > 1) {
+                // An offline win that would count asks for the line first. If it comes back, the
+                // win is counted now and whatever that gives (repair offer included) follows below.
+                if (_streakOfflinePopup != null && streak.repair == 0 && DailyStreakManager.AskToConnect) {
+                    _streakOfflinePopup.Show();
+                    yield return new WaitWhile(() => _streakOfflinePopup.IsShowing);
+                    if (DailyStreakManager.IsOnline) {
+                        streak = DailyStreakManager.RegisterWin();
+                        if (streak.reward != null) MBBoostButton.SuppressUpdate = true;
+                    }
+                }
+
                 if (streak.repair > 0) {
                     _streakRepairPopup.Show(streak.repair);
                     yield return new WaitWhile(() => _streakRepairPopup.IsShowing);
