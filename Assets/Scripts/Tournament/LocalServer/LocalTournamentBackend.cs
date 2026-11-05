@@ -185,6 +185,7 @@ namespace qp {
         /// is decided here, once, and then only played back.
         /// </summary>
         void _open(DateTime now, int level) {
+            bool first = !_state.HasFinishedOne;
             int usual = _state.UsualScore > 0 ? _state.UsualScore : RivalGroup.TypicalScore;
 
             _state.currentId = "t" + now.Ticks;
@@ -194,7 +195,7 @@ namespace qp {
             _state.baseScore = usual;
             _state.acceptedIds.Clear();
             _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
-                                             level, _state.setKind, out var kind);
+                                             level, _state.setKind, first, out var kind);
             _state.setKind = kind;
 
             Debug.Log($"[LocalTournament] {_state.currentId} opened with {_state.rivals.Count} rivals " +

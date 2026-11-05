@@ -141,20 +141,23 @@ namespace qp {
         /// </summary>
         /// <param name="last">The kind the player got last time, so the draw can avoid repeating
         /// an extreme. <paramref name="chosen"/> reports what this group actually is.</param>
+        /// <param name="firstEver">The player's first tournament, which is always Easy: their
+        /// usual score is still an estimate, and this is not the moment for the week the prize is
+        /// nearly gone.</param>
         public static List<LocalRival> Build(int myScore, uint myOwner, string myName, int myLevel,
-                                             Kind last, out Kind chosen) {
+                                             Kind last, bool firstEver, out Kind chosen) {
             // Taken and released in the same breath, so the whole lifetime is one method. The
             // recordings and the name lists are read here and nowhere else: everything chosen is
             // copied out below, and the ~280 KB and ~70 KB behind them are not wanted again for
             // another 48 hours.
             RivalsBlob.Load();
             RivalNames.Load();
-            try { return _build(myScore, myOwner, myName, myLevel, last, out chosen); }
+            try { return _build(myScore, myOwner, myName, myLevel, last, firstEver, out chosen); }
             finally { RivalsBlob.Unload(); RivalNames.Unload(); }
         }
 
         static List<LocalRival> _build(int myScore, uint myOwner, string myName, int myLevel,
-                                       Kind last, out Kind chosen) {
+                                       Kind last, bool firstEver, out Kind chosen) {
             chosen = Kind.Unknown;   // nothing was drawn unless the group is actually built
             var rivals = new List<LocalRival>(Size);
             if (RivalsBlob.Count == 0) {
@@ -163,7 +166,7 @@ namespace qp {
             }
 
             var rnd = new System.Random(Guid.NewGuid().GetHashCode());
-            chosen = _pickKind(rnd, last);
+            chosen = firstEver ? Kind.Easy : _pickKind(rnd, last);
             float[] set = chosen == Kind.Easy ? Easy : chosen == Kind.Hard ? Hard : Normal;
             var usedRecordings = new HashSet<int>();
             var usedNames = new HashSet<string> { myName ?? "" };
@@ -210,8 +213,9 @@ namespace qp {
         /// A repeat is turned into Normal, which costs the long-run mix about a point and a half
         /// of each extreme and is well worth it.
         /// </summary>
-        /// <remarks>An Unknown <paramref name="last"/> — a first tournament, or one that predates
-        /// the field — suppresses nothing, which is right: there is no repeat to avoid.</remarks>
+        /// <remarks>An Unknown <paramref name="last"/> — a save that predates the field — suppresses
+        /// nothing, which is right: there is no repeat to avoid. A first tournament never gets
+        /// here; it is always Easy.</remarks>
         static Kind _pickKind(System.Random rnd, Kind last) {
             double roll = rnd.NextDouble();
             Kind k = roll < EasyChance ? Kind.Easy

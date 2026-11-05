@@ -69,9 +69,8 @@ namespace qp {
 
         /// <summary>
         /// What the player scored in each of their last few tournaments, newest first — the
-        /// measurement the next group is sized against (see <see cref="RivalGroup"/>). Nothing
-        /// else predicts a player's pace, so the first tournament assumes the median and every one
-        /// after it knows.
+        /// measurement the next group is sized against (see <see cref="RivalGroup"/>). The first
+        /// tournament has none of these, so it assumes the median and every one after it knows.
         ///
         /// Several and not just the last one, because one unusual 48 hours should not decide the
         /// next group: a holiday, an illness or a single long evening would each set the bar on
@@ -100,6 +99,10 @@ namespace qp {
                 return sorted[sorted.Count / 2];
             }
         }
+
+        /// <summary>Only a tournament the player scored in counts, so one they never joined leaves
+        /// the next group still being their first.</summary>
+        public bool HasFinishedOne => recentScores != null && recentScores.Count > 0;
 
         /// <summary>Remember a finished tournament, dropping the oldest once there are enough.</summary>
         public void RecordScore(int score) {
