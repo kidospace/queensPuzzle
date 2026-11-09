@@ -22,6 +22,17 @@ namespace qp {
         /// to make in the window. Reported with the result next to the score itself. 0 when the
         /// server does not say.</summary>
         public int baseScore;
+        /// <summary>Which group of players by base the rivals were built for, 1-based; 0 when
+        /// the server does not say. Reported with the result.</summary>
+        public int group;
+        /// <summary>Which of this player's tournaments it is, 1-based; 0 when the server does not
+        /// say. Reported with the result.</summary>
+        public int nth;
+        /// <summary>When the rivals file the group was built from was made (unix seconds), and
+        /// whether it was the downloaded file ("download") or the baked one ("baked"). 0 / ""
+        /// when the server does not say. Reported with the result.</summary>
+        public long fileBuiltAt;
+        public string fileSource = "";
         public bool isFinal;      // the server closed it — its table is the final ranking. Closing is
                                   // instant at end time, so there is no "results are being calculated"
 

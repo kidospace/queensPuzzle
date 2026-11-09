@@ -47,6 +47,16 @@ namespace qp {
         readonly System.Random _latency = new System.Random();
         LocalServerState _state;
 
+        /// <summary>This launch found no rivals file it could read, so it opens no tournament.
+        /// Static, so it lasts exactly one launch: the next one has a fresh download (or baked
+        /// copy) to try.</summary>
+        static bool _noRivalsThisLaunch;
+
+        /// <summary>A launch starts with a clean slate — also in the editor with domain reload off,
+        /// where statics would otherwise outlive the play session.</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void _resetLaunch() => _noRivalsThisLaunch = false;
+
         public LocalTournamentBackend(string userId) {
             _userId = userId;
         }
@@ -67,7 +77,15 @@ namespace qp {
             // counted — a win that arrives after the end belongs to the tournament now running,
             // not to the one it just missed.
             bool changed = _closeIfOver(now);
-            if (!_running) { _open(now, req?.level ?? 0); changed = true; }
+
+            // A group with no rivals is not a tournament, and must not sit in the save for 48 hours
+            // as if it were one. One left over from a launch that could read no rivals file is
+            // dropped, so this launch builds a real one.
+            if (_running && _state.rivals.Count == 0 && !_noRivalsThisLaunch) {
+                _state.currentId = "";
+                changed = true;
+            }
+            if (!_running && !_noRivalsThisLaunch) { _open(now, req?.level ?? 0); changed = true; }
 
             var accepted = _applyWins(req, ref changed);
 
@@ -146,6 +164,7 @@ namespace qp {
             _state.currentId = "";           // _open runs on the next sync
             _state.rivals.Clear();
             _state.Save();
+            _noRivalsThisLaunch = false;     // and gets to try the rivals file again
             Debug.Log("[LocalTournament] restarting on the next sync");
         }
 
@@ -195,11 +214,26 @@ namespace qp {
             _state.baseScore = usual;
             _state.acceptedIds.Clear();
             _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
-                                             level, _state.setKind, first, out var kind);
-            _state.setKind = kind;
+                                             level, _state.setKind, first, out var built);
+            // No rivals file could be read (each failure was reported where it happened). Open
+            // nothing, and do not try again until the next launch: every sync would otherwise load
+            // and reject the same files again, and report it again, twice a minute.
+            if (_state.rivals.Count == 0) {
+                _state.currentId = "";
+                _noRivalsThisLaunch = true;
+                Debug.LogWarning("[LocalTournament] no rivals — no tournament until the next launch");
+                return;
+            }
+
+            _state.setKind = built.kind;
+            _state.group = built.group;
+            _state.nth = _state.FinishedSoFar + 1;
+            _state.fileBuiltAt = built.fileBuiltAt;
+            _state.fileSource = built.fileSource;
 
             Debug.Log($"[LocalTournament] {_state.currentId} opened with {_state.rivals.Count} rivals " +
-                      $"(built around {usual} points, {kind})");
+                      $"(built around {usual} points, {built.kind}, group {built.group}, " +
+                      $"tournament #{_state.nth}, {built.fileSource} file)");
         }
 
         /// <summary>
@@ -218,6 +252,10 @@ namespace qp {
             _state.closedMyScore = _state.myScore;
             _state.closedSetKind = _state.setKind;   // the result event is sent after this
             _state.closedBaseScore = _state.baseScore;
+            _state.closedGroup = _state.group;
+            _state.closedNth = _state.nth;
+            _state.closedFileBuiltAt = _state.fileBuiltAt;
+            _state.closedFileSource = _state.fileSource;
             _state.closedTable = _table(WindowMinutes, _state.myScore);
             _state.RecordScore(_state.myScore);   // what the next groups are sized against
         }
@@ -284,20 +322,23 @@ namespace qp {
             var rows = _table(minutes, _state.myScore);
 
             return _snapshot(_state.currentId, _state.startTicks, _state.endTicks, rows, false,
-                             _state.setKind, _state.baseScore);
+                             _state.setKind, _state.baseScore,
+                             _state.group, _state.nth, _state.fileBuiltAt, _state.fileSource);
         }
 
         TournamentSnapshot _closedSnapshot() {
             if (string.IsNullOrEmpty(_state.closedId)) return _noTournament();
             return _snapshot(_state.closedId, _state.closedStartTicks, _state.closedEndTicks,
-                             _state.closedTable, true, _state.closedSetKind, _state.closedBaseScore);
+                             _state.closedTable, true, _state.closedSetKind, _state.closedBaseScore,
+                             _state.closedGroup, _state.closedNth, _state.closedFileBuiltAt,
+                             _state.closedFileSource);
         }
 
         static TournamentSnapshot _noTournament() => new TournamentSnapshot { etag = "none" };
 
         TournamentSnapshot _snapshot(
             string id, long startTicks, long endTicks, List<LocalEntry> rows, bool isFinal,
-            RivalGroup.Kind kind, int baseScore) {
+            RivalGroup.Kind kind, int baseScore, int group, int nth, long fileBuiltAt, string fileSource) {
 
             var entries = new TournamentEntry[rows.Count];
             int myIndex = -1;
@@ -317,6 +358,10 @@ namespace qp {
                     // Unknown travels as empty, and the event turns that into "?".
                     difficulty = kind == RivalGroup.Kind.Unknown ? "" : kind.ToString(),
                     baseScore = baseScore,
+                    group = group,
+                    nth = nth,
+                    fileBuiltAt = fileBuiltAt,
+                    fileSource = fileSource ?? "",
                 },
                 standings = new TournamentStandings { myIndex = myIndex, entries = entries },
             };

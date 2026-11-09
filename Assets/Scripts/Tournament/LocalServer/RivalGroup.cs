@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Common;
 using UnityEngine;
 
 namespace qp {
@@ -11,19 +12,17 @@ namespace qp {
     /// when they play, how long for, whether they vanish for a day. So the competition is designed
     /// and the behaviour is not simulated, because it was never simulated: it was recorded.
     ///
-    /// Targets are multiples of what THIS player usually scores in 48 hours, so the climb costs a
-    /// weak player and a strong one the same effort. A set of nineteen multipliers is a whole
-    /// tournament's difficulty in one line.
+    /// Targets are multiples of what THIS player usually scores in 48 hours. A list of those
+    /// multiples is a whole tournament's difficulty in one line.
     ///
-    /// The multipliers are MEASURED, not picked: they sit on the 5%, 10% … 95% points of how far a
-    /// real 48 hours lands from the player's usual — from a third of it to four times it (Oct 2026,
-    /// tournament_end over the rebuilt base). Placed there, every final place would come out ~5%
-    /// of the time, which is what a group of twenty real players gives. Each set is that spread
-    /// scaled: below 1 is kinder than real, above 1 harder.
-    ///
-    /// The first sets were hand-picked around 1.0 (top rival at 1.2x / 1.8x) on the assumption
-    /// that a player's pace barely moves. It moves a lot — so anyone with a good two days passed
-    /// the whole table at once, 1st came out 35–45% of the time and places 2–8 stayed empty.
+    /// The lists are NOT here: they arrive with the rivals file (<see cref="RivalsBlob.ListFor"/>)
+    /// and are measured on the server every day — see pawdoku-winstats-server/src/tournament/
+    /// lists.ts for how, and why. In short: each list sits on the 95%, 90% … 10% points of how far
+    /// a settled player's real 48 hours lands from their base, times a scale per difficulty, and
+    /// there is one set of lists per GROUP of players by base — because a player who usually
+    /// scores 15 doubles it far more easily than one who usually scores 150, and one list for both
+    /// handed the light player five times the prizes. After the list comes one more rival, the
+    /// dead account (<see cref="DeadAccountScore"/>).
     ///
     /// Which set is drawn VARIES, and that matters more than the sets do. A player who is always
     /// 7th, always 25% from a prize, is looking at a pattern; a player who comes 3rd without trying
@@ -46,34 +45,10 @@ namespace qp {
         /// <summary>Rivals per group — the player makes twenty.</summary>
         public const int Size = 19;
 
-        // ---- the three difficulty sets ---------------------------------------------------
-        // Each is nineteen multipliers of the player's usual 48-hour score, biggest first. How
-        // many sit above 1.0 is the whole design: that is where the player lands by doing nothing
-        // differently. The last slot is not a multiplier — see DeadAccountScore.
-
-        /// <summary>The measured spread x0.6. Five above: playing as usual finishes ~6th, third
-        /// place costs about 55% more play. A prize about a third of the time.</summary>
-        static readonly float[] Easy = {
-            2.64f, 1.80f, 1.55f, 1.25f, 1.11f,
-            0.99f, 0.87f, 0.79f, 0.70f, 0.61f, 0.54f, 0.49f, 0.45f, 0.41f,
-            0.35f, 0.31f, 0.24f, 0.19f, 0.11f,
-        };
-
-        /// <summary>The measured spread x0.8 — a little kinder than a real group, because a real
-        /// one (a prize 15% of the time) reads as never winning. Eight above: finishes ~9th, third
-        /// place costs about twice the usual. A prize about a fifth of the time.</summary>
-        static readonly float[] Normal = {
-            3.52f, 2.40f, 2.06f, 1.67f, 1.48f, 1.32f, 1.16f, 1.06f,
-            0.94f, 0.81f, 0.72f, 0.66f, 0.60f, 0.54f, 0.47f, 0.41f, 0.32f, 0.25f, 0.15f,
-        };
-
-        /// <summary>The measured spread x1.2. Eleven above: finishes ~12th, and a prize under one
-        /// time in ten. This is the week the prize is nearly gone — and the reason winning one
-        /// means something.</summary>
-        static readonly float[] Hard = {
-            5.28f, 3.60f, 3.10f, 2.51f, 2.22f, 1.98f, 1.74f, 1.58f, 1.40f, 1.21f, 1.08f,
-            0.98f, 0.90f, 0.82f, 0.71f, 0.61f, 0.48f, 0.37f, 0.23f,
-        };
+        // ---- which difficulty -------------------------------------------------------------
+        // The lists themselves come from the file. Measured there, Easy gives a prize about a
+        // third of the time, Normal about a fifth, and Hard under one time in ten — the week the
+        // prize is nearly gone, and the reason winning one means something.
 
         const float EasyChance = 0.25f;
         const float HardChance = 0.15f;   // the rest are Normal
@@ -118,14 +93,21 @@ namespace qp {
         /// most, and only used once — the next group is built on what they actually did.
         ///
         /// Taken from the blob, so it tracks the game as it grows and arrives with every refresh
-        /// of the recordings rather than with a release.
+        /// of the recordings rather than with a release. A blob without it is not loaded at all
+        /// (see <see cref="RivalsBlob"/>), so 0 here only ever means there are no rivals either.
         /// </summary>
-        public static int TypicalScore =>
-            RivalsBlob.MedianScore > 0 ? RivalsBlob.MedianScore : FallbackMedianScore;
+        public static int TypicalScore => RivalsBlob.MedianScore;
 
-        /// <summary>For a blob that is missing or predates the field. Measured over the Firebase
-        /// export when this was written: 16 wins at ~2.36 points.</summary>
-        public const int FallbackMedianScore = 38;
+        /// <summary>What a group was built from — reported with its result.</summary>
+        public struct Built {
+            public Kind kind;
+            /// <summary>Which group of players by base, 1-based; 0 when nothing was built.</summary>
+            public int group;
+            /// <summary>When the server made the file it came from (unix seconds).</summary>
+            public long fileBuiltAt;
+            /// <summary>"download" or "baked".</summary>
+            public string fileSource;
+        }
 
         /// <summary>How close a recording has to land to its target before we take it. Widened
         /// when nothing is near enough; the bank holds dozens of candidates per target at the
@@ -140,34 +122,44 @@ namespace qp {
         /// <paramref name="myName"/> keeps a rival from arriving under their name.
         /// </summary>
         /// <param name="last">The kind the player got last time, so the draw can avoid repeating
-        /// an extreme. <paramref name="chosen"/> reports what this group actually is.</param>
+        /// an extreme. <paramref name="built"/> reports what this group actually is and where its
+        /// list came from.</param>
         /// <param name="firstEver">The player's first tournament, which is always Easy: their
         /// usual score is still an estimate, and this is not the moment for the week the prize is
         /// nearly gone.</param>
         public static List<LocalRival> Build(int myScore, uint myOwner, string myName, int myLevel,
-                                             Kind last, bool firstEver, out Kind chosen) {
+                                             Kind last, bool firstEver, out Built built) {
             // Taken and released in the same breath, so the whole lifetime is one method. The
             // recordings and the name lists are read here and nowhere else: everything chosen is
             // copied out below, and the ~280 KB and ~70 KB behind them are not wanted again for
             // another 48 hours.
             RivalsBlob.Load();
             RivalNames.Load();
-            try { return _build(myScore, myOwner, myName, myLevel, last, firstEver, out chosen); }
+            try { return _build(myScore, myOwner, myName, myLevel, last, firstEver, out built); }
             finally { RivalsBlob.Unload(); RivalNames.Unload(); }
         }
 
         static List<LocalRival> _build(int myScore, uint myOwner, string myName, int myLevel,
-                                       Kind last, bool firstEver, out Kind chosen) {
-            chosen = Kind.Unknown;   // nothing was drawn unless the group is actually built
+                                       Kind last, bool firstEver, out Built built) {
+            built = new Built { kind = Kind.Unknown, fileSource = "" };   // nothing drawn unless built
             var rivals = new List<LocalRival>(Size);
             if (RivalsBlob.Count == 0) {
-                Debug.LogWarning("[RivalGroup] no recordings available — the tournament has no rivals");
+                // Both the downloaded file and the baked one are missing or failed their checks —
+                // and each of those was reported where it happened. This is the outcome: no group.
+                CDebug.LogError("[RivalGroup] no recordings available — the tournament has no rivals");
                 return rivals;
             }
 
             var rnd = new System.Random(Guid.NewGuid().GetHashCode());
-            chosen = firstEver ? Kind.Easy : _pickKind(rnd, last);
-            float[] set = chosen == Kind.Easy ? Easy : chosen == Kind.Hard ? Hard : Normal;
+            built.kind = firstEver ? Kind.Easy : _pickKind(rnd, last);
+            int group = RivalsBlob.GroupOf(myScore);
+            float[] list = RivalsBlob.ListFor(group, built.kind == Kind.Easy ? 0 : built.kind == Kind.Hard ? 2 : 1);
+            built.group = group + 1;
+            built.fileBuiltAt = RivalsBlob.BuiltAt;
+            built.fileSource = RivalsBlob.FromDownload ? "download" : "baked";
+
+            // The list, then one more: the dead account.
+            int slots = list.Length + 1;
             var usedRecordings = new HashSet<int>();
             var usedNames = new HashSet<string> { myName ?? "" };
             var usedWords = new HashSet<string>();
@@ -179,13 +171,13 @@ namespace qp {
             // eighteen of the nineteen kept the name the game gave them, which is honest and
             // reads as nothing at all — and that is the first table a player ever sees.
             string country = Country.Code;
-            var renamed = _whoRenamed(myLevel, set.Length, rnd);
+            var renamed = _whoRenamed(myLevel, slots, rnd);
 
-            for (int i = 0; i < set.Length; i++) {
-                bool isLast = i == set.Length - 1;
+            for (int i = 0; i < slots; i++) {
+                bool isLast = i == slots - 1;
                 int target = isLast
                     ? DeadAccountScore
-                    : Mathf.Max(1, Mathf.RoundToInt(myScore * set[i] * _jitter(rnd)));
+                    : Mathf.Max(1, Mathf.RoundToInt(myScore * list[i] * _jitter(rnd)));
 
                 int pick = _pickRecording(target, myOwner, usedRecordings, rnd);
                 if (pick < 0) continue;                 // bank too small to fill the group

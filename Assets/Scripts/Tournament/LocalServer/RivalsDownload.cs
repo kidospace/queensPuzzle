@@ -97,9 +97,16 @@ namespace qp {
                     // is pure arithmetic over a byte array — no file, no Unity API, nothing to
                     // race with. The continuation lands back on the player loop, so everything
                     // that touches the file still happens on one thread.
-                    string invalid = await Task.Run(() => RivalsBlob.Validate(bytes));
+                    //
+                    // Its own try: a reader that throws on these bytes is a broken FILE (or a bug in
+                    // the reader), and must be reported as one — not swallowed below as if the
+                    // network had dropped.
+                    string invalid;
+                    try { invalid = await Task.Run(() => RivalsBlob.Validate(bytes)); }
+                    catch (Exception e) { invalid = $"crash: {e.GetType().Name}: {e.Message}"; }
+
                     if (invalid != null) {
-                        Debug.LogError("[RivalsDownload] server blob rejected: " + invalid);
+                        RivalsBlob.Report("download", invalid);
                         return true;   // not a network problem; retrying would fetch the same bytes
                     }
 
@@ -107,9 +114,25 @@ namespace qp {
                     return true;
                 }
             } catch (Exception e) {
-                // No connection yet, airplane mode, DNS — ordinary states, not defects.
+                // No connection yet, airplane mode, DNS — ordinary states, not defects. Nothing
+                // about the file lands here: its checks have their own try above.
                 Debug.LogWarning("[RivalsDownload] fetch failed: " + e.Message);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Drop the downloaded file and its ETag, so the next launch downloads a whole new one
+        /// instead of being told nothing changed. Called by <see cref="RivalsBlob.Load"/> when the
+        /// file on disk does not check out — the baked copy covers until then.
+        ///
+        /// MAIN THREAD, like everything else that touches the file.
+        /// </summary>
+        public static void Forget() {
+            string path = RivalsBlob.FilePath;
+            foreach (string p in new[] { path, path + EtagSuffix, path + TempSuffix }) {
+                try { if (File.Exists(p)) File.Delete(p); }
+                catch (Exception e) { Debug.LogWarning("[RivalsDownload] could not delete " + p + ": " + e.Message); }
             }
         }
 

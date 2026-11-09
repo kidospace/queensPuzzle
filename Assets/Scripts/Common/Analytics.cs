@@ -307,8 +307,9 @@ namespace qp {
         /// bots are built from recorded players and multipliers picked by hand, and only the
         /// spread of final places says whether that guess was fair.
         /// </summary>
-        public static void TournamentEnd(int day, int place, int score, bool prize, string difficulty,
-                                         int baseScore) {
+        public static void TournamentEnd(int day, int place, int score, bool prize, TournamentInfo info) {
+            string difficulty = info?.difficulty;
+            int baseScore = info?.baseScore ?? 0;
             CrashLog($"[tournament] end day {day} place {place} score {score} base {baseScore} prize {(prize ? 1 : 0)} {difficulty}");
 #if !IGNORE_FIREBASE
             Send("tournament_end",
@@ -323,9 +324,42 @@ namespace qp {
                 // 7th place in an Easy group and a 7th in a Hard one are different events, and the
                 // comparison between them is the only way to tell whether the prize moved anyone.
                 new Firebase.Analytics.Parameter("t_difficulty",
-                    string.IsNullOrEmpty(difficulty) ? "?" : difficulty));
+                    string.IsNullOrEmpty(difficulty) ? "?" : difficulty),
+                // Which group of players by base the rivals' list came from, 1-based (0 = unknown).
+                // The lists are cut by how much a player plays so every group wins about as often;
+                // this is how that is checked.
+                new Firebase.Analytics.Parameter("t_band", info?.group ?? 0),
+                // Which of the player's tournaments this was, 1-based (0 = unknown). The base only
+                // settles by the 4th, so every reading of these results splits on it. Exact for a
+                // player who started on this version; for one from before it is a floor (it never
+                // reads under 4 for a player with three results already).
+                new Firebase.Analytics.Parameter("t_nth", info?.nth ?? 0),
+                // When the server built the rivals file the group came from (unix seconds), and
+                // whether it was the downloaded file or the copy baked into the app — a phone stuck
+                // on an old file shows up here and nowhere else.
+                new Firebase.Analytics.Parameter("t_file", info?.fileBuiltAt ?? 0L),
+                new Firebase.Analytics.Parameter("t_src", string.IsNullOrEmpty(info?.fileSource) ? "?" : info.fileSource));
 #else
             Send("tournament_end");
+#endif
+        }
+
+        /// <summary>
+        /// The rivals file was rejected — downloaded and failed its checks, or on disk / baked and
+        /// failed them at load. Never for a network failure, and never for the downloaded file a
+        /// player kept from before an update (that is expected, not a fault). Also goes to
+        /// Crashlytics (see RivalsBlob.Report), which is what makes a broken server file loud.
+        /// </summary>
+        public static void RivalsRejected(string where, string reason) {
+            CrashLog($"[rivals] rejected at {where}: {reason}");
+#if !IGNORE_FIREBASE
+            Send("rivals_rejected",
+                new Firebase.Analytics.Parameter("r_where", where ?? ""),
+                // Firebase keeps 100 characters of a value.
+                new Firebase.Analytics.Parameter("r_reason",
+                    reason == null ? "" : reason.Length <= 100 ? reason : reason.Substring(0, 100)));
+#else
+            Send("rivals_rejected");
 #endif
         }
 

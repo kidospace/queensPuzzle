@@ -59,6 +59,15 @@ namespace qp {
         public int baseScore;
         public int closedBaseScore;
 
+        /// <summary>Where the open group's rivals came from, and the closed one's — which group
+        /// of players by base (1-based), which of the player's tournaments it was (1-based), and
+        /// the rivals file it was built from. Reported with the result; 0 / "" = a save from
+        /// before these existed.</summary>
+        public int group, closedGroup;
+        public int nth, closedNth;
+        public long fileBuiltAt, closedFileBuiltAt;
+        public string fileSource = "", closedFileSource = "";
+
         public string closedId = "";
         public long closedStartTicks;
         public long closedEndTicks;
@@ -90,10 +99,15 @@ namespace qp {
         /// and hand them a tournament built for a player they are not, and lets one quiet week drag
         /// it down and hand them one they cannot lose. The median ignores a single outlier in
         /// either direction and still follows a real change in pace within two tournaments.
+        ///
+        /// With exactly two there is no middle, and taking the higher of them (sorted[n/2]) built
+        /// every third tournament around a player's better result: they reached ~0.6 of it and a
+        /// prize came 8% of the time against ~20% everywhere else (Nov 2026). Their mean instead.
         /// </summary>
         public int UsualScore {
             get {
                 if (recentScores == null || recentScores.Count == 0) return 0;
+                if (recentScores.Count == 2) return (recentScores[0] + recentScores[1] + 1) / 2;
                 var sorted = new List<int>(recentScores);
                 sorted.Sort();
                 return sorted[sorted.Count / 2];
@@ -104,8 +118,21 @@ namespace qp {
         /// the next group still being their first.</summary>
         public bool HasFinishedOne => recentScores != null && recentScores.Count > 0;
 
+        /// <summary>How many tournaments this player has finished (and scored in). Counted from the
+        /// version that added it, so for a player from before it starts at 0 —
+        /// <see cref="FinishedSoFar"/> is the number to read.</summary>
+        public int finishedCount;
+
+        /// <summary>
+        /// Tournaments finished so far: exact for a player who started on this version, and a
+        /// floor for one from before (it never reads under the scores we already hold, so a player
+        /// with three of them always counts as past their third).
+        /// </summary>
+        public int FinishedSoFar => Math.Max(finishedCount, recentScores?.Count ?? 0);
+
         /// <summary>Remember a finished tournament, dropping the oldest once there are enough.</summary>
         public void RecordScore(int score) {
+            finishedCount = FinishedSoFar + 1;
             recentScores.Insert(0, score);
             while (recentScores.Count > RecentScoresKept) recentScores.RemoveAt(recentScores.Count - 1);
         }

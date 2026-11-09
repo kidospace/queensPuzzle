@@ -7,8 +7,8 @@ using UnityEngine;
 namespace qp {
 
     /// <summary>
-    /// Zero-parse reader for the baked rivals blob (Resources/rivals.bytes) — recorded 48-hour
-    /// play histories of real players, packed by pawdoku-winstats-server (see its
+    /// Zero-parse reader for the rivals blob — recorded 48-hour play histories of real players,
+    /// and the lists that say how strong each rival is, packed by pawdoku-winstats-server (see its
     /// tournament/pack.ts for the byte layout; QRIV v1).
     ///
     /// Like <see cref="WinStats"/>, the bytes ARE the data structure. The index is sorted by the
@@ -20,8 +20,23 @@ namespace qp {
     /// (skins are coming) without a version bump: this reader strides by the header's numbers and
     /// reads only the fields it knows.
     ///
-    /// A missing or corrupt blob is not an error worth breaking anything over — the tournament
-    /// simply reports no rivals. The deep walk (<see cref="Validate"/>) is editor/download-time.
+    /// ---- THE RULE: THE FILE ONLY EVER GROWS AT THE END ----
+    /// Every phone keeps reading this file with the code it shipped with. Two numbers say what a
+    /// file holds, and they work like a version and a sub-version:
+    ///   - version (byte 4): bumped only for a change an old reader cannot survive. This reader
+    ///     rejects any version it does not know, and the server serves a new one from a new URL.
+    ///   - headerSize (byte 5): grows with every field added at the end of the header. A field
+    ///     exists when the header reaches it; nothing past what this reader knows is read.
+    ///
+    ///   version  headerSize  what arrived
+    ///   1        12          the first file: recordings and their wins
+    ///   1        14          medianScore (Oct 2026)
+    ///   1        22          listsOffset + builtAt: the rival lists (Nov 2026) — required from here
+    ///
+    /// A file from before the lists (headerSize below 22) is OLD, not broken: a phone that last
+    /// downloaded before the server changed still holds one. It is set aside quietly in favour of
+    /// the baked copy and a fresh download. Anything else that does not check out is BROKEN, and
+    /// is reported (<see cref="Report"/>) — those are the ones worth hearing about.
     /// </summary>
     public static class RivalsBlob {
 
@@ -35,6 +50,9 @@ namespace qp {
         const int MinHeaderSize = 4 + 1 + 1 + 1 + 1 + 4;
         const int MedianScoreAt = MinHeaderSize;          // uint16
         const int MedianScoreHeaderSize = MedianScoreAt + 2;
+        const int ListsOffsetAt = MedianScoreHeaderSize;  // uint32, from the start of the file
+        const int BuiltAtAt = ListsOffsetAt + 4;          // uint32, unix seconds
+        const int ListsHeaderSize = BuiltAtAt + 4;        // a header this long carries the lists
 
         // ---- index entry schema — the single source of truth for field order --------------
         // Offsets are derived from these; nothing else may assume the layout.
@@ -52,6 +70,23 @@ namespace qp {
         const int PointsMask = (1 << PointsBits) - 1;
         public const int MaxMinute = 2879;   // 48 hours; a win cannot sit outside its window
 
+        // ---- the lists section — see the server's tournament/lists.ts --------------------
+        // sectionHeaderSize(1) groups(1) difficulties(1) rivalsPerList(1), then
+        // (groups - 1) x uint16 cutoffs, then groups x difficulties x rivalsPerList x uint16
+        // multiples x100, strongest first, difficulties in the order Easy, Normal, Hard.
+        const int ListsSectionMinHeader = 4;
+
+        /// <summary>Easy, Normal, Hard — what the game draws from. A file may carry more after
+        /// them (a later difficulty); this reader uses these three and skips the rest.</summary>
+        public const int Difficulties = 3;
+
+        /// <summary>A multiple outside this is not a rival anyone could meet.</summary>
+        const float MinMultiple = 0.05f, MaxMultiple = 20f;
+
+        /// <summary>The server existed from Oct 2026; a build time outside this is not a time.</summary>
+        const long EarliestBuild = 1790812800;   // 2026-10-01 UTC
+        const long LatestBuild = 4102444800;     // 2100-01-01 UTC
+
         /// <summary>A recording with no owner — from a build before the app sent an id.</summary>
         public const uint NoOwner = 0;
 
@@ -62,14 +97,18 @@ namespace qp {
         static int _playSize;      // from the header
         static int _indexPos;
         static int _playsPos;
+        static int[] _cutoffs;     // base where each group after the first starts
+        static float[][] _lists;   // [group * Difficulties + difficulty], strongest first
+        static long _builtAt;
+        static bool _downloaded;
         static bool _loadTried;
 
         /// <summary>How many recordings are available; 0 when nothing is loaded.</summary>
         public static int Count => Load() ? _count : 0;
 
         /// <summary>
-        /// What a typical player scores in 48 hours, measured over everyone — or 0 when the blob
-        /// is missing or predates the field.
+        /// What a typical player scores in 48 hours, measured over everyone — or 0 when nothing
+        /// is loaded.
         ///
         /// It has to be told to us. The recordings are drawn to a fixed quota per score bucket, so
         /// their own middle is a property of the quota and not of the players; only the server has
@@ -77,6 +116,40 @@ namespace qp {
         /// this player has finished one of their own.
         /// </summary>
         public static int MedianScore => Load() ? _medianScore : 0;
+
+        /// <summary>When the server built the file in use (unix seconds), or 0 when none is loaded.
+        /// Reported with every result, so a phone stuck on an old file shows up.</summary>
+        public static long BuiltAt => Load() ? _builtAt : 0;
+
+        /// <summary>True when the file in use is the downloaded one, false for the baked copy.</summary>
+        public static bool FromDownload => Load() && _downloaded;
+
+        /// <summary>How many groups of players the lists are cut into; 0 when nothing is loaded.</summary>
+        public static int Groups => Load() ? _cutoffs.Length + 1 : 0;
+
+        /// <summary>
+        /// Which group a player who usually scores <paramref name="baseScore"/> belongs to: 0 below
+        /// the first cutoff, and one more for every cutoff they reach.
+        /// </summary>
+        public static int GroupOf(int baseScore) {
+            if (!Load()) return 0;
+            int group = 0;
+            foreach (int cutoff in _cutoffs)
+                if (baseScore >= cutoff) group++;
+            return group;
+        }
+
+        /// <summary>
+        /// The multiples of a player's base that a group's rivals end on, strongest first, for
+        /// <paramref name="difficulty"/> 0 = Easy, 1 = Normal, 2 = Hard. Null when nothing is
+        /// loaded. Shared — the caller reads it and does not keep or change it.
+        /// </summary>
+        public static float[] ListFor(int group, int difficulty) {
+            if (!Load()) return null;
+            group = Mathf.Clamp(group, 0, _cutoffs.Length);
+            difficulty = Mathf.Clamp(difficulty, 0, Difficulties - 1);
+            return _lists[group * Difficulties + difficulty];
+        }
 
         // ---- loading ---------------------------------------------------------------------
 
@@ -100,10 +173,13 @@ namespace qp {
         /// be paying for all of it to save none of it. There is no work to do at startup at all.
         ///
         /// TWO sources in ONE order, decided here and nowhere else: the downloaded file if there
-        /// is one, the copy baked into the build otherwise. Bytes used to arrive from three
-        /// directions and whichever landed last won, which is not something anyone can reason
-        /// about later. <see cref="RivalsDownload"/> only ever replaces the file; it hands this
-        /// class nothing.
+        /// is one and it checks out, the copy baked into the build otherwise. A downloaded file
+        /// that does not check out is deleted with its ETag, so the next launch downloads a whole
+        /// new one instead of being told nothing changed — the baked copy covers the gap.
+        ///
+        /// Only the cheap checks run here (<see cref="CheckLight"/>: the header, the median, the
+        /// lists — a few hundred numbers). The walk over every win ran when the file was
+        /// downloaded, off the main thread.
         ///
         /// MAIN THREAD, because <see cref="Resources.Load"/> is. That holds today: the only
         /// caller is a group build, which runs from the sync runner — a MonoBehaviour — so the
@@ -118,7 +194,12 @@ namespace qp {
             if (_loadTried) return _blob != null;
             _loadTried = true;
 
-            return _adopt(_fromFile()) || _adopt(_fromResources());
+            byte[] file = _fromFile();
+            if (file != null) {
+                if (_adopt(file, downloaded: true)) return true;
+                RivalsDownload.Forget();
+            }
+            return _adopt(_fromResources(), downloaded: false);
         }
 
         static byte[] _fromResources() {
@@ -137,6 +218,8 @@ namespace qp {
             _blob = null;
             _loadTried = false;
             _count = 0;
+            _cutoffs = null;
+            _lists = null;
         }
 
         static byte[] _fromFile() {
@@ -149,29 +232,49 @@ namespace qp {
             }
         }
 
-        static bool _adopt(byte[] bytes) {
+        static bool _adopt(byte[] bytes, bool downloaded) {
             if (bytes == null) return false;
-            string err = CheckHeader(bytes);
+
+            string err;
+            bool old = false;
+            try { err = CheckLight(bytes, out old); }
+            catch (Exception e) { err = $"crash: {e.GetType().Name}: {e.Message}"; }
+
             if (err != null) {
-                CDebug.LogError("[RivalsBlob] blob rejected: " + err);
+                // A downloaded file from before the lists is what an update leaves behind — not a
+                // fault. A BAKED one from before them means a build went out without them: report.
+                if (!(old && downloaded)) Report(downloaded ? "load-file" : "load-baked", err);
                 return false;
             }
+
             _blob = bytes;
             _entrySize = bytes[6];
             _playSize = bytes[7];
             _count = ReadInt(bytes, 8);
             _indexPos = bytes[5];                    // headerSize
-
-            // Only if the header is long enough to hold it — a blob from before this field just
-            // reports 0, and the caller falls back to its own figure.
-            _medianScore = _indexPos >= MedianScoreHeaderSize ? ReadUShort(bytes, MedianScoreAt) : 0;
+            _medianScore = ReadUShort(bytes, MedianScoreAt);
+            _builtAt = ReadUInt(bytes, BuiltAtAt);
+            _readLists(bytes, out _cutoffs, out _lists);
+            _downloaded = downloaded;
 
             _playsPos = _indexPos + _count * _entrySize;
             _loadTried = true;
             return true;
         }
 
-        // Cheap sanity only — the deep walk ran at download time (Validate).
+        /// <summary>
+        /// Say that a file was rejected, and why: Crashlytics (a wave of one reason across many
+        /// phones is a broken server file) and a <c>rivals_rejected</c> event (to count it).
+        /// <paramref name="where"/> is download / load-file / load-baked.
+        /// </summary>
+        internal static void Report(string where, string reason) {
+            CDebug.LogError($"[RivalsBlob] {where} rejected: {reason}");
+            Analytics.RivalsRejected(where, reason);
+        }
+
+        // ---- checks ----------------------------------------------------------------------
+
+        /// <summary>The structure only: magic, version, sizes, and that the index fits.</summary>
         static string CheckHeader(byte[] b) {
             if (b == null || b.Length < MinHeaderSize) return "too short";
             if (b[0] != 'Q' || b[1] != 'R' || b[2] != 'I' || b[3] != 'V') return "bad magic";
@@ -187,6 +290,89 @@ namespace qp {
             if (count <= 0) return $"recordCount {count}";
             long indexEnd = (long)headerSize + (long)count * entrySize;
             if (indexEnd > b.Length) return $"index of {count} entries runs past the end";
+            return null;
+        }
+
+        /// <summary>
+        /// Everything that can be checked without walking the wins: the header, the median, the
+        /// build time and the lists. Null when sound. <paramref name="old"/> is set when the file
+        /// is simply from before the lists existed.
+        /// </summary>
+        static string CheckLight(byte[] b, out bool old) {
+            old = false;
+            string err = CheckHeader(b);
+            if (err != null) return err;
+
+            if (b[5] < ListsHeaderSize) {
+                old = true;
+                return $"headerSize {b[5]}: a file from before the lists";
+            }
+
+            int median = ReadUShort(b, MedianScoreAt);
+            if (median <= 0) return $"medianScore {median}";
+
+            long builtAt = ReadUInt(b, BuiltAtAt);
+            if (builtAt < EarliestBuild || builtAt > LatestBuild) return $"builtAt {builtAt} is not a time";
+
+            return _readLists(b, out _, out _);
+        }
+
+        /// <summary>
+        /// Read the lists section and check it on the way. Null when sound.
+        ///
+        /// Checks only what will stay true as the file grows: the section and everything it says
+        /// it holds fits inside the file (more may follow it), cutoffs rise, every list falls and
+        /// stays in range, and in every group Easy is kinder than Normal is kinder than Hard. How
+        /// many groups and how many rivals per list are the server's business, read from here.
+        /// </summary>
+        static string _readLists(byte[] b, out int[] cutoffs, out float[][] lists) {
+            cutoffs = null;
+            lists = null;
+
+            long at = ReadUInt(b, ListsOffsetAt);
+            long indexEnd = (long)b[5] + (long)ReadInt(b, 8) * b[6];
+            if (at < indexEnd || at + ListsSectionMinHeader > b.Length) return $"listsOffset {at} is outside the file";
+
+            int sectionHeader = b[at], groups = b[at + 1], difficulties = b[at + 2], perList = b[at + 3];
+            if (sectionHeader < ListsSectionMinHeader) return $"lists header {sectionHeader} is below {ListsSectionMinHeader}";
+            if (groups < 1) return "lists have no groups";
+            if (difficulties < Difficulties) return $"lists have {difficulties} difficulties, the game needs {Difficulties}";
+            if (perList < 1) return "lists are empty";
+
+            long cutoffsAt = at + sectionHeader;
+            long valuesAt = cutoffsAt + (groups - 1) * 2L;
+            long end = valuesAt + (long)groups * difficulties * perList * 2;
+            if (end > b.Length) return $"lists run past the end ({end} > {b.Length})";
+
+            var c = new int[groups - 1];
+            for (int i = 0; i < c.Length; i++) {
+                c[i] = ReadUShort(b, (int)(cutoffsAt + i * 2));
+                if (c[i] < 1) return $"cutoff {i} is {c[i]}";
+                if (i > 0 && c[i] <= c[i - 1]) return $"cutoffs do not rise at {i} ({c[i - 1]}, {c[i]})";
+            }
+
+            var l = new float[groups * Difficulties][];
+            for (int g = 0; g < groups; g++) {
+                float lastSum = 0;
+                for (int d = 0; d < Difficulties; d++) {
+                    var list = new float[perList];
+                    float sum = 0;
+                    long from = valuesAt + ((long)(g * difficulties + d) * perList) * 2;
+                    for (int i = 0; i < perList; i++) {
+                        float m = ReadUShort(b, (int)(from + i * 2)) / 100f;
+                        if (m < MinMultiple || m > MaxMultiple) return $"group {g} difficulty {d} rival {i} is {m}";
+                        if (i > 0 && m > list[i - 1]) return $"group {g} difficulty {d} rises at rival {i}";
+                        list[i] = m;
+                        sum += m;
+                    }
+                    if (d > 0 && sum <= lastSum) return $"group {g}: difficulty {d} is not harder than {d - 1}";
+                    lastSum = sum;
+                    l[g * Difficulties + d] = list;
+                }
+            }
+
+            cutoffs = c;
+            lists = l;
             return null;
         }
 
@@ -262,14 +448,15 @@ namespace qp {
         // ---- validation (editor / download time) ------------------------------------------
 
         /// <summary>
-        /// Walk the whole blob the way the game will read it: every index entry, every offset,
-        /// every win. Returns null when it is sound, or why it is not.
+        /// Walk the whole blob the way the game will read it: the header, the lists, every index
+        /// entry, every offset, every win. Returns null when it is sound, or why it is not.
         ///
         /// What gets baked is therefore guaranteed readable by exactly the code that will read
-        /// it — the same deal <see cref="WinStats.ValidateBlob"/> makes.
+        /// it — the same deal <see cref="WinStats.ValidateBlob"/> makes. A file from before the
+        /// lists fails here: the server has them, so one without them did not come from it.
         /// </summary>
         public static string Validate(byte[] b) {
-            string err = CheckHeader(b);
+            string err = CheckLight(b, out _);
             if (err != null) return err;
 
             int headerSize = b[5], entrySize = b[6], playSize = b[7];
@@ -288,6 +475,7 @@ namespace qp {
 
                 int n = ReadUShort(b, (int)at);
                 at += 2;
+                if (n < 1) return $"entry {i}: a recording with no wins";
                 if (at + (long)n * playSize > b.Length) return $"entry {i}: {n} wins run past the end";
 
                 int sum = 0;
@@ -309,6 +497,8 @@ namespace qp {
 
         static int ReadInt(byte[] b, int at) =>
             b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | (b[at + 3] << 24);
+
+        static long ReadUInt(byte[] b, int at) => (uint)ReadInt(b, at);
 
         static ushort ReadUShort(byte[] b, int at) => (ushort)(b[at] | (b[at + 1] << 8));
     }
