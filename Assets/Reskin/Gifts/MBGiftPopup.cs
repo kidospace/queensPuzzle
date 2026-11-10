@@ -107,6 +107,13 @@ namespace qp {
             Anim.SetTrigger("Reveal");
         }
 
+        /// <summary>Animation event (GiftReveal.anim, as the box bursts into light). The same
+        /// sound every gift has opened on, whichever feature hands it out.</summary>
+        public void PlayOpenSFX() {
+            var sfx = CommonSFX.Instance?.RewordOpen;
+            if (sfx != null) CommonSFX.Play(sfx);
+        }
+
         void _find() {
             if (_box != null) return;
             _box = _findDeep(transform, "$Box").GetComponent<MBGiftBox>();
