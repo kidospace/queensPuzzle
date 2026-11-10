@@ -17,7 +17,7 @@ namespace qp {
     /// </summary>
     public static class SpineFrameBaker {
 
-        const string PrefabPath = "Assets/Reskin/QueenInGame/QueenSpine.prefab";
+        const string PrefabPath = "Assets/Reskin/Characters/Dog01/Board/QueenSpine.prefab";
         static readonly string[] Anims = { "idle_thinking", "celebrate", "disappointed", "cry_in", "cry_loop" };
         const int Fps = 12;
         const int RtSize = 512;
