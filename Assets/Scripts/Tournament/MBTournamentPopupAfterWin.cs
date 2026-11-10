@@ -55,6 +55,11 @@ namespace qp {
         /// <summary>How high a bone's arc rises, in the row's own units, and how small it lands.</summary>
         const float BoneHop = 120f, BoneLandScale = 0.7f;
 
+        /// <summary>The first few times the player sees the bones fly, the flight is this much
+        /// slower — long enough to read that the bones are what became the score.</summary>
+        const int SlowBoneFlights = 3;
+        const float SlowBoneFactor = 2f;
+
         /// <summary>Barely raised. Enough to read as held above the list, not enough to read as
         /// a row that changed size.</summary>
         const float LiftScale = 1.04f;
@@ -557,10 +562,16 @@ namespace qp {
                 row.SetScore(landed == flying.Count ? score : before + landed);
             };
 
+            float slow = 1f;
+            if (AppData.BonesFlySeen.Value < SlowBoneFlights) {
+                slow = SlowBoneFactor;
+                AppData.BonesFlySeen.Value++;
+            }
+
             Vector3 target = row.ScoreLabel.transform.position;
             for (int i = 0; i < flying.Count; i++) {
-                if (i > 0) yield return new WaitForSecondsRealtime(BoneStagger);
-                StartCoroutine(_flyBone(flying[i], target, land));
+                if (i > 0) yield return new WaitForSecondsRealtime(BoneStagger * slow);
+                StartCoroutine(_flyBone(flying[i], target, BoneFlySeconds * slow, land));
             }
             while (landed < flying.Count) yield return null;
 
@@ -568,11 +579,11 @@ namespace qp {
             while (_bonesEffect != null && _bonesEffect.IsPlaying) yield return null;
         }
 
-        IEnumerator _flyBone(RectTransform bone, Vector3 target, System.Action land) {
+        IEnumerator _flyBone(RectTransform bone, Vector3 target, float seconds, System.Action land) {
             Vector3 start = bone.position;
             float hop = BoneHop * _bones.lossyScale.y;
-            for (float e = 0f; e < BoneFlySeconds; e += Time.unscaledDeltaTime) {
-                float raw = e / BoneFlySeconds;
+            for (float e = 0f; e < seconds; e += Time.unscaledDeltaTime) {
+                float raw = e / seconds;
                 float p = Ease(raw);
                 bone.position = Vector3.Lerp(start, target, p) + Vector3.up * (Mathf.Sin(raw * Mathf.PI) * hop);
                 bone.localScale = Vector3.one * Mathf.Lerp(1f, BoneLandScale, p);

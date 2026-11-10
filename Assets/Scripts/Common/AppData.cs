@@ -56,6 +56,10 @@ namespace qp {
         // time the player is ever down to a single bone, then never again.
         public static readonly PlayerPrefsHelper.BoolHolder LastBoneToturialSeen = new PlayerPrefsHelper.BoolHolder("qp_last_bone_tut_seen", false);
 
+        // How many times the player has watched the bones fly to the tournament score. The first
+        // few flights play slower (MBTournamentPopupAfterWin) so the player reads what happened.
+        public static readonly PlayerPrefsHelper.IntHolder BonesFlySeen = new PlayerPrefsHelper.IntHolder("qp_bones_fly_seen", 0);
+
         // Install attribution from Singular's device attribution callback (network / campaign ...).
         // Written once by SingularBoot when the callback fires (usually first launch, may take a few
         // seconds — or never, if Singular hasn't enabled the callback for the app). Read on every
