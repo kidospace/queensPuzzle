@@ -18,7 +18,10 @@ namespace qp {
 
         void Awake() {
             _animator = GetComponent<Animator>();
-            _char = transform.RecursiveFindChild<MBSpinePlayer>("$WinQueen");
+            // $WinQueen is the popup's own slot (placement, scale, CanvasGroup); the character
+            // is whatever sits under it.
+            var slot = transform.RecursiveFindChild("$WinQueen");
+            _char = slot != null ? slot.GetComponentInChildren<MBSpinePlayer>(true) : null;
         }
 
         /// <summary>Rewinds and plays the show cascade. Driven by MBWinPopup.Show.</summary>

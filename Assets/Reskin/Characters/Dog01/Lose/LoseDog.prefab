@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 4000000000000000003}
   - component: {fileID: 4000000000000000004}
   - component: {fileID: 4000000000000000006}
-  - component: {fileID: 4000000000000000007}
   - component: {fileID: 4000000000000000008}
   m_Layer: 5
   m_Name: LoseDog
@@ -30,7 +29,7 @@ RectTransform:
   m_GameObject: {fileID: 4000000000000000001}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.70825, y: 0.70825, z: 0.70825}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5000000000000000005}
@@ -59,8 +58,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d85b887af7e6c3f45a2e2d2920d641bc, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   m_Material: {fileID: 2100000, guid: 9c6ec24bca5fc42489fe47358fef0d4a, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
@@ -70,7 +69,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   skeletonDataAsset: {fileID: 11400000, guid: 5fdaa64bc8ac5274ca8325acb61f1a98, type: 2}
-  initialSkinName:
+  initialSkinName: 
   initialFlipX: 0
   initialFlipY: 0
   meshSettings:
@@ -115,7 +114,7 @@ MonoBehaviour:
   disableMeshAssignmentOnOverride: 1
   wasDeprecatedTransferred: 1
   updateTimingDeprecated: 1
-  startingAnimationDeprecated:
+  startingAnimationDeprecated: 
   startingLoopDeprecated: 0
   timeScaleDeprecated: 1
   unscaledTimeDeprecated: 0
@@ -129,21 +128,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5573d8891cb783048b49ceb356fa3a96, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _controller: {fileID: 11400000, guid: c42dd06c6a2a4910af3bf198aa491c74, type: 2}
---- !u!225 &4000000000000000007
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4000000000000000001}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!114 &4000000000000000008
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -154,17 +141,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   updateTiming: 1
   threadedAnimation: 2
-  animationName:
+  animationName: 
   loop: 0
   timeScale: 1
   unscaledTime: 0
   wasDeprecatedTransferred: 1
   skeletonDataAssetDeprecated: {fileID: 0}
-  initialSkinNameDeprecated:
+  initialSkinNameDeprecated: 
   editorSkipSkinSyncDeprecated: 0
   fixPrefabOverrideViaMeshFilterDeprecated: 2
   initialFlipXDeprecated: 0
@@ -242,8 +229,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: deeb12332c062954093c24a3fab10b83, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0

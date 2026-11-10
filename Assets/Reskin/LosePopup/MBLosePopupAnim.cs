@@ -21,7 +21,10 @@ namespace qp {
 
         void Awake() {
             _animator = GetComponent<Animator>();
-            _char = transform.RecursiveFindChild<MBSpinePlayer>("$LoseDog");
+            // $LoseDog is the popup's own slot (placement, scale, CanvasGroup); the character
+            // is whatever sits under it.
+            var slot = transform.RecursiveFindChild("$LoseDog");
+            _char = slot != null ? slot.GetComponentInChildren<MBSpinePlayer>(true) : null;
             _showVideo = transform.RecursiveFindChild("$ShowVideo").gameObject;
         }
 

@@ -35,7 +35,7 @@ RectTransform:
   - {fileID: 8104799648683783868}
   - {fileID: 5013759841100693974}
   - {fileID: 7044565322309628706}
-  - {fileID: 2702048366109366717}
+  - {fileID: 4527820525785076147}
   m_Father: {fileID: 5384358721828219602}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -21533,6 +21533,55 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1 &6855233274532857393
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4527820525785076147}
+  - component: {fileID: 1458634349187651854}
+  m_Layer: 5
+  m_Name: $WinQueen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4527820525785076147
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6855233274532857393}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.61107, y: 0.61107, z: 0.61107}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2702048366109366717}
+  m_Father: {fileID: 448349522834669390}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -270}
+  m_SizeDelta: {x: 480, y: 656}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &1458634349187651854
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6855233274532857393}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &6857468712729152156
 GameObject:
   m_ObjectHideFlags: 0
@@ -27648,11 +27697,11 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 448349522834669390}
+    m_TransformParent: {fileID: 4527820525785076147}
     m_Modifications:
     - target: {fileID: 4000000000000000001, guid: 29af33dc91bfc8d4b9a60b981979535f, type: 3}
       propertyPath: m_Name
-      value: $WinQueen
+      value: WinQueen
       objectReference: {fileID: 0}
     - target: {fileID: 4000000000000000002, guid: 29af33dc91bfc8d4b9a60b981979535f, type: 3}
       propertyPath: m_Pivot.x
@@ -27720,7 +27769,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4000000000000000002, guid: 29af33dc91bfc8d4b9a60b981979535f, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -270
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4000000000000000002, guid: 29af33dc91bfc8d4b9a60b981979535f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
