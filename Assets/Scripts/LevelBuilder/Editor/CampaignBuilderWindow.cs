@@ -5,7 +5,8 @@ namespace QueensPuzzle
 {
     /// <summary>
     /// Campaign build window: pick a <see cref="CampaignCurveConfig"/>, a level range, and see
-    /// the curve's target weights and the built levels' weights for that range on one graph.
+    /// what the curve asks of each slot and what the built levels take — both in seconds for a
+    /// regular player — for that range on one graph.
     ///
     /// Performance: targets are computed once per "Show graph" click (never in OnGUI), the
     /// polyline is decimated to two points per pixel column (max/min per column, so peaks and
@@ -42,7 +43,7 @@ namespace QueensPuzzle
         // together on one plot; each line has a checkbox. null = that line has no data (no curve).
         int[] targets, built;
         byte[] roles;
-        int dataFrom, maxW;
+        int dataFrom, maxSeconds;
         [SerializeField] bool showTargets = true, showBuilt = true;
 
         // screen-space cache, rebuilt when data, checkboxes or rect changes
@@ -148,7 +149,7 @@ namespace QueensPuzzle
                 {
                     UpdateOffTolCount();
                     EditorGUILayout.LabelField(" ",
-                        $"{offTolCount} existing level(s) outside ±{config.matchTol * 100:0}%", EditorStyles.miniLabel);
+                        $"{offTolCount} existing level(s) outside their slot's time (±{config.timeTol * 100:0}%)", EditorStyles.miniLabel);
                 }
                 using (new EditorGUI.DisabledScope(config == null))
                     if (GUILayout.Button($"Generate levels {from}–{to}"))
@@ -182,7 +183,7 @@ namespace QueensPuzzle
             DrawGraph(rect);
         }
 
-        // generate → rate → fit into any open slot at a FIXED ±matchTol — no widening,
+        // generate → rate → fit into any open slot whose TIME it matches (±timeTol, fixed) — no widening,
         // a board that fits nothing is discarded. The build core lives in PoolBuildRunner.
         void GenerateLevels()
         {
@@ -205,7 +206,7 @@ namespace QueensPuzzle
                 $"   • new (missing):  {scan.newCount}\n" +
                 $"   • override off-tolerance:  {scan.offTol}\n" +
                 $"   • overwrite existing:  {scan.overwrite}\n\n" +
-                $"Tolerance:  ±{config.matchTol * 100:0}% (fixed)\n" +
+                $"Tolerance:  ±{config.timeTol * 100:0}% of the slot's seconds (fixed)\n" +
                 $"Threads:  {threadCount}   ·   Seed base:  {seedBase}",
                 "Go", "Cancel"))
                 return;
@@ -216,12 +217,12 @@ namespace QueensPuzzle
                     threadCount = threadCount,
                     seedBase = seedBase,
                     title = "Generating campaign levels",
-                    tolLabel = $"tol ±{config.matchTol * 100:0}%",
+                    tolLabel = $"time ±{config.timeTol * 100:0}%",
                 });
 
             offTolCount = -1;   // recount after the build
             RefreshSetStats();
-            Debug.Log($"[CampaignBuilder] filled {made} level(s), {scan.open.Count} still open, {attempts} boards generated at tol ±{config.matchTol * 100:0}%");
+            Debug.Log($"[CampaignBuilder] filled {made} level(s), {scan.open.Count} still open, {attempts} boards generated at time ±{config.timeTol * 100:0}%");
         }
 
         // ---- colors: find & fix confusable region colors ----------------------------------
@@ -739,7 +740,7 @@ namespace QueensPuzzle
             return minDist * 2.0f - gapSd * 0.20f - lSd * 0.55f - cSd * 0.55f;
         }
 
-        // Existing levels in range whose weight sits outside their slot's tolerance window.
+        // Existing levels in range whose seconds sit outside their slot's time window.
         // Cached — recounts only when range/set/config change, on window focus, or after a build.
         void UpdateOffTolCount()
         {
@@ -752,12 +753,15 @@ namespace QueensPuzzle
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                 if (lvl == null) continue;
                 var t = config.GetTarget(l);
-                if (lvl.weight < t.minWeight || lvl.weight > t.maxWeight) offTolCount++;
+                if (!CampaignCurve.InTimeWindow(t, lvl)) offTolCount++;   // by time, like the build gate
             }
         }
 
-        // Both lines in one pass: the curve's target weight (needs a curve) and the weight of the built
-        // level asset in the output folder. Missing levels show as 0 (gaps on the floor).
+        // Both lines in one pass, in REAL SECONDS — the regular player who is at that level (the board's
+        // own seconds × the level's place factor): what the curve asks of each slot
+        // (needs a curve) and what the built level in the output folder takes (its board rated by
+        // TimeRater — once per asset, so the first graph of a long range takes a moment). Missing
+        // levels show as 0 (gaps on the floor).
         void BuildData()
         {
             from = Mathf.Max(1, from);
@@ -767,20 +771,25 @@ namespace QueensPuzzle
             built = new int[n];
             roles = new byte[n];
             dataFrom = from;
-            maxW = config != null ? Mathf.Max(1, config.weightCap) : 1;
-            for (int i = 0; i < n; i++)
+            maxSeconds = 1;
+            try
             {
-                if (config != null)
+                for (int i = 0; i < n; i++)
                 {
-                    var t = config.GetTarget(from + i);
-                    targets[i] = t.targetWeight;
-                    roles[i] = (byte)t.role;
-                    if (t.targetWeight > maxW) maxW = t.targetWeight;
+                    if (n > 400 && i % 200 == 0) EditorUtility.DisplayProgressBar("Campaign graph", $"rating level {from + i} of {to}", i / (float)n);
+                    if (config != null)
+                    {
+                        var t = config.GetTarget(from + i);
+                        targets[i] = Mathf.RoundToInt(t.targetSeconds);
+                        roles[i] = (byte)t.role;
+                        if (targets[i] > maxSeconds) maxSeconds = targets[i];
+                    }
+                    var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
+                    built[i] = lvl != null ? Mathf.RoundToInt((float)CampaignCurve.SecondsOf(lvl) * (config != null ? config.PlaceFactorAt(from + i) : 1f)) : 0;
+                    if (built[i] > maxSeconds) maxSeconds = built[i];
                 }
-                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
-                built[i] = lvl != null ? lvl.weight : 0;
-                if (built[i] > maxW) maxW = built[i];
             }
+            finally { EditorUtility.ClearProgressBar(); }
             cacheStale = true;   // invalidate screen cache
             Repaint();
         }
@@ -808,19 +817,12 @@ namespace QueensPuzzle
             // gridlines + labels (GUI, repaint-safe)
             var label = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleRight };
             label.normal.textColor = ink;
-            int step = NiceStep(maxW, 5);
-            for (int v = 0; v <= maxW; v += step)
+            int step = NiceStep(maxSeconds, 5);
+            for (int v = 0; v <= maxSeconds; v += step)
             {
-                float y = plot.yMax - v / (float)maxW * plot.height;
+                float y = plot.yMax - v / (float)maxSeconds * plot.height;
                 EditorGUI.DrawRect(new Rect(plot.xMin, y, plot.width, 1f), grid);
                 GUI.Label(new Rect(r.x, y - 8, padL - 6, 16), v.ToString(), label);
-            }
-
-            // cap line (weightCap = difficulty 1.0) — only meaningful with a curve loaded
-            if (config != null)
-            {
-                float capY = plot.yMax - config.weightCap / (float)maxW * plot.height;
-                EditorGUI.DrawRect(new Rect(plot.xMin, capY, plot.width, 1f), new Color(red.r, red.g, red.b, 0.55f));
             }
 
             // lines + milestone dots via GL — built first, so the target line sits on top
@@ -889,8 +891,8 @@ namespace QueensPuzzle
             if (hasTarget) { var p = ToScreen(plot, i, n, targets[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), milestone ? red : blue); }
 
             string text = $"Level {level}"
-                + (hasTarget ? $"  |  target {targets[i]}" : "")
-                + (showBuilt ? $"  |  built {built[i]}" : "")
+                + (hasTarget ? $"  |  target {targets[i]} s" : "")
+                + (showBuilt ? $"  |  built {built[i]} s" : "")
                 + (milestone ? "  |  milestone" : "");
             var style = new GUIStyle(EditorStyles.helpBox)
             {
@@ -957,7 +959,7 @@ namespace QueensPuzzle
 
         Vector3 ToScreen(Rect plot, int i, int n, int w) => new Vector3(
             plot.xMin + i / (float)Mathf.Max(1, n - 1) * plot.width,
-            plot.yMax - w / (float)maxW * plot.height,
+            plot.yMax - w / (float)maxSeconds * plot.height,
             0f);
 
         static int NiceStep(int max, int ticks)

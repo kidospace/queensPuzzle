@@ -9,7 +9,7 @@ namespace QueensPuzzle
     /// target's FIXED window — no widening, a board that fits nothing is discarded.
     ///
     /// Inputs are deliberately dumb: <see cref="GenerationGates"/> + a list of LevelTargets whose
-    /// weight windows are already baked in. Callers own all dialogs; this owns the worker threads,
+    /// time windows (seconds) are already baked in. Callers own all dialogs; this owns the worker threads,
     /// the progress bar and the asset writes ({outputFolder}/{target.level}.asset).
     /// </summary>
     public static class PoolBuildRunner
@@ -19,7 +19,7 @@ namespace QueensPuzzle
             public int threadCount;
             public int seedBase;
             public string title;      // progress-bar title
-            public string tolLabel;   // display only, e.g. "tol ±10%"
+            public string tolLabel;   // display only, e.g. "time ±6%"
         }
 
         public sealed class ScanResult
@@ -41,7 +41,7 @@ namespace QueensPuzzle
             {
                 var existing = AssetDatabase.LoadAssetAtPath<LevelData>($"{outputFolder}/{t.level}.asset");
                 if (existing == null) { r.open.Add(t); r.newCount++; }
-                else if (overrideOffTol && (existing.weight < t.minWeight || existing.weight > t.maxWeight)) { r.open.Add(t); r.offTol++; }
+                else if (overrideOffTol && !CampaignCurve.InTimeWindow(t, existing)) { r.open.Add(t); r.offTol++; }   // by time, like the gate
                 else if (!skipExisting) { r.open.Add(t); r.overwrite++; }
             }
             return r;
@@ -65,10 +65,10 @@ namespace QueensPuzzle
             string outputFolder, Options opt)
         {
             EnsureFolder(outputFolder);
-            var queue = new System.Collections.Concurrent.ConcurrentQueue<(int[] region, int[] cols, int seed, WeightRater.Report rep, int size)>();
+            var queue = new System.Collections.Concurrent.ConcurrentQueue<(int[] region, int[] cols, int seed, WeightRater.Report rep, double seconds, int size)>();
             int made = 0;
 
-            // workers: generate + rate off the main thread (TryGenerateRaw and Rate are thread-safe)
+            // workers: generate + rate off the main thread (TryGenerateRaw, Rate and TimeRater are thread-safe)
             var st = new SharedState { nextSeed = opt.seedBase - 1, sizes = SizesOf(open) };
             var workers = new System.Threading.Thread[opt.threadCount];
             for (int w = 0; w < workers.Length; w++)
@@ -87,7 +87,7 @@ namespace QueensPuzzle
                         if (!ok) continue;
                         var rep = WeightRater.Rate(size, region, cols);
                         if (rep.trials > 0) continue;   // guess wall — discarded on the worker
-                        queue.Enqueue((region, cols, s, rep, size));
+                        queue.Enqueue((region, cols, s, rep, TimeRater.SecondsExact(size, region, cols, rep), size));
                     }
                 }) { IsBackground = true, Name = $"PoolGen{w}" };
                 workers[w].Start();
@@ -106,7 +106,7 @@ namespace QueensPuzzle
                     bool filled = false;
                     while (open.Count > 0 && queue.TryDequeue(out var c))
                     {
-                        int slot = FindSlot(gates, open, c.size, c.rep);
+                        int slot = FindSlot(gates, open, c.size, c.rep, c.seconds);
                         if (slot >= 0)
                         {
                             SaveLevel(outputFolder, open[slot], c.region, c.cols, c.rep.weight, c.seed);
@@ -145,14 +145,14 @@ namespace QueensPuzzle
         // don't eat the rare heavy boards.
         static int FindSlot(in GenerationGates gates,
             System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open, int size,
-            in WeightRater.Report rep)
+            in WeightRater.Report rep, double seconds)
         {
             int best = -1, bestPrio = -1;
             for (int i = 0; i < open.Count; i++)
             {
                 var t = open[i];
                 if (t.boardSize != size) continue;
-                if (!CampaignCurve.PassesGates(gates, t, rep)) continue;
+                if (!CampaignCurve.PassesGates(gates, t, rep, seconds)) continue;
                 int prio = (int)t.role;
                 if (prio > bestPrio) { bestPrio = prio; best = i; }
             }

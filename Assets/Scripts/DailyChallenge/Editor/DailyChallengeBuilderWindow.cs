@@ -51,7 +51,7 @@ namespace QueensPuzzle
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     string range = tr.progressMax == int.MaxValue ? $"{tr.progressMin}+" : $"{tr.progressMin}–{tr.progressMax}";
-                    EditorGUILayout.LabelField($"{tr.name}  ·  progress {range}  ·  diff {tr.diffMin:0.00}–{tr.diffMax:0.00}", GUILayout.MinWidth(240));
+                    EditorGUILayout.LabelField($"{tr.name}  ·  progress {range}  ·  {tr.secondsMin:0}–{tr.secondsMax:0} s", GUILayout.MinWidth(240));
                     EditorGUILayout.LabelField($"{CountBuilt(FolderOf(tr))}/{tr.PoolSize}", GUILayout.Width(70));
                     if (GUILayout.Button("Generate", GUILayout.Width(80)))
                     {
@@ -142,7 +142,7 @@ namespace QueensPuzzle
                 $"   • new (missing):  {scan.newCount}\n" +
                 $"   • override off-tolerance:  {scan.offTol}\n" +
                 $"   • overwrite existing:  {scan.overwrite}\n\n" +
-                $"Tolerance:  ±{config.campaign.matchTol * 100:0}% (fixed)\n" +
+                $"Tolerance:  ±{config.campaign.timeTol * 100:0}% of the slot's seconds (fixed)\n" +
                 $"Threads:  {threadCount}   ·   Seed base:  {tierSeed}",
                 "Go", "Cancel"))
                 return false;
@@ -153,7 +153,7 @@ namespace QueensPuzzle
                     threadCount = threadCount,
                     seedBase = tierSeed,
                     title = $"Generating daily pool — {tr.name}",
-                    tolLabel = $"tol ±{config.campaign.matchTol * 100:0}%",
+                    tolLabel = $"time ±{config.campaign.timeTol * 100:0}%",
                 });
             Debug.Log($"[DailyBuilder] {tr.name}: filled {made}, {scan.open.Count} still open, {attempts} boards generated");
             return scan.open.Count == 0;   // slots left ⇒ the run was cancelled mid-way

@@ -4,16 +4,16 @@ using System.Collections.Generic;
 namespace QueensPuzzle
 {
     /// <summary>
-    /// What Generate aims for. weight is required; peak / evenness / steps / startShare are
+    /// What Generate aims for. seconds (calibrated, see <see cref="TimeRater"/>) is required; peak / evenness / steps / startShare are
     /// optional (&lt;= 0 = don't care). Each tolerance is a % of its target value — a level
     /// counts as on-target when every active term is within its tolerance.
     /// </summary>
     public struct LevelFingerprint
     {
-        public int weight, peak, steps;   // steps = paid steps (queen shadows excluded)
+        public int seconds, peak, steps; // steps = paid steps (queen shadows excluded)
         public float evenness;            // 0..1
-        public float startShare;          // 0..1 — share of the weight in the solve's first third (opening shape)
-        public int tolWeightPct, tolPeakPct, tolEvennessPct, tolStepsPct, tolStartPct;
+        public float startShare;          // 0..1 — share of the rating in the solve's first third (opening shape)
+        public int tolSecondsPct, tolPeakPct, tolEvennessPct, tolStepsPct, tolStartPct;
     }
 
     /// <summary>
@@ -26,10 +26,10 @@ namespace QueensPuzzle
     ///
     ///   cost = Σ %-beyond-tolerance per fingerprint term  +  gamma * neighbourStdDev%
     ///
-    /// The first term aims at the requested fingerprint (weight / peak / evenness / steps, each
+    /// The first term aims at the requested fingerprint (seconds / peak / evenness / steps, each
     /// within its % tolerance). The second term — the spread of the board's OWN one-flip
-    /// neighbours' weights — steers away from fragile "knife-edge" boards (where one different
-    /// cell swings the weight wildly) toward stable ones that play like they're rated.
+    /// neighbours' seconds — steers away from fragile "knife-edge" boards (where one different
+    /// cell swings the time wildly) toward stable ones that play like they're rated.
     /// Uniqueness is enforced per move: a flip that creates a second solution is rejected.
     ///
     /// Pure C# (no Unity types); the editor wrapper <c>LevelSteerer</c> turns the result into an asset.
@@ -98,21 +98,21 @@ namespace QueensPuzzle
         static double Cost(int n, int[] region, int[] sol, LevelFingerprint target, float gamma)
         {
             var rep = WeightRater.Rate(n, region, sol);
-            double cost = FingerprintGap(rep, target);
-            // stability, in the same units (% of the target weight)
-            double stdDevPct = Math.Sqrt(NeighbourVariance(n, region)) * 100.0 / Math.Max(1, target.weight);
+            double cost = FingerprintGap(rep, TimeRater.SecondsExact(n, region, sol, rep), target);
+            // stability, in the same units (% of the target seconds)
+            double stdDevPct = Math.Sqrt(NeighbourVariance(n, region)) * 100.0 / Math.Max(1, target.seconds);
             return cost + gamma * stdDevPct;
         }
 
         /// <summary>Sum of the %-beyond-tolerance gaps of all active fingerprint terms. 0 = on target.</summary>
-        public static double FingerprintGap(WeightRater.Report rep, LevelFingerprint t)
-            => Gap(rep.weight, t.weight, t.tolWeightPct)
+        public static double FingerprintGap(WeightRater.Report rep, double seconds, LevelFingerprint t)
+            => Gap(seconds, t.seconds, t.tolSecondsPct)
              + Gap(rep.peak, t.peak, t.tolPeakPct)
              + Gap(rep.evenness, t.evenness, t.tolEvennessPct)
              + Gap(rep.paidSteps, t.steps, t.tolStepsPct)
              + Gap(rep.startShare, t.startShare, t.tolStartPct);
 
-        public static bool OnTarget(WeightRater.Report rep, LevelFingerprint t) => FingerprintGap(rep, t) <= 0;
+        public static bool OnTarget(WeightRater.Report rep, double seconds, LevelFingerprint t) => FingerprintGap(rep, seconds, t) <= 0;
 
         // % deviation beyond the tolerance; 0 inside the tolerance or when the term is "don't care".
         static double Gap(double value, double target, int tolPct)
@@ -122,10 +122,11 @@ namespace QueensPuzzle
             return Math.Max(0, pct - tolPct);
         }
 
-        // Population variance of the weights of every legal one-cell-flip neighbour that stays unique.
+        // Population variance of the seconds of every legal one-cell-flip neighbour that stays unique.
+        // Hundreds of boards a step, and only their spread matters — so the quick one-road estimate.
         static double NeighbourVariance(int n, int[] region)
         {
-            var weights = new List<int>();
+            var secs = new List<double>();
             var done = new HashSet<long>();
             int[] dr = { -1, 1, 0, 0 }, dc = { 0, 0, -1, 1 };
             for (int i = 0; i < n * n; i++)
@@ -143,13 +144,13 @@ namespace QueensPuzzle
                     int[] cand = (int[])region.Clone();
                     cand[i] = b;
                     if (!QueensSolver.TrySolve(n, cand, out int[] sol, out bool unique) || !unique) continue;
-                    weights.Add(WeightRater.Rate(n, cand, sol).weight);
+                    secs.Add(TimeRater.QuickSeconds(WeightRater.Rate(n, cand, sol)));
                 }
             }
-            if (weights.Count == 0) return 0;
-            double m = 0; foreach (int s in weights) m += s; m /= weights.Count;
-            double v = 0; foreach (int s in weights) v += (s - m) * (s - m);
-            return v / weights.Count;
+            if (secs.Count == 0) return 0;
+            double m = 0; foreach (double s in secs) m += s; m /= secs.Count;
+            double v = 0; foreach (double s in secs) v += (s - m) * (s - m);
+            return v / secs.Count;
         }
 
         // Picks a random boundary cell whose region stays connected after the flip.

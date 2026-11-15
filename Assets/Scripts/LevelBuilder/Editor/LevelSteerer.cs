@@ -5,7 +5,7 @@ namespace QueensPuzzle
 {
     /// <summary>
     /// Editor wrapper around <see cref="WeightAnnealer"/>: generates a unique starting board,
-    /// steers its region map toward the requested weight, then assembles a rated, traced asset.
+    /// steers its region map toward the requested seconds, then assembles a rated, traced asset.
     /// </summary>
     public static class LevelSteerer
     {

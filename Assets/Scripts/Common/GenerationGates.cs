@@ -9,11 +9,11 @@ namespace QueensPuzzle
     {
         public int maxTrials;
         public float maxPeakShare;
-        public float minWeightPerStep;
+        public float minSecondsPerStep;   // as on a 10x10 board
+        public float secondsPerRow;       // to read any board size as 10x10
         public int maxPaidSteps;
         public int milestoneMaxPaidSteps;
         public float maxStartShare;
         public float peakMaxStartShare;
-        public int gateMinWeight;
     }
 }

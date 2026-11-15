@@ -8,7 +8,7 @@ namespace QueensPuzzle
     /// solution. Returns a ready-to-save <see cref="LevelData"/>.
     ///
     /// Every generated level is auto-rated: <see cref="LevelData.weight"/> gets the measured
-    /// solve weight. Steering toward a requested weight is <c>LevelSteerer</c>'s job.
+    /// solve weight. Steering toward requested seconds is <c>LevelSteerer</c>'s job.
     /// </summary>
     public static class LevelGenerator
     {

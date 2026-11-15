@@ -14,48 +14,48 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   campaign: {fileID: 11400000, guid: 24ad190ce3404a248b16aa9bd2a1c092, type: 2}
   epochDate: 2026-01-05
-  weekdayMult:
-  - 0.85
-  - 0.95
+  weekdayFactor:
+  - 0.957
+  - 0.986
+  - 1.013
+  - 0.972
+  - 1.026
   - 1.05
-  - 0.9
-  - 1.1
-  - 1.2
-  - 0.85
+  - 0.957
   jitter: 0.025
   tiers:
   - name: Tier2
     progressMin: 21
     progressMax: 50
-    diffMin: 0.12
-    diffMax: 0.22
-    baseDiff: 0.17
+    secondsMin: 97.7
+    secondsMax: 114.9
+    baseSeconds: 107.2
     weeks: 5
   - name: Tier3
     progressMin: 51
     progressMax: 100
-    diffMin: 0.18
-    diffMax: 0.3
-    baseDiff: 0.24
+    secondsMin: 108.9
+    secondsMax: 124.9
+    baseSeconds: 117.6
     weeks: 8
   - name: Tier4
     progressMin: 101
     progressMax: 150
-    diffMin: 0.25
-    diffMax: 0.4
-    baseDiff: 0.32
+    secondsMin: 118.9
+    secondsMax: 135
+    baseSeconds: 127.1
     weeks: 8
   - name: Tier5
     progressMin: 151
     progressMax: 200
-    diffMin: 0.35
-    diffMax: 0.55
-    baseDiff: 0.45
+    secondsMin: 130.2
+    secondsMax: 147.2
+    baseSeconds: 139.4
     weeks: 8
   - name: Endless
     progressMin: 201
     progressMax: 2147483647
-    diffMin: 0.45
-    diffMax: 0.65
-    baseDiff: 0.52
+    secondsMin: 139.4
+    secondsMax: 154
+    baseSeconds: 144.9
     weeks: 52

@@ -13,10 +13,12 @@ namespace QueensPuzzle
     /// Pools are whole weeks and the epoch is a Monday, so slot % 7 IS the weekday and the weekly
     /// wave below stays aligned forever as the pool rotates.
     ///
-    /// Scale, size ranges, tolerance and quality gates all come from the referenced campaign
-    /// curve — daily 0.30 means exactly campaign 0.30. Jitter is a hash of (tier, slot) so
-    /// same-weekday slots aren't clones and builds reproduce. Milestones (0.85–1.00) never
-    /// appear in dailies.
+    /// Everything is in SECONDS, like the campaign curve — the board's own seconds, for an
+    /// experienced player (daily players are not new, so no place factor). A tier states its
+    /// seconds as on a 10x10 board; a slot whose rotation size is smaller asks for the same kind
+    /// of level in fewer seconds (the campaign curve's secondsPerRow). Size ranges, tolerance and
+    /// quality gates come from the referenced campaign curve. Jitter is a hash of (tier, slot)
+    /// so same-weekday slots aren't clones and builds reproduce. No milestones in dailies.
     /// </summary>
     [CreateAssetMenu(fileName = "DailyChallengeCurve", menuName = "QueensPuzzle/Daily Challenge Curve", order = 2)]
     public class DailyChallengeCurveConfig : ScriptableObject
@@ -29,37 +31,37 @@ namespace QueensPuzzle
             [Tooltip("DailyProgress range (inclusive). The last tier is open-ended upward.")]
             public int progressMin;
             public int progressMax;
-            [Tooltip("Target difficulty band 0..1 — the weekly wave is clamped into it.")]
-            public float diffMin;
-            public float diffMax;
-            [Tooltip("The wave's center: weekday multipliers apply around this.")]
-            public float baseDiff;
+            [Tooltip("The tier's band in seconds (as on a 10x10 board) — the weekly wave is clamped into it.")]
+            public float secondsMin;
+            public float secondsMax;
+            [Tooltip("The wave's center in seconds (as on a 10x10 board): weekday factors apply around this.")]
+            public float baseSeconds;
             [Tooltip("Pool length in WHOLE WEEKS (slots = weeks*7) so rotation keeps weekday alignment.")]
             public int weeks;
 
             public int PoolSize => weeks * 7;
         }
 
-        [Tooltip("Shared source of truth: weight scale, size ranges, match tolerance, quality gates.")]
+        [Tooltip("Shared source of truth: size ranges, seconds per row, match tolerance, quality gates.")]
         public CampaignCurveConfig campaign;
 
         [Tooltip("Day 0, UTC, yyyy-MM-dd — MUST be a Monday so slot % 7 = weekday.")]
         public string epochDate = "2026-01-05";
 
-        [Tooltip("Mon..Sun multipliers around each tier's baseDiff. Saturday = weekly peak, Sunday = breather.")]
-        public float[] weekdayMult = { 0.85f, 0.95f, 1.05f, 0.90f, 1.10f, 1.20f, 0.85f };
+        [Tooltip("Mon..Sun factors on each tier's baseSeconds. Saturday = weekly peak, Sunday = breather.")]
+        public float[] weekdayFactor = { 0.957f, 0.986f, 1.013f, 0.972f, 1.026f, 1.050f, 0.957f };
 
-        [Tooltip("± spread so same-weekday slots aren't clones. Hash of (tier, slot) — builds reproduce.")]
+        [Tooltip("± spread (share of the seconds) so same-weekday slots aren't clones. Hash of (tier, slot) — builds reproduce.")]
         public float jitter = 0.025f;
 
         [Tooltip("Daily unlocks at campaign 21, so there is no tier below DailyProgress 21.")]
         public Tier[] tiers =
         {
-            new Tier { name = "Tier2",   progressMin = 21,  progressMax = 50,           diffMin = 0.12f, diffMax = 0.22f, baseDiff = 0.17f, weeks = 5 },
-            new Tier { name = "Tier3",   progressMin = 51,  progressMax = 100,          diffMin = 0.18f, diffMax = 0.30f, baseDiff = 0.24f, weeks = 8 },
-            new Tier { name = "Tier4",   progressMin = 101, progressMax = 150,          diffMin = 0.25f, diffMax = 0.40f, baseDiff = 0.32f, weeks = 8 },
-            new Tier { name = "Tier5",   progressMin = 151, progressMax = 200,          diffMin = 0.35f, diffMax = 0.55f, baseDiff = 0.45f, weeks = 8 },
-            new Tier { name = "Endless", progressMin = 201, progressMax = int.MaxValue, diffMin = 0.45f, diffMax = 0.65f, baseDiff = 0.52f, weeks = 52 },
+            new Tier { name = "Tier2",   progressMin = 21,  progressMax = 50,           secondsMin = 97.7f,  secondsMax = 114.9f, baseSeconds = 107.2f, weeks = 5 },
+            new Tier { name = "Tier3",   progressMin = 51,  progressMax = 100,          secondsMin = 108.9f, secondsMax = 124.9f, baseSeconds = 117.6f, weeks = 8 },
+            new Tier { name = "Tier4",   progressMin = 101, progressMax = 150,          secondsMin = 118.9f, secondsMax = 135.0f, baseSeconds = 127.1f, weeks = 8 },
+            new Tier { name = "Tier5",   progressMin = 151, progressMax = 200,          secondsMin = 130.2f, secondsMax = 147.2f, baseSeconds = 139.4f, weeks = 8 },
+            new Tier { name = "Endless", progressMin = 201, progressMax = int.MaxValue, secondsMin = 139.4f, secondsMax = 154.0f, baseSeconds = 144.9f, weeks = 52 },
         };
 
         public DateTime Epoch =>
@@ -94,22 +96,13 @@ namespace QueensPuzzle
         public CampaignCurveConfig.LevelTarget GetSlotTarget(int tier, int slot)
         {
             var tr = tiers[tier];
-            float d = tr.baseDiff * weekdayMult[slot % 7];
-            d += (Hash01((uint)((tier + 1) * 8191 + slot)) * 2f - 1f) * jitter;
-            d = Mathf.Clamp(d, tr.diffMin, tr.diffMax);
+            float s10 = tr.baseSeconds * weekdayFactor[slot % 7];   // as on a 10x10 board
+            s10 *= 1f + (Hash01((uint)((tier + 1) * 8191 + slot)) * 2f - 1f) * jitter;
+            s10 = Mathf.Clamp(s10, tr.secondsMin, tr.secondsMax);
 
-            int w = Mathf.RoundToInt(d * campaign.weightCap);
-            int tol = Mathf.Max(campaign.minTolWeight, (int)(campaign.matchTol * w));
-            return new CampaignCurveConfig.LevelTarget
-            {
-                level = slot + 1,
-                boardSize = campaign.FitSize(w, campaign.sizeRotation[slot % campaign.sizeRotation.Length]),
-                difficulty = d,
-                targetWeight = w,
-                minWeight = Mathf.Max(1, w - tol),
-                maxWeight = w + tol,
-                role = campaign.RoleOf(d),   // Milestone never occurs — dailies have none
-            };
+            int size = campaign.FitSizeAs10x10(s10, campaign.sizeRotation[slot % campaign.sizeRotation.Length]);
+            float seconds = s10 * campaign.RowScale(size);
+            return campaign.MakeTarget(slot + 1, size, seconds, campaign.RoleOf(seconds, size), 1f);   // place factor 1: daily players are not new
         }
 
         /// <summary>All targets of one tier's pool — the builder's shopping list.</summary>
