@@ -43,6 +43,9 @@ namespace QueensPuzzle
         /// <summary>Does a built level take the time its slot asks for?</summary>
         public static bool InTimeWindow(in CampaignCurveConfig.LevelTarget t, LevelData lvl) => InTimeWindow(t, SecondsOf(lvl));
 
+        /// <summary>Is a built level what its slot asks for — the board size AND the time?</summary>
+        public static bool Fits(in CampaignCurveConfig.LevelTarget t, LevelData lvl) => lvl.size == t.boardSize && InTimeWindow(t, lvl);
+
         /// <summary>
         /// Accept/reject one rated candidate for a slot. <paramref name="seconds"/> is its
         /// <see cref="TimeRater"/> rating, taken once per board. Board size must match separately.

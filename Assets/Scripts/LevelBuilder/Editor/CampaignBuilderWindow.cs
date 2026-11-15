@@ -149,7 +149,7 @@ namespace QueensPuzzle
                 {
                     UpdateOffTolCount();
                     EditorGUILayout.LabelField(" ",
-                        $"{offTolCount} existing level(s) outside their slot's time (±{config.timeTol * 100:0}%)", EditorStyles.miniLabel);
+                        $"{offTolCount} existing level(s) not what their slot asks (board size, or time ±{config.timeTol * 100:0}%)", EditorStyles.miniLabel);
                 }
                 using (new EditorGUI.DisabledScope(config == null))
                     if (GUILayout.Button($"Generate levels {from}–{to}"))
@@ -740,7 +740,7 @@ namespace QueensPuzzle
             return minDist * 2.0f - gapSd * 0.20f - lSd * 0.55f - cSd * 0.55f;
         }
 
-        // Existing levels in range whose seconds sit outside their slot's time window.
+        // Existing levels in range that are not what their slot asks for (board size or time window).
         // Cached — recounts only when range/set/config change, on window focus, or after a build.
         void UpdateOffTolCount()
         {
@@ -753,7 +753,7 @@ namespace QueensPuzzle
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                 if (lvl == null) continue;
                 var t = config.GetTarget(l);
-                if (!CampaignCurve.InTimeWindow(t, lvl)) offTolCount++;   // by time, like the build gate
+                if (!CampaignCurve.Fits(t, lvl)) offTolCount++;   // size and time, like the build
             }
         }
 

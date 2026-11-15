@@ -20,6 +20,7 @@ namespace QueensPuzzle
             public int seedBase;
             public string title;      // progress-bar title
             public string tolLabel;   // display only, e.g. "time ±6%"
+            public float maxSeconds;  // stop after this long and leave the rest open (0 = until done or cancelled)
         }
 
         public sealed class ScanResult
@@ -31,7 +32,8 @@ namespace QueensPuzzle
 
         /// <summary>
         /// Which targets still need a level: no asset yet · skip-existing off · or the existing
-        /// level sits outside its tolerance window and override is on.
+        /// level is not what the slot asks for (another board size, or outside the time window)
+        /// and override is on.
         /// </summary>
         public static ScanResult Scan(System.Collections.Generic.IList<CampaignCurveConfig.LevelTarget> targets,
             string outputFolder, bool skipExisting, bool overrideOffTol)
@@ -41,7 +43,7 @@ namespace QueensPuzzle
             {
                 var existing = AssetDatabase.LoadAssetAtPath<LevelData>($"{outputFolder}/{t.level}.asset");
                 if (existing == null) { r.open.Add(t); r.newCount++; }
-                else if (overrideOffTol && !CampaignCurve.InTimeWindow(t, existing)) { r.open.Add(t); r.offTol++; }   // by time, like the gate
+                else if (overrideOffTol && !CampaignCurve.Fits(t, existing)) { r.open.Add(t); r.offTol++; }   // size and time, like the build
                 else if (!skipExisting) { r.open.Add(t); r.overwrite++; }
             }
             return r;
@@ -96,8 +98,10 @@ namespace QueensPuzzle
             try
             {
                 AssetDatabase.StartAssetEditing();   // files are still written per level; Unity imports them once at the end
+                var clock = System.Diagnostics.Stopwatch.StartNew();
                 while (open.Count > 0)
                 {
+                    if (opt.maxSeconds > 0 && clock.Elapsed.TotalSeconds >= opt.maxSeconds) break;
                     long attempts = System.Threading.Interlocked.Read(ref st.attempts);
                     if (EditorUtility.DisplayCancelableProgressBar(opt.title,
                         $"filled {made} · open {open.Count} · boards {attempts} · threads {opt.threadCount} · {opt.tolLabel}",
