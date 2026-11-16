@@ -54,7 +54,7 @@ namespace QueensPuzzle
             get
             {
                 if (_lastCheck == null)
-                    return SectionStatus.Of(SectionState.Unknown, "Not checked against the server yet — every build fetches and updates");
+                    return SectionStatus.Of(SectionState.Ok, "Updated from the server before every build");
 
                 var failed = _lastCheck.Where(c => c.Error != null).ToList();
                 if (failed.Count > 0)
@@ -73,40 +73,14 @@ namespace QueensPuzzle
 
         public override void DrawDetails()
         {
-            EditorGUILayout.LabelField(
-                "Every build fetches from the server. Newer → saved and committed, no questions. The server not answering STOPS the build. Untick to build with what is baked.",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(4);
-
             foreach (var blob in All)
             {
-                var c = _lastCheck?.FirstOrDefault(x => x.Blob.Name == blob.Name);
                 var baked = blob.Baked();
-                string bakedText = baked == null ? "nothing baked" : $"{baked.Length / 1024f:0.0} KB baked";
-                string serverText =
-                    c == null ? "not checked" :
-                    c.Error != null ? "✗ " + c.Error :
-                    c.Same ? "✓ same as server" :
-                    baked == null ? "⚠ server has it, nothing baked" : "⚠ server has newer";
-
-                EditorGUILayout.LabelField($"{blob.Name}", $"{serverText}   ·   {bakedText}", EditorStyles.wordWrappedLabel);
+                EditorGUILayout.LabelField(blob.Name, baked == null ? "nothing baked" : $"{baked.Length / 1024f:0.0} KB");
             }
 
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Check server now", GUILayout.Width(140)))
-                    CheckNow();
-
-                var newer = _lastCheck?.Where(x => x.Fresh != null && !x.Same).ToList();
-                using (new EditorGUI.DisabledScope(newer == null || newer.Count == 0))
-                {
-                    if (GUILayout.Button("Update & commit now", GUILayout.Width(160)))
-                        UpdateAndCommit(newer);
-                }
-            }
-
-            if (_lastCheck != null)
-                EditorGUILayout.LabelField($"Checked {_checkedAt:HH:mm:ss}" + (_lastAction != null ? "  ·  " + _lastAction : ""), EditorStyles.centeredGreyMiniLabel);
+            if (_lastAction != null)
+                EditorGUILayout.LabelField($"{_checkedAt:HH:mm}  ·  {_lastAction}", EditorStyles.centeredGreyMiniLabel);
         }
 
         // Fetch shows progress bars and reads level assets: main thread, on request only.

@@ -22,6 +22,11 @@ namespace Common
 #if UNITY_EDITOR
         // queensPuzzle Firebase app id (encoded) — fill when the Firebase project is set up.
         public static string FirebaseEncodeAppID = "";
+
+        // Google service account Build Center uses for Google Play (read versions, upload to
+        // internal). One account for both Kidospace and Puzzby, in Google Cloud project
+        // mysubscriptionvalidator; no key file - used through gcloud ("Service Account Token Creator").
+        public static string PlayServiceAccount = "play-publisher@mysubscriptionvalidator.iam.gserviceaccount.com";
 #endif
 
         // Firebase Remote Config default values.
