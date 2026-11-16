@@ -64,6 +64,7 @@ namespace qp {
         TournamentSyncRequest _request() => new TournamentSyncRequest {
             wins = _state.pending.ToArray(),
             level = AppData.LevelIdx.Value + 1,
+            recentPoints = _state.RecentPoints(MBServerTimeManagerV2.UTCNow.Ticks),
             currentEtag = _state.lastSyncCurrent.etag,
             closedEtag = _state.lastSyncClosed.etag,
         };

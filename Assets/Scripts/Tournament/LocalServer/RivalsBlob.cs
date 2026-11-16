@@ -31,9 +31,12 @@ namespace qp {
     ///   version  headerSize  what arrived
     ///   1        12          the first file: recordings and their wins
     ///   1        14          medianScore (Oct 2026)
-    ///   1        22          listsOffset + builtAt: the rival lists (Nov 2026) — required from here
+    ///   1        22          listsOffset + builtAt: the rival lists (Nov 2026)
+    ///   1        24          firstFactor: what a first tournament is sized by (Nov 2026) — required from here
     ///
-    /// A file from before the lists (headerSize below 22) is OLD, not broken: a phone that last
+    /// medianScore is still in the file for the versions before firstFactor; this one does not read it.
+    ///
+    /// A file from before the factor (headerSize below 24) is OLD, not broken: a phone that last
     /// downloaded before the server changed still holds one. It is set aside quietly in favour of
     /// the baked copy and a fresh download. Anything else that does not check out is BROKEN, and
     /// is reported (<see cref="Report"/>) — those are the ones worth hearing about.
@@ -53,6 +56,12 @@ namespace qp {
         const int ListsOffsetAt = MedianScoreHeaderSize;  // uint32, from the start of the file
         const int BuiltAtAt = ListsOffsetAt + 4;          // uint32, unix seconds
         const int ListsHeaderSize = BuiltAtAt + 4;        // a header this long carries the lists
+        const int FirstFactorAt = ListsHeaderSize;        // uint16, x100
+        const int FirstFactorHeaderSize = FirstFactorAt + 2;   // the header this reader needs
+
+        /// <summary>A first-tournament factor outside this is not a measurement (the server's
+        /// tournament/first.ts refuses to write one).</summary>
+        const float MinFirstFactor = 0.3f, MaxFirstFactor = 20f;
 
         // ---- index entry schema — the single source of truth for field order --------------
         // Offsets are derived from these; nothing else may assume the layout.
@@ -92,7 +101,7 @@ namespace qp {
 
         static byte[] _blob;
         static int _count;
-        static int _medianScore;
+        static float _firstFactor;
         static int _entrySize;     // from the header; may exceed KnownEntrySize
         static int _playSize;      // from the header
         static int _indexPos;
@@ -107,15 +116,14 @@ namespace qp {
         public static int Count => Load() ? _count : 0;
 
         /// <summary>
-        /// What a typical player scores in 48 hours, measured over everyone — or 0 when nothing
-        /// is loaded.
+        /// What a FIRST tournament is sized by: its group is built around this times the points the
+        /// player won in their last day of play — or 0 when nothing is loaded.
         ///
-        /// It has to be told to us. The recordings are drawn to a fixed quota per score bucket, so
-        /// their own middle is a property of the quota and not of the players; only the server has
-        /// ever seen the real distribution. The game needs it to size a first tournament, before
-        /// this player has finished one of their own.
+        /// Measured daily on the server (tournament/first.ts) so a first tournament pays a prize as
+        /// often as an Easy one should, and it arrives with every refresh of the recordings rather
+        /// than with a release.
         /// </summary>
-        public static int MedianScore => Load() ? _medianScore : 0;
+        public static float FirstFactor => Load() ? _firstFactor : 0f;
 
         /// <summary>When the server built the file in use (unix seconds), or 0 when none is loaded.
         /// Reported with every result, so a phone stuck on an old file shows up.</summary>
@@ -177,7 +185,7 @@ namespace qp {
         /// that does not check out is deleted with its ETag, so the next launch downloads a whole
         /// new one instead of being told nothing changed — the baked copy covers the gap.
         ///
-        /// Only the cheap checks run here (<see cref="CheckLight"/>: the header, the median, the
+        /// Only the cheap checks run here (<see cref="CheckLight"/>: the header, the factor, the
         /// lists — a few hundred numbers). The walk over every win ran when the file was
         /// downloaded, off the main thread.
         ///
@@ -241,8 +249,8 @@ namespace qp {
             catch (Exception e) { err = $"crash: {e.GetType().Name}: {e.Message}"; }
 
             if (err != null) {
-                // A downloaded file from before the lists is what an update leaves behind — not a
-                // fault. A BAKED one from before them means a build went out without them: report.
+                // A downloaded file from before the factor is what an update leaves behind — not a
+                // fault. A BAKED one from before it means a build went out without it: report.
                 if (!(old && downloaded)) Report(downloaded ? "load-file" : "load-baked", err);
                 return false;
             }
@@ -252,7 +260,7 @@ namespace qp {
             _playSize = bytes[7];
             _count = ReadInt(bytes, 8);
             _indexPos = bytes[5];                    // headerSize
-            _medianScore = ReadUShort(bytes, MedianScoreAt);
+            _firstFactor = ReadUShort(bytes, FirstFactorAt) / 100f;
             _builtAt = ReadUInt(bytes, BuiltAtAt);
             _readLists(bytes, out _cutoffs, out _lists);
             _downloaded = downloaded;
@@ -294,22 +302,22 @@ namespace qp {
         }
 
         /// <summary>
-        /// Everything that can be checked without walking the wins: the header, the median, the
-        /// build time and the lists. Null when sound. <paramref name="old"/> is set when the file
-        /// is simply from before the lists existed.
+        /// Everything that can be checked without walking the wins: the header, the first-tournament
+        /// factor, the build time and the lists. Null when sound. <paramref name="old"/> is set when
+        /// the file is simply from before the factor existed.
         /// </summary>
         static string CheckLight(byte[] b, out bool old) {
             old = false;
             string err = CheckHeader(b);
             if (err != null) return err;
 
-            if (b[5] < ListsHeaderSize) {
+            if (b[5] < FirstFactorHeaderSize) {
                 old = true;
-                return $"headerSize {b[5]}: a file from before the lists";
+                return $"headerSize {b[5]}: a file from before the first-tournament factor";
             }
 
-            int median = ReadUShort(b, MedianScoreAt);
-            if (median <= 0) return $"medianScore {median}";
+            float factor = ReadUShort(b, FirstFactorAt) / 100f;
+            if (factor < MinFirstFactor || factor > MaxFirstFactor) return $"firstFactor {factor}";
 
             long builtAt = ReadUInt(b, BuiltAtAt);
             if (builtAt < EarliestBuild || builtAt > LatestBuild) return $"builtAt {builtAt} is not a time";
@@ -453,7 +461,7 @@ namespace qp {
         ///
         /// What gets baked is therefore guaranteed readable by exactly the code that will read
         /// it — the same deal <see cref="WinStats.ValidateBlob"/> makes. A file from before the
-        /// lists fails here: the server has them, so one without them did not come from it.
+        /// factor fails here: the server has it, so one without it did not come from today's server.
         /// </summary>
         public static string Validate(byte[] b) {
             string err = CheckLight(b, out _);

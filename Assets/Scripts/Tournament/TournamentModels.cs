@@ -28,6 +28,10 @@ namespace qp {
         /// <summary>Which of this player's tournaments it is, 1-based; 0 when the server does not
         /// say. Reported with the result.</summary>
         public int nth;
+        /// <summary>The player's points in the day before the group was built — what a FIRST
+        /// tournament is sized on (see <see cref="TournamentSyncRequest.recentPoints"/>). 0 when
+        /// the server does not say. Reported with the result.</summary>
+        public int recentPoints;
         /// <summary>When the rivals file the group was built from was made (unix seconds), and
         /// whether it was the downloaded file ("download") or the baked one ("baked"). 0 / ""
         /// when the server does not say. Reported with the result.</summary>
@@ -74,6 +78,12 @@ namespace qp {
         /// so the server needs to know who they are — today only to judge how many of their rivals
         /// should look like players who have been here long enough to name themselves.</summary>
         public int level;
+
+        /// <summary>The points the player won in the last 24 hours, or in their last day of play
+        /// when they won nothing in those (see <see cref="TournamentState.RecentPoints"/>). A
+        /// player's FIRST group is built around it — before they finish a tournament nothing else
+        /// says how much they play. 0 = never won anything.</summary>
+        public int recentPoints;
 
         // The etags of the snapshots the client already holds, exactly as the server sent them.
         // The server skips the payload of anything that hasn't changed since.

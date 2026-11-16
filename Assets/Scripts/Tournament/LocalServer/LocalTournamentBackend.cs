@@ -85,7 +85,10 @@ namespace qp {
                 _state.currentId = "";
                 changed = true;
             }
-            if (!_running && !_noRivalsThisLaunch) { _open(now, req?.level ?? 0); changed = true; }
+            if (!_running && !_noRivalsThisLaunch) {
+                _open(now, req?.level ?? 0, req?.recentPoints ?? 0);
+                changed = true;
+            }
 
             var accepted = _applyWins(req, ref changed);
 
@@ -179,6 +182,29 @@ namespace qp {
 
         bool _running => !string.IsNullOrEmpty(_state.currentId);
 
+        /// <summary>The smallest score a first group is built around: below it a group is built
+        /// for a player who barely played, out of recordings that barely exist.</summary>
+        const int MinFirstBase = 5;
+
+        /// <summary>A first group for a player with no win at all to go on — about what a typical
+        /// player scores in 48 hours (Nov 2026). Practically never used: a tournament unlocks at a
+        /// level, and every level is a win.</summary>
+        const int FirstBaseWithNothing = 37;
+
+        /// <summary>
+        /// What a player's FIRST group is built around: the server's factor times what they won
+        /// in their last day of play. There is no tournament of their own to go on yet, and new
+        /// players differ too much for one number to fit them — a quarter score under 25 in their
+        /// first 48 hours, a quarter over 160 (Nov 2026). The factor is measured daily on the
+        /// server so the first tournament pays a prize as often as an Easy one should
+        /// (pawdoku-winstats-server, tournament/first.ts).
+        /// </summary>
+        static int _firstBase(int recentPoints) {
+            float factor = RivalsBlob.FirstFactor;
+            if (recentPoints <= 0 || factor <= 0) return FirstBaseWithNothing;
+            return Mathf.Max(MinFirstBase, Mathf.RoundToInt(factor * recentPoints));
+        }
+
         /// <summary>Freeze a tournament whose time is up. Nothing opens here — only a win does
         /// that. True when it actually closed one, so the caller knows the state has to be
         /// written.</summary>
@@ -203,9 +229,9 @@ namespace qp {
         /// Everything a tournament is — its window, its nineteen rivals, their whole two days —
         /// is decided here, once, and then only played back.
         /// </summary>
-        void _open(DateTime now, int level) {
+        void _open(DateTime now, int level, int recentPoints) {
             bool first = !_state.HasFinishedOne;
-            int usual = _state.UsualScore > 0 ? _state.UsualScore : RivalGroup.TypicalScore;
+            int usual = first ? _firstBase(recentPoints) : _state.UsualScore;
 
             _state.currentId = "t" + now.Ticks;
             _state.startTicks = now.Ticks;
@@ -228,6 +254,7 @@ namespace qp {
             _state.setKind = built.kind;
             _state.group = built.group;
             _state.nth = _state.FinishedSoFar + 1;
+            _state.recentPoints = first ? recentPoints : 0;
             _state.fileBuiltAt = built.fileBuiltAt;
             _state.fileSource = built.fileSource;
 
@@ -254,6 +281,7 @@ namespace qp {
             _state.closedBaseScore = _state.baseScore;
             _state.closedGroup = _state.group;
             _state.closedNth = _state.nth;
+            _state.closedRecentPoints = _state.recentPoints;
             _state.closedFileBuiltAt = _state.fileBuiltAt;
             _state.closedFileSource = _state.fileSource;
             _state.closedTable = _table(WindowMinutes, _state.myScore);
@@ -323,22 +351,24 @@ namespace qp {
 
             return _snapshot(_state.currentId, _state.startTicks, _state.endTicks, rows, false,
                              _state.setKind, _state.baseScore,
-                             _state.group, _state.nth, _state.fileBuiltAt, _state.fileSource);
+                             _state.group, _state.nth, _state.recentPoints,
+                             _state.fileBuiltAt, _state.fileSource);
         }
 
         TournamentSnapshot _closedSnapshot() {
             if (string.IsNullOrEmpty(_state.closedId)) return _noTournament();
             return _snapshot(_state.closedId, _state.closedStartTicks, _state.closedEndTicks,
                              _state.closedTable, true, _state.closedSetKind, _state.closedBaseScore,
-                             _state.closedGroup, _state.closedNth, _state.closedFileBuiltAt,
-                             _state.closedFileSource);
+                             _state.closedGroup, _state.closedNth, _state.closedRecentPoints,
+                             _state.closedFileBuiltAt, _state.closedFileSource);
         }
 
         static TournamentSnapshot _noTournament() => new TournamentSnapshot { etag = "none" };
 
         TournamentSnapshot _snapshot(
             string id, long startTicks, long endTicks, List<LocalEntry> rows, bool isFinal,
-            RivalGroup.Kind kind, int baseScore, int group, int nth, long fileBuiltAt, string fileSource) {
+            RivalGroup.Kind kind, int baseScore, int group, int nth, int recentPoints,
+            long fileBuiltAt, string fileSource) {
 
             var entries = new TournamentEntry[rows.Count];
             int myIndex = -1;
@@ -360,6 +390,7 @@ namespace qp {
                     baseScore = baseScore,
                     group = group,
                     nth = nth,
+                    recentPoints = recentPoints,
                     fileBuiltAt = fileBuiltAt,
                     fileSource = fileSource ?? "",
                 },

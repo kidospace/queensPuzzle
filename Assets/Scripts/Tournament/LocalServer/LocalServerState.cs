@@ -52,8 +52,8 @@ namespace qp {
         public RivalGroup.Kind setKind = RivalGroup.Kind.Unknown;
         public RivalGroup.Kind closedSetKind = RivalGroup.Kind.Unknown;
 
-        /// <summary>The score the open group was built around (<see cref="UsualScore"/>, or the
-        /// population median for a first tournament), and the closed one's. Reported with the
+        /// <summary>The score the open group was built around (<see cref="UsualScore"/>, or for a
+        /// first tournament the player's last day of play times the file's factor), and the closed one's. Reported with the
         /// result, because a place cannot be judged without it: 1st on 3x the usual pace and 1st
         /// on the usual pace are different findings. 0 = a save from before this existed.</summary>
         public int baseScore;
@@ -65,6 +65,10 @@ namespace qp {
         /// before these existed.</summary>
         public int group, closedGroup;
         public int nth, closedNth;
+        /// <summary>For a FIRST tournament, the player's points in the day before it was built —
+        /// what its base came from (see LocalTournamentBackend._firstBase); 0 for any later one.
+        /// Reported with the result.</summary>
+        public int recentPoints, closedRecentPoints;
         public long fileBuiltAt, closedFileBuiltAt;
         public string fileSource = "", closedFileSource = "";
 
@@ -79,7 +83,8 @@ namespace qp {
         /// <summary>
         /// What the player scored in each of their last few tournaments, newest first — the
         /// measurement the next group is sized against (see <see cref="RivalGroup"/>). The first
-        /// tournament has none of these, so it assumes the median and every one after it knows.
+        /// tournament has none of these, so it is sized on the player's last day of play instead,
+        /// and every one after it knows.
         ///
         /// Several and not just the last one, because one unusual 48 hours should not decide the
         /// next group: a holiday, an illness or a single long evening would each set the bar on

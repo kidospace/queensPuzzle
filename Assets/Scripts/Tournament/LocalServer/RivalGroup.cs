@@ -87,17 +87,6 @@ namespace qp {
         /// </summary>
         const int JoinWithinMinutes = 5;
 
-        /// <summary>
-        /// What a player scores in 48 hours when we have never seen them finish a tournament: the
-        /// median of everyone past the unlock level. Wrong for any particular player and right for
-        /// most, and only used once — the next group is built on what they actually did.
-        ///
-        /// Taken from the blob, so it tracks the game as it grows and arrives with every refresh
-        /// of the recordings rather than with a release. A blob without it is not loaded at all
-        /// (see <see cref="RivalsBlob"/>), so 0 here only ever means there are no rivals either.
-        /// </summary>
-        public static int TypicalScore => RivalsBlob.MedianScore;
-
         /// <summary>What a group was built from — reported with its result.</summary>
         public struct Built {
             public Kind kind;

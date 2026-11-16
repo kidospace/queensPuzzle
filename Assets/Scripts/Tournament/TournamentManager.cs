@@ -248,6 +248,14 @@ namespace qp {
         /// whether there is anything to animate at all.</summary>
         public static TournamentWinResult OnLevelWin(int score) {
             var res = new TournamentWinResult { fromIndex = -1, toIndex = -1 };
+
+            // Every win, from level 1 and before the feature unlocks: the player's first
+            // tournament is built around their last day of play (see TournamentState.RecentPoints).
+            if (_exists && score > 0) {
+                _state.RecordPlay(score, MBServerTimeManagerV2.UTCNow.Ticks);
+                if (!_isUnlocked) _state.Save();   // unlocked, the save below covers it
+            }
+
             if (!_exists || !_isUnlocked || score <= 0) return res;
 
             res.fromIndex = MyIndexWithPending;

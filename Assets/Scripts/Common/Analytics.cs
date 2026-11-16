@@ -334,6 +334,10 @@ namespace qp {
                 // player who started on this version; for one from before it is a floor (it never
                 // reads under 4 for a player with three results already).
                 new Firebase.Analytics.Parameter("t_nth", info?.nth ?? 0),
+                // For a FIRST tournament: the player's points in the last 24 hours (or in their last
+                // day of play) when it was built — its base is that times the file's factor, so
+                // t_score against this is how the factor is checked. 0 for any later tournament.
+                new Firebase.Analytics.Parameter("t_pre24", info?.recentPoints ?? 0),
                 // When the server built the rivals file the group came from (unix seconds), and
                 // whether it was the downloaded file or the copy baked into the app — a phone stuck
                 // on an old file shows up here and nowhere else.
