@@ -35,6 +35,16 @@ namespace QueensPuzzle
 
         public override string Title => "Baked server data (WinStats, Rivals) — update before build";
 
+        const string CommitPref = "Pawdoku.BakedData.Commit";
+
+        /// <summary>Commit what was updated (default on). Off: saved only, and the git check
+        /// that runs next stops the build on those files.</summary>
+        static bool Commit
+        {
+            get => EditorPrefs.GetBool(CommitPref, true);
+            set => EditorPrefs.SetBool(CommitPref, value);
+        }
+
         // ---- window ------------------------------------------------------------------
 
         class Checked
@@ -62,7 +72,7 @@ namespace QueensPuzzle
 
                 var newer = _lastCheck.Where(c => !c.Same).ToList();
                 if (newer.Count > 0)
-                    return SectionStatus.Of(SectionState.Warning, "Server has newer: " + string.Join(", ", newer.Select(c => c.Blob.Name)) + " — the build will update and commit it");
+                    return SectionStatus.Of(SectionState.Warning, "Server has newer: " + string.Join(", ", newer.Select(c => c.Blob.Name)) + " — the build will update it");
 
                 return SectionStatus.Of(SectionState.Ok, "Same as the server");
             }
@@ -73,6 +83,11 @@ namespace QueensPuzzle
 
         public override void DrawDetails()
         {
+            bool commit = EditorGUILayout.ToggleLeft("Commit", Commit);
+            if (commit != Commit) Commit = commit;
+            if (!Commit)
+                EditorGUILayout.LabelField("Without Commit, \"Project is clean\" stops the build.", EditorStyles.miniLabel);
+
             foreach (var blob in All)
             {
                 var baked = blob.Baked();
@@ -202,8 +217,10 @@ namespace QueensPuzzle
         static string Apply(Dictionary<BakedBlob, byte[]> changed)
         {
             foreach (var kv in changed) kv.Key.Save(kv.Value);
+            string names = string.Join(", ", changed.Keys.Select(b => b.Name));
+            if (!Commit) return $"{names} updated, not committed";
             string sha = BakedBlob.CommitAll(changed.Keys.ToList());
-            return $"{string.Join(", ", changed.Keys.Select(b => b.Name))} updated + committed ({sha})";
+            return $"{names} updated + committed ({sha})";
         }
 
         static bool BytesEqual(byte[] a, byte[] b) => a != null && b != null && a.SequenceEqual(b);
