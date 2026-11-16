@@ -161,56 +161,10 @@ namespace QueensPuzzle
 
         protected override void RunBeforeBuild(BuildReport report)
         {
-            // The window's Build button already fetched, updated and committed moments ago
-            if (FromBuildCenter)
-            {
-                Debug.Log("[BakedData] updated in Build Center just before this build");
-                return;
-            }
-
-            var blobs = All;
-
-            // CI / -batchmode: try each, log loudly, never block (as before).
-            if (Application.isBatchMode)
-            {
-                foreach (var blob in blobs)
-                {
-                    try { blob.Save(blob.Fetch()); Debug.Log($"[{blob.Name}] baked fresh blob (batch mode)"); }
-                    catch (Exception e) { Debug.LogError($"[{blob.Name}] batch fetch FAILED — building with the existing blob. " + Innermost(e).Message); }
-                }
-                return;
-            }
-
-            var fresh = new Dictionary<BakedBlob, byte[]>();
-            var failures = new List<string>();
-
-            foreach (var blob in blobs)
-            {
-                try { fresh[blob] = blob.Fetch(); }
-                catch (Exception e) { failures.Add($"{blob.Name}: {Innermost(e).Message}"); }
-                finally { EditorUtility.ClearProgressBar(); }
-            }
-
-            if (failures.Count > 0)
-                throw new BuildFailedException("[BakedData] Could not fetch from the server:\n\n" + string.Join("\n\n", failures) +
-                    "\n\nBuild stopped (it never builds on data it could not check). " +
-                    "Fix the server or network, or untick this section in Build Center to build with what is baked.");
-
-            var changed = fresh.Where(kv => !BytesEqual(kv.Key.Baked(), kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value);
-            if (changed.Count == 0)
-            {
-                Debug.Log("[BakedData] same as the server: " + string.Join(", ", blobs.Select(b => b.Name)));
-                return;
-            }
-
-            try
-            {
-                Debug.Log("[BakedData] " + Apply(changed));
-            }
-            catch (Exception e)
-            {
-                throw new BuildFailedException("[BakedData] updating the baked data FAILED — build stopped: " + Innermost(e).Message);
-            }
+            // Runs only in a DEPLOY build, which only the window's Build button makes - and the
+            // window fetched, updated and committed moments ago (PrepareBuildFromWindow).
+            // A TEST build (Build And Run, File > Build) builds with what is baked: nothing here.
+            Debug.Log("[BakedData] updated in Build Center just before this build");
         }
 
         /// <summary>Save the fresh bytes and commit them in one commit. Returns what was done.</summary>
