@@ -20,7 +20,7 @@ namespace QueensPuzzle
     ///
     /// Two entry points:
     ///  - Manual: QueensPuzzle → Export WinStats — fetch from the winstats-server and bake.
-    ///  - EVERY BUILD, through <see cref="BakedBlobsBuildCheck"/>, which asks about this and the
+    ///  - EVERY BUILD, through <see cref="BakedDataSection"/> (Build Center), which asks about this and the
     ///    rivals blob together rather than once each.
     /// </summary>
     public static class WinStatsExporter

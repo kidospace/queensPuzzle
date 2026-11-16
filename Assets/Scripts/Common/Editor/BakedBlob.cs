@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,7 +13,7 @@ namespace QueensPuzzle
     /// The game bakes more than one of these now (winstats, rivals), and they are identical in
     /// everything except the fetch — same Resources folder, same compare-with-baked, same "commit
     /// it or the build ships what git hasn't got". So the exporters describe their blob with this
-    /// and <see cref="BakedBlobsBuildCheck"/> handles the rest, once, for all of them.
+    /// and <see cref="BakedDataSection"/> handles the rest, once, for all of them.
     ///
     /// Fetch is a delegate rather than an interface because the differences are entirely inside
     /// it: a URL, a request shape, and a validator that is the game's own reader.
@@ -46,41 +48,26 @@ namespace QueensPuzzle
         }
 
         /// <summary>
-        /// Stage and commit just this blob. A build must never ship bytes the repo lacks, so the
-        /// pre-build "Use Fresh" choice saves AND commits; pushing stays manual. A git failure
-        /// logs loudly and does not cancel a build the user already approved.
+        /// Stage and commit just these blobs (and their .meta), in one commit. A build must never
+        /// ship bytes the repo lacks; pushing stays manual. Returns the new commit's short hash.
+        /// Throws with git's own message on failure.
         /// </summary>
-        public void Commit()
+        public static string CommitAll(IReadOnlyCollection<BakedBlob> blobs)
         {
-            try
-            {
-                RunGit($"add -- \"{Path}\" \"{Path}.meta\"");
-                RunGit($"commit -m \"{Name.ToLowerInvariant()}: refresh baked blob (pre-build)\" -- \"{Path}\" \"{Path}.meta\"");
-                Debug.Log($"[{Name}] fresh blob committed to git");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[{Name}] blob saved but NOT committed to git — commit it manually! " + e.Message);
-            }
+            string root = System.IO.Path.GetFullPath(Application.dataPath + "/..");
+            string paths = string.Join(" ", blobs.SelectMany(b => new[] { $"\"{b.Path}\"", $"\"{b.Path}.meta\"" }));
+            string names = string.Join(", ", blobs.Select(b => b.Name.ToLowerInvariant()));
+
+            Git(root, $"add -- {paths}");
+            Git(root, $"commit -m \"baked data: refresh {names}\" -- {paths}");
+            return Git(root, "rev-parse --short HEAD").Trim();
         }
 
-        static void RunGit(string args)
+        static string Git(string root, string args)
         {
-            var psi = new System.Diagnostics.ProcessStartInfo("git", args)
-            {
-                WorkingDirectory = Directory.GetCurrentDirectory(),   // the project root = repo root
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-            using (var p = System.Diagnostics.Process.Start(psi))
-            {
-                string stderr = p.StandardError.ReadToEnd();
-                p.StandardOutput.ReadToEnd();
-                p.WaitForExit(30000);
-                if (p.ExitCode != 0) throw new Exception($"git {args} -> {stderr.Trim()}");
-            }
+            var result = Common.BuildCenter.GitStatusCheck.Git(root, args);
+            if (result.Error != null) throw new Exception(result.Error);
+            return result.Output;
         }
     }
 }

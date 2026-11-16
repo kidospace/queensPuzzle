@@ -20,7 +20,7 @@ namespace QueensPuzzle
     ///
     /// Two entry points:
     ///  - Manual: QueensPuzzle → Export Rivals — fetch from the server and bake.
-    ///  - EVERY BUILD, through <see cref="BakedBlobsBuildCheck"/>, which asks about this and
+    ///  - EVERY BUILD, through <see cref="BakedDataSection"/> (Build Center), which asks about this and
     ///    winstats together rather than once each.
     /// </summary>
     public static class RivalsExporter
