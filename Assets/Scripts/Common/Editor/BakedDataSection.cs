@@ -35,6 +35,9 @@ namespace QueensPuzzle
 
         public override string Title => "Baked server data (WinStats, Rivals) — update before build";
 
+        public override Run InTest => Run.Optional;
+        public override Run InDeploy => Run.Required;
+
         const string CommitPref = "Pawdoku.BakedData.Commit";
 
         /// <summary>Commit what was updated (default on). Off: saved only, and the git check
@@ -159,18 +162,22 @@ namespace QueensPuzzle
 
         // ---- build -------------------------------------------------------------------
 
-        protected override void RunBeforeBuild(BuildReport report)
+        // Unity's own Build (InUnityBuild: No) builds with what is baked; the window's builds
+        // fetched, updated and committed moments ago (PrepareBuildFromWindow)
+        protected override string RunBeforeBuild(BuildReport report)
         {
-            // Runs only in a DEPLOY build, which only the window's Build button makes - and the
-            // window fetched, updated and committed moments ago (PrepareBuildFromWindow).
-            // A TEST build (Build And Run, File > Build) builds with what is baked: nothing here.
             Debug.Log("[BakedData] updated in Build Center just before this build");
+            return null;
         }
 
         /// <summary>Save the fresh bytes and commit them in one commit. Returns what was done.</summary>
         static string Apply(Dictionary<BakedBlob, byte[]> changed)
         {
-            foreach (var kv in changed) kv.Key.Save(kv.Value);
+            foreach (var kv in changed)
+            {
+                // Before committing: the file on disk really changed
+                SavedFiles.SaveAndCheck(kv.Key.Path, () => kv.Key.Save(kv.Value));
+            }
             string names = string.Join(", ", changed.Keys.Select(b => b.Name));
             if (!Commit) return $"{names} updated, not committed";
             string sha = BakedBlob.CommitAll(changed.Keys.ToList());

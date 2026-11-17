@@ -315,7 +315,8 @@ namespace Common {
         // ================== iOS: post-build steps (conflict check) ==================
         // Pods are handled by the EDM iOS Resolver's own `pod install`; no pod update here.
 
-        [PostProcessBuild(10000)]   // high order = after the EDM iOS Resolver wrote the Podfile
+        // Runs from the Build Center section SingularAppControllerSection (every iOS build,
+        // after the EDM iOS Resolver wrote the Podfile)
         public static void OnPostProcessBuildIOS(BuildTarget target, string buildPath) {
             if (target != BuildTarget.iOS) return;
             CheckAppControllerConflict(buildPath);
