@@ -62,7 +62,7 @@ namespace QueensPuzzle
         DateTime _checkedAt;
         string _lastAction;
 
-        public override SectionStatus Status
+        protected override SectionStatus CurrentStatus
         {
             get
             {
@@ -82,7 +82,7 @@ namespace QueensPuzzle
         }
 
         // No network on focus: the server is checked only on "Check server now" and in a build.
-        public override void Refresh() { }
+        protected override CheckWork Check() => null;   // nothing to check
 
         public override void DrawDetails()
         {

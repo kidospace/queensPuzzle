@@ -20,10 +20,10 @@ namespace Common {
         public override Run InDeploy => Run.Required;
         public override bool InUnityBuild => true;   // a conflict breaks Singular at runtime
 
-        public override SectionStatus Status =>
+        protected override SectionStatus CurrentStatus =>
             SectionStatus.Of(SectionState.Ok, "Checked after Unity writes the Xcode project");
 
-        public override void Refresh() { }
+        protected override CheckWork Check() => null;   // nothing to check
 
         public override void DrawDetails() {
             EditorGUILayout.LabelField("More than one IMPL_APP_CONTROLLER_SUBCLASS in the export → offers Singular's swizzle fix.",
