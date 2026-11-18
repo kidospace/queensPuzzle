@@ -75,6 +75,12 @@ namespace qp {
             MaxSdkCallbacks.Interstitial.OnAdRevenuePaidEvent += OnRevenuePaid;
             MaxSdkCallbacks.Banner.OnAdRevenuePaidEvent += OnRevenuePaid;
 
+            // ...and the price of the first loaded ads of every format (see OnLoadedPrice).
+            LoadLoadedCounts();
+            MaxSdkCallbacks.Rewarded.OnAdLoadedEvent += OnLoadedPrice;
+            MaxSdkCallbacks.Interstitial.OnAdLoadedEvent += OnLoadedPrice;
+            MaxSdkCallbacks.Banner.OnAdLoadedEvent += OnLoadedPrice;
+
             WireRewarded();
             WireInterstitial();
 
@@ -259,6 +265,73 @@ namespace qp {
             Debug.Log($"[Ads] revenue {info.Revenue:F6} USD — {info.NetworkName} / {info.AdFormat} → Singular");
         }
 
+        // ================== price of a LOADED ad → Firebase ==================
+
+        // What a player's ads are worth is only known from ad_impression — and that needs an ad to
+        // be SHOWN: none before StartShowInterAtLevel, and never a rewarded one for a player who
+        // does not watch them. So everyone who leaves in the first levels has no price at all.
+        // But MAX knows the winning bid as soon as an ad is LOADED, and ads load from boot. Report
+        // that bid for the first LoadedPricesPerFormat loads of each format — the same number of
+        // readings for every player, whatever level he is on.
+        //
+        // Firebase only, and never as revenue: a loaded ad earned nothing. It is NOT forwarded to
+        // Singular, and the price travels as `bid_usd` (no `value` / `currency`), so no report or
+        // network can add it to revenue.
+        const int LoadedPricesPerFormat = 10;
+        const string LoadedCountsKey = "qp_ad_loaded_counts";   // "REWARDED:3,INTER:10" — loads reported so far, per ad format
+        static readonly System.Collections.Generic.Dictionary<string, int> _loadedCounts = new System.Collections.Generic.Dictionary<string, int>();
+        static bool _loadedCountsDirty;   // both under lock (_loadedCounts): MAX may call back off the main thread.
+                                          // The lock is taken once per ad LOAD and once per pause — never per frame.
+
+        static void OnLoadedPrice(string adUnitId, MaxSdkBase.AdInfo info) {
+            if (info == null || info.Revenue <= 0) return;
+            if (!Analytics.EventsOn) return;   // debug mode reports nothing, like OnRevenuePaid
+
+            string format = info.AdFormat ?? "";
+            int n;
+            lock (_loadedCounts) {
+                _loadedCounts.TryGetValue(format, out n);
+                if (n >= LoadedPricesPerFormat) return;
+                _loadedCounts[format] = ++n;
+                _loadedCountsDirty = true;
+            }
+
+#if !IGNORE_FIREBASE
+            Common.CDebug.Log("ad_loaded",
+                    new Firebase.Analytics.Parameter("ad_source", info.NetworkName ?? ""),
+                    new Firebase.Analytics.Parameter("ad_format", format),
+                    new Firebase.Analytics.Parameter("ad_unit_name", info.AdUnitIdentifier ?? ""),
+                    new Firebase.Analytics.Parameter("precision", info.RevenuePrecision ?? ""),
+                    new Firebase.Analytics.Parameter("lvl_idx", AppData.LevelIdx.Value),
+                    new Firebase.Analytics.Parameter("n", n),
+                    new Firebase.Analytics.Parameter("bid_usd", info.Revenue));
+#endif
+        }
+
+        static void LoadLoadedCounts() {
+            lock (_loadedCounts) {
+                _loadedCounts.Clear();
+                foreach (var pair in PlayerPrefs.GetString(LoadedCountsKey, "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) {
+                    int at = pair.LastIndexOf(':');
+                    if (at > 0 && int.TryParse(pair.Substring(at + 1), out int n)) _loadedCounts[pair.Substring(0, at)] = n;
+                }
+            }
+        }
+
+        // main thread (AdsRunner, on pause / quit): PlayerPrefs cannot be written from MAX's callback thread
+        static void SaveLoadedCounts() {
+            string text;
+            lock (_loadedCounts) {
+                if (!_loadedCountsDirty) return;
+                _loadedCountsDirty = false;
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (var kv in _loadedCounts) parts.Add(kv.Key + ":" + kv.Value);
+                text = string.Join(",", parts);
+            }
+            PlayerPrefs.SetString(LoadedCountsKey, text);
+            PlayerPrefs.Save();
+        }
+
         // ================== helpers ==================
 
         static bool Usable(string id) {
@@ -291,6 +364,11 @@ namespace qp {
 
         // Tiny coroutine host for retry delays and DontDestroyOnLoad ownership.
         class AdsRunner : MonoBehaviour {
+            // the loaded-ad counts reach PlayerPrefs here, on the main thread, when the app leaves
+            // the screen — a kill before that only means a few bids are reported once more
+            void OnApplicationPause(bool paused) { if (paused) SaveLoadedCounts(); }
+            void OnApplicationQuit() => SaveLoadedCounts();
+
             public void RunAfter(float seconds, Action action) => StartCoroutine(After(seconds, action));
             IEnumerator After(float s, Action a) { yield return new WaitForSeconds(s); a?.Invoke(); }
 
