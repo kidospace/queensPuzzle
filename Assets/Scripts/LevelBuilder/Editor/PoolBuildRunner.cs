@@ -110,10 +110,10 @@ namespace QueensPuzzle
                     bool filled = false;
                     while (open.Count > 0 && queue.TryDequeue(out var c))
                     {
-                        int slot = FindSlot(gates, open, c.size, c.rep, c.seconds);
+                        int slot = FindSlot(gates, open, c.size, c.region, c.cols, c.rep, c.seconds, out int[] revealed, out int weight);
                         if (slot >= 0)
                         {
-                            SaveLevel(outputFolder, open[slot], c.region, c.cols, c.rep.weight, c.seed);
+                            SaveLevel(outputFolder, open[slot], c.region, c.cols, weight, c.seed, revealed);
                             open.RemoveAt(slot);
                             made++;
                             filled = true;
@@ -146,25 +146,56 @@ namespace QueensPuzzle
         }
 
         // Rarest fit wins (milestone > peak > build > normal > breather) so easy slots
-        // don't eat the rare heavy boards.
+        // don't eat the rare heavy boards. A slot that opens with a queen on the board (dog) is
+        // tried with each row's queen revealed, and takes the one that lands closest to its seconds.
         static int FindSlot(in GenerationGates gates,
             System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open, int size,
-            in WeightRater.Report rep, double seconds)
+            int[] region, int[] cols, in WeightRater.Report rep, double seconds, out int[] revealed, out int weight)
         {
             int best = -1, bestPrio = -1;
+            revealed = null;
+            weight = rep.weight;
             for (int i = 0; i < open.Count; i++)
             {
                 var t = open[i];
                 if (t.boardSize != size) continue;
-                if (!CampaignCurve.PassesGates(gates, t, rep, seconds)) continue;
                 int prio = (int)t.role;
-                if (prio > bestPrio) { bestPrio = prio; best = i; }
+                if (prio <= bestPrio) continue;
+                if (!t.dog)
+                {
+                    if (!CampaignCurve.PassesGates(gates, t, rep, seconds)) continue;
+                    bestPrio = prio; best = i; revealed = null; weight = rep.weight;
+                    continue;
+                }
+                int row = BestDog(gates, t, size, region, cols, out int w);
+                if (row < 0) continue;
+                bestPrio = prio; best = i; revealed = new[] { row }; weight = w;
+            }
+            return best;
+        }
+
+        // The row whose queen, revealed, makes the board pass the slot's gates closest to its seconds (-1 = none).
+        static int BestDog(in GenerationGates gates, in CampaignCurveConfig.LevelTarget t, int size, int[] region, int[] cols, out int weight)
+        {
+            int best = -1;
+            double bestGap = double.MaxValue;
+            weight = 0;
+            var rows = new int[1];
+            for (int row = 0; row < size; row++)
+            {
+                rows[0] = row;
+                var rep = WeightRater.Rate(size, region, cols, rows);
+                if (rep.trials > 0) continue;
+                double secs = TimeRater.SecondsExact(size, region, cols, rep, rows);
+                if (!CampaignCurve.PassesGates(gates, t, rep, secs)) continue;
+                double gap = System.Math.Abs(secs - t.boardSeconds);
+                if (gap < bestGap) { bestGap = gap; best = row; weight = rep.weight; }
             }
             return best;
         }
 
         static void SaveLevel(string outputFolder, in CampaignCurveConfig.LevelTarget t,
-            int[] region, int[] cols, int weight, int seed)
+            int[] region, int[] cols, int weight, int seed, int[] revealedRows)
         {
             var data = ScriptableObject.CreateInstance<LevelData>();
             data.size = t.boardSize;
@@ -172,6 +203,7 @@ namespace QueensPuzzle
             data.solutionColumns = cols;
             data.weight = weight;
             data.seed = seed;
+            data.revealedRows = revealedRows ?? new int[0];
             AssetDatabase.CreateAsset(data, $"{outputFolder}/{t.level}.asset");
         }
 

@@ -61,6 +61,8 @@ namespace QueensPuzzle
             public int regionChokeUses;
             public int subsetLineToRegionUses;
             public int subsetRegionToLineUses;
+            public int subsetLineToRegion3Uses;   // of the subset uses above, those over 3 lines or more
+            public int subsetRegionToLine3Uses;
             public int fishUses;
             public int lineChokeUses;
             public int trials;
@@ -158,6 +160,8 @@ namespace QueensPuzzle
                 regionChokeUses = m.regionChokeUses,
                 subsetLineToRegionUses = m.subsetLineToRegionUses,
                 subsetRegionToLineUses = m.subsetRegionToLineUses,
+                subsetLineToRegion3Uses = m.subsetLineToRegion3Uses,
+                subsetRegionToLine3Uses = m.subsetRegionToLine3Uses,
                 fishUses = m.fishUses,
                 lineChokeUses = m.lineChokeUses,
                 trials = m.trials,
@@ -229,8 +233,8 @@ namespace QueensPuzzle
                 case SolveTechnique.RegionToLine:       m.regionToLineUses++;       m.eliminations += step.cells.Length; break;
                 case SolveTechnique.Squeeze:            m.squeezeUses++;            m.eliminations += step.cells.Length; break;
                 case SolveTechnique.RegionChoke:        m.regionChokeUses++;        m.eliminations += step.cells.Length; break;
-                case SolveTechnique.SubsetLineToRegion: m.subsetLineToRegionUses++; m.eliminations += step.cells.Length; break;
-                case SolveTechnique.SubsetRegionToLine: m.subsetRegionToLineUses++; m.eliminations += step.cells.Length; break;
+                case SolveTechnique.SubsetLineToRegion: m.subsetLineToRegionUses++; if (step.k >= 3) m.subsetLineToRegion3Uses++; m.eliminations += step.cells.Length; break;
+                case SolveTechnique.SubsetRegionToLine: m.subsetRegionToLineUses++; if (step.k >= 3) m.subsetRegionToLine3Uses++; m.eliminations += step.cells.Length; break;
                 case SolveTechnique.Fish:               m.fishUses++;               m.eliminations += step.cells.Length; break;
                 case SolveTechnique.LineChoke:         m.lineChokeUses++;         m.eliminations += step.cells.Length; break;
             }
@@ -285,7 +289,7 @@ namespace QueensPuzzle
         {
             public int cycles, placements, regionSingles, lineSingles, eliminations,
                 lineToRegionUses, regionToLineUses, squeezeUses, regionChokeUses,
-                subsetLineToRegionUses, subsetRegionToLineUses,
+                subsetLineToRegionUses, subsetRegionToLineUses, subsetLineToRegion3Uses, subsetRegionToLine3Uses,
                 fishUses, lineChokeUses, trials, maxTrialDepth,
                 findCost, thinkCost, guessCost;
             public int[] techCost = new int[16];

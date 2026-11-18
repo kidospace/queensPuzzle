@@ -18,23 +18,23 @@ MonoBehaviour:
   - level: 2
     factor: 4
   - level: 3
-    factor: 2.14
+    factor: 2.6
   - level: 4
-    factor: 2.53
+    factor: 2.3
   - level: 5
-    factor: 1.39
+    factor: 2.1
   - level: 6
-    factor: 1.82
+    factor: 1.95
   - level: 7
-    factor: 1.91
+    factor: 1.85
   - level: 8
-    factor: 1.52
+    factor: 1.75
   - level: 9
-    factor: 1.77
+    factor: 1.65
   - level: 10
-    factor: 1.33
+    factor: 1.58
   - level: 11
-    factor: 1.7
+    factor: 1.5
   - level: 12
     factor: 1.42
   - level: 13
@@ -61,525 +61,506 @@ MonoBehaviour:
     factor: 0.89
   - level: 1200
     factor: 0.88
+  trickOpenings:
+  - trick: 0
+    level: 4
+    proveUses: 0
+  - trick: 1
+    level: 8
+    proveUses: 0
+  - trick: 2
+    level: 12
+    proveUses: 0
+  - trick: 3
+    level: 16
+    proveUses: 0
+  - trick: 4
+    level: 31
+    proveUses: 0
+  - trick: 5
+    level: 41
+    proveUses: 0
+  - trick: 6
+    level: 61
+    proveUses: 0
+  - trick: 7
+    level: 81
+    proveUses: 0
+  - trick: 8
+    level: 101
+    proveUses: 1
+  lessonMinUses: 010000000100000002000000
+  lessonMaxUses: 010000000200000000000000
+  lessonAloneFor: 8
   learnLevels:
   - size: 4
     seconds: 4.5
+    dog: 0
   - size: 4
     seconds: 3.5
+    dog: 1
+  - size: 5
+    seconds: 8
+    dog: 1
   - size: 6
-    seconds: 13.1
+    seconds: 19.5
+    dog: 1
   - size: 6
-    seconds: 15
+    seconds: 21.5
+    dog: 1
+  - size: 6
+    seconds: 25
+    dog: 1
+  - size: 6
+    seconds: 16
+    dog: 1
+  - size: 6
+    seconds: 28
+    dog: 1
+  - size: 6
+    seconds: 30
+    dog: 1
+  - size: 7
+    seconds: 38.5
+    dog: 1
+  - size: 6
+    seconds: 26
+    dog: 0
+  - size: 7
+    seconds: 41.5
+    dog: 0
+  - size: 7
+    seconds: 50
+    dog: 0
   - size: 8
-    seconds: 41.8
-  - size: 6
-    seconds: 15.4
-  - size: 6
-    seconds: 15.7
+    seconds: 58
+    dog: 0
   - size: 8
-    seconds: 55.2
-  - size: 8
-    seconds: 58.2
+    seconds: 50
+    dog: 0
   - size: 7
     seconds: 46
-  - size: 6
-    seconds: 24.1
-  - size: 6
-    seconds: 30.2
+    dog: 0
+  - size: 7
+    seconds: 56
+    dog: 0
   - size: 8
-    seconds: 52
+    seconds: 66
+    dog: 0
   - size: 8
-    seconds: 55.9
-  - size: 8
-    seconds: 65.1
-  - size: 8
-    seconds: 47.6
-  - size: 8
-    seconds: 60.6
-  - size: 8
-    seconds: 52
-  - size: 8
-    seconds: 64.6
-  - size: 9
-    seconds: 79.5
-  - size: 8
-    seconds: 49
+    seconds: 56
+    dog: 0
   - size: 8
     seconds: 57.8
+    dog: 0
   - size: 8
-    seconds: 58.1
+    seconds: 57.2
+    dog: 0
   - size: 8
-    seconds: 55.6
-  - size: 8
-    seconds: 60.2
-  - size: 8
-    seconds: 54.7
+    seconds: 66.5
+    dog: 0
   - size: 9
-    seconds: 79.1
-  - size: 8
-    seconds: 60
-  - size: 10
-    seconds: 106
-  - size: 10
-    seconds: 116.3
-  - size: 8
-    seconds: 50.8
-  - size: 8
-    seconds: 55.3
-  - size: 8
-    seconds: 59.6
-  - size: 8
-    seconds: 59
-  - size: 10
-    seconds: 100.5
-  - size: 8
-    seconds: 55.4
+    seconds: 74.3
+    dog: 0
   - size: 9
-    seconds: 82
+    seconds: 82.5
+    dog: 0
   - size: 8
-    seconds: 63.1
-  - size: 10
-    seconds: 108.6
-  - size: 10
-    seconds: 119.8
+    seconds: 64.5
+    dog: 0
   - size: 8
-    seconds: 53.5
+    seconds: 70.7
+    dog: 0
   - size: 8
-    seconds: 57.6
-  - size: 8
-    seconds: 64.7
+    seconds: 67.7
+    dog: 0
   - size: 9
-    seconds: 76.7
-  - size: 10
-    seconds: 103.6
-  - size: 8
-    seconds: 61.4
+    seconds: 76.1
+    dog: 0
   - size: 9
-    seconds: 88.8
+    seconds: 82.6
+    dog: 0
+  - size: 9
+    seconds: 89.1
+    dog: 0
   - size: 8
-    seconds: 59.8
-  - size: 10
-    seconds: 109.2
-  - size: 11
-    seconds: 153.8
-  - size: 8
-    seconds: 52.7
-  - size: 8
-    seconds: 65
-  - size: 10
-    seconds: 105.9
+    seconds: 67.9
+    dog: 0
+  - size: 9
+    seconds: 75.4
+    dog: 0
+  - size: 9
+    seconds: 87.7
+    dog: 0
   - size: 9
     seconds: 75
-  - size: 10
-    seconds: 108.4
-  - size: 8
-    seconds: 63.6
+    dog: 0
   - size: 9
-    seconds: 86.3
+    seconds: 75.9
+    dog: 0
   - size: 8
-    seconds: 61.2
-  - size: 10
-    seconds: 114.1
-  - size: 10
-    seconds: 123.5
-  - size: 8
-    seconds: 57.7
-  - size: 8
-    seconds: 60.8
-  - size: 10
-    seconds: 106.7
+    seconds: 72.7
+    dog: 0
   - size: 9
-    seconds: 80.7
-  - size: 10
-    seconds: 105
-  - size: 8
-    seconds: 62.1
+    seconds: 81.7
+    dog: 0
   - size: 9
-    seconds: 91.2
-  - size: 8
-    seconds: 66.1
-  - size: 10
-    seconds: 119.9
-  - size: 10
-    seconds: 125.9
-  - size: 8
-    seconds: 61.1
-  - size: 10
-    seconds: 100.5
-  - size: 10
-    seconds: 105.3
+    seconds: 88.7
+    dog: 0
   - size: 9
-    seconds: 78.4
-  - size: 10
-    seconds: 112.6
+    seconds: 95.6
+    dog: 0
   - size: 8
-    seconds: 60.6
-  - size: 9
-    seconds: 90.1
-  - size: 10
-    seconds: 105.4
-  - size: 10
-    seconds: 119.5
-  - size: 10
-    seconds: 126.5
+    seconds: 72.7
+    dog: 0
   - size: 8
-    seconds: 59.7
-  - size: 10
-    seconds: 103
-  - size: 10
-    seconds: 106.7
+    seconds: 73.6
+    dog: 0
   - size: 9
-    seconds: 83.7
-  - size: 10
-    seconds: 114.5
-  - size: 8
-    seconds: 62.8
+    seconds: 81.9
+    dog: 0
   - size: 9
-    seconds: 92.1
-  - size: 10
-    seconds: 107.7
-  - size: 10
-    seconds: 122.3
-  - size: 10
-    seconds: 130.9
-  - size: 8
-    seconds: 59.6
-  - size: 8
-    seconds: 65.1
-  - size: 10
-    seconds: 109.5
+    seconds: 95.5
+    dog: 0
   - size: 9
-    seconds: 79
-  - size: 10
-    seconds: 114.4
-  - size: 8
-    seconds: 61.1
+    seconds: 81.8
+    dog: 0
   - size: 9
-    seconds: 96.4
-  - size: 10
-    seconds: 103.1
-  - size: 10
-    seconds: 123.5
-  - size: 11
-    seconds: 171.6
-  - size: 8
-    seconds: 59.6
-  - size: 10
-    seconds: 102.7
-  - size: 10
-    seconds: 113.6
+    seconds: 82.9
+    dog: 0
   - size: 9
-    seconds: 85.6
-  - size: 10
-    seconds: 120
-  - size: 10
-    seconds: 104.3
+    seconds: 79.4
+    dog: 0
   - size: 9
-    seconds: 96.1
+    seconds: 89.5
+    dog: 0
+  - size: 9
+    seconds: 97.2
+    dog: 0
   - size: 10
     seconds: 104.9
+    dog: 0
   - size: 10
-    seconds: 128.1
-  - size: 10
-    seconds: 133.1
-  - size: 8
-    seconds: 67.3
-  - size: 10
-    seconds: 104.6
-  - size: 10
-    seconds: 113.9
+    seconds: 131
+    dog: 0
   - size: 9
-    seconds: 86.6
+    seconds: 80.2
+    dog: 0
+  - size: 9
+    seconds: 87.5
+    dog: 0
+  - size: 9
+    seconds: 83.5
+    dog: 0
+  - size: 9
+    seconds: 93.5
+    dog: 0
   - size: 10
-    seconds: 115.9
+    seconds: 101.1
+    dog: 0
+  - size: 10
+    seconds: 108.6
+    dog: 0
+  - size: 9
+    seconds: 82.3
+    dog: 0
+  - size: 9
+    seconds: 89.8
+    dog: 0
+  - size: 9
+    seconds: 85.6
+    dog: 0
+  - size: 9
+    seconds: 96
+    dog: 0
+  - size: 9
+    seconds: 84
+    dog: 0
+  - size: 9
+    seconds: 93.1
+    dog: 0
+  - size: 10
+    seconds: 108.1
+    dog: 0
+  - size: 9
+    seconds: 92.1
+    dog: 0
+  - size: 9
+    seconds: 92.9
+    dog: 0
+  - size: 9
+    seconds: 88.4
+    dog: 0
+  - size: 9
+    seconds: 99.7
+    dog: 0
+  - size: 10
+    seconds: 108.2
+    dog: 0
+  - size: 10
+    seconds: 116.9
+    dog: 0
+  - size: 9
+    seconds: 87.1
+    dog: 0
+  - size: 9
+    seconds: 95.4
+    dog: 0
+  - size: 9
+    seconds: 90.5
+    dog: 0
+  - size: 10
+    seconds: 102.2
+    dog: 0
+  - size: 10
+    seconds: 111.1
+    dog: 0
+  - size: 10
+    seconds: 120
+    dog: 0
+  - size: 9
+    seconds: 88.2
+    dog: 0
+  - size: 9
+    seconds: 97
+    dog: 0
+  - size: 9
+    seconds: 91.8
+    dog: 0
   - size: 10
     seconds: 104.2
+    dog: 0
+  - size: 10
+    seconds: 113.5
+    dog: 0
+  - size: 9
+    seconds: 91.1
+    dog: 0
+  - size: 10
+    seconds: 100.7
+    dog: 0
+  - size: 10
+    seconds: 116.6
+    dog: 0
+  - size: 9
+    seconds: 99.2
+    dog: 0
   - size: 9
     seconds: 99.1
-  - size: 10
-    seconds: 107
-  - size: 10
-    seconds: 126.4
-  - size: 10
-    seconds: 136.8
-  - size: 8
-    seconds: 62.2
-  - size: 10
-    seconds: 111.3
-  - size: 10
-    seconds: 117.3
+    dog: 0
   - size: 9
-    seconds: 84.4
+    seconds: 93.3
+    dog: 0
   - size: 10
-    seconds: 121.1
+    seconds: 106.5
+    dog: 0
   - size: 10
-    seconds: 104.3
+    seconds: 116.4
+    dog: 0
+  - size: 10
+    seconds: 126.2
+    dog: 0
   - size: 9
-    seconds: 101.6
+    seconds: 90.3
+    dog: 0
   - size: 10
-    seconds: 111.3
-  - size: 10
-    seconds: 130.4
-  - size: 10
-    seconds: 137.6
-  - size: 8
-    seconds: 66.3
-  - size: 10
-    seconds: 110.3
-  - size: 10
-    seconds: 117.3
+    seconds: 100.1
+    dog: 0
   - size: 9
-    seconds: 87.9
+    seconds: 94.1
+    dog: 0
   - size: 10
-    seconds: 124.3
+    seconds: 107.9
+    dog: 0
   - size: 10
-    seconds: 106
-  - size: 9
-    seconds: 103.2
+    seconds: 118.2
+    dog: 0
   - size: 10
-    seconds: 110.1
-  - size: 10
-    seconds: 133.2
-  - size: 10
-    seconds: 142
-  - size: 8
-    seconds: 63.9
-  - size: 10
-    seconds: 110.2
-  - size: 10
-    seconds: 120.3
-  - size: 9
-    seconds: 87.4
-  - size: 10
-    seconds: 122.2
-  - size: 10
-    seconds: 108.4
-  - size: 9
-    seconds: 105.4
-  - size: 10
-    seconds: 115.1
-  - size: 10
-    seconds: 132.5
-  - size: 11
-    seconds: 181.2
-  - size: 8
-    seconds: 66.9
-  - size: 10
-    seconds: 111.9
-  - size: 10
-    seconds: 118.9
-  - size: 9
-    seconds: 90
-  - size: 10
-    seconds: 124.3
-  - size: 10
-    seconds: 105.8
-  - size: 9
-    seconds: 103.4
-  - size: 10
-    seconds: 113.8
-  - size: 10
-    seconds: 133.9
-  - size: 10
-    seconds: 142.7
-  - size: 8
-    seconds: 67.3
-  - size: 10
-    seconds: 112.3
-  - size: 10
-    seconds: 118.4
+    seconds: 128.5
+    dog: 0
   - size: 9
     seconds: 90.9
+    dog: 0
   - size: 10
-    seconds: 129.3
+    seconds: 101.1
+    dog: 0
+  - size: 9
+    seconds: 94.8
+    dog: 0
   - size: 10
     seconds: 109.2
+    dog: 0
+  - size: 10
+    seconds: 155.6
+    dog: 0
   - size: 9
-    seconds: 104.1
+    seconds: 95.2
+    dog: 0
   - size: 10
-    seconds: 117.1
+    seconds: 105.1
+    dog: 0
   - size: 10
-    seconds: 137.9
+    seconds: 121.6
+    dog: 0
   - size: 10
-    seconds: 145.7
-  - size: 8
-    seconds: 67.5
+    seconds: 103.3
+    dog: 0
   - size: 10
-    seconds: 116.1
-  - size: 10
-    seconds: 121.7
+    seconds: 102.5
+    dog: 0
   - size: 9
-    seconds: 89
+    seconds: 95.8
+    dog: 0
   - size: 10
-    seconds: 130.5
+    seconds: 111
+    dog: 0
+  - size: 10
+    seconds: 122.3
+    dog: 0
+  - size: 10
+    seconds: 133.7
+    dog: 0
+  - size: 9
+    seconds: 92.1
+    dog: 0
+  - size: 10
+    seconds: 103.4
+    dog: 0
+  - size: 9
+    seconds: 96.4
+    dog: 0
+  - size: 10
+    seconds: 112.3
+    dog: 0
+  - size: 10
+    seconds: 124.1
+    dog: 0
+  - size: 10
+    seconds: 135.9
+    dog: 0
+  - size: 9
+    seconds: 92.5
+    dog: 0
+  - size: 10
+    seconds: 104.2
+    dog: 0
+  - size: 9
+    seconds: 96.8
+    dog: 0
+  - size: 10
+    seconds: 113.2
+    dog: 0
+  - size: 10
+    seconds: 125.3
+    dog: 0
+  - size: 10
+    seconds: 137.4
+    dog: 0
+  - size: 9
+    seconds: 92.5
+    dog: 0
+  - size: 10
+    seconds: 104.6
+    dog: 0
+  - size: 9
+    seconds: 97
+    dog: 0
+  - size: 10
+    seconds: 113.8
+    dog: 0
+  - size: 10
+    seconds: 126.5
+    dog: 0
+  - size: 10
+    seconds: 139.1
+    dog: 0
+  - size: 9
+    seconds: 92.6
+    dog: 0
   - size: 10
     seconds: 105.2
+    dog: 0
   - size: 9
-    seconds: 108.8
+    seconds: 97.4
+    dog: 0
   - size: 10
-    seconds: 117.6
+    seconds: 115
+    dog: 0
   - size: 10
-    seconds: 140
+    seconds: 128
+    dog: 0
   - size: 10
-    seconds: 148.8
-  - size: 8
-    seconds: 71.7
-  - size: 10
-    seconds: 119.7
-  - size: 10
-    seconds: 121.2
+    seconds: 141.1
+    dog: 0
   - size: 9
-    seconds: 91.3
+    seconds: 92.9
+    dog: 0
   - size: 10
-    seconds: 130.9
-  - size: 10
-    seconds: 109.3
+    seconds: 105.9
+    dog: 0
   - size: 9
-    seconds: 108.3
+    seconds: 97.8
+    dog: 0
   - size: 10
-    seconds: 119.6
+    seconds: 116
+    dog: 0
   - size: 10
-    seconds: 139.9
+    seconds: 129.6
+    dog: 0
   - size: 10
-    seconds: 150.3
-  - size: 8
-    seconds: 71.1
-  - size: 10
-    seconds: 120.3
-  - size: 10
-    seconds: 122.7
+    seconds: 143.1
+    dog: 0
   - size: 9
-    seconds: 90.8
+    seconds: 93.2
+    dog: 0
   - size: 10
-    seconds: 133.3
-  - size: 10
-    seconds: 112.2
+    seconds: 106.7
+    dog: 0
   - size: 9
-    seconds: 110.7
+    seconds: 98.3
+    dog: 0
   - size: 10
-    seconds: 121.1
+    seconds: 117.1
+    dog: 0
   - size: 10
-    seconds: 139.5
+    seconds: 131.1
+    dog: 0
+  - size: 10
+    seconds: 145.1
+    dog: 0
+  - size: 9
+    seconds: 93.4
+    dog: 0
+  - size: 10
+    seconds: 107.4
+    dog: 0
+  - size: 9
+    seconds: 98.7
+    dog: 0
+  - size: 10
+    seconds: 118.1
+    dog: 0
   - size: 11
-    seconds: 197
-  waves:
-  - seconds:
-    - 64.4
-    - 112
-    - 118.9
-    - 101.5
-    - 133.2
-    - 103.7
-    - 96.6
-    - 128.2
-    - 136.8
-    - 143.4
-    - 65.8
-    - 122.6
-    - 133.2
-    - 116.5
-    - 152
-    - 64.4
-    - 93.4
-    - 130.2
-    - 139.4
-    - 124.9
-  - seconds:
-    - 85.9
-    - 139.4
-    - 101.8
-    - 96.6
-    - 130.2
-    - 122.6
-    - 109.7
-    - 65.8
-    - 124.9
-    - 136.8
-    - 75.8
-    - 130.2
-    - 141.8
-    - 84.2
-    - 124.9
-    - 136.8
-    - 117.7
-    - 152
-    - 65.8
-    - 118.9
-  - seconds:
-    - 65.8
-    - 108.9
-    - 114.9
-    - 98.6
-    - 127.1
-    - 131.2
-    - 82.7
-    - 124.9
-    - 135
-    - 140.2
-    - 95.6
-    - 152
-    - 101.8
-    - 99.6
-    - 130.2
-    - 118.9
-    - 109.7
-    - 124.9
-    - 112
-    - 130.2
-  - seconds:
-    - 67.2
-    - 122.6
-    - 136.8
-    - 116.5
-    - 103.7
-    - 124.9
-    - 113.2
-    - 147.2
-    - 152
-    - 65.8
-    - 78.5
-    - 133.2
-    - 124.9
-    - 113.2
-    - 130.2
-    - 103.7
-    - 101.5
-    - 139.4
-    - 130.2
-    - 118.9
-  - seconds:
-    - 68.4
-    - 130.2
-    - 112
-    - 111.1
-    - 118.9
-    - 141.8
-    - 82.7
-    - 133.2
-    - 122.6
-    - 143.4
-    - 73.9
-    - 138.5
-    - 124.9
-    - 123.5
-    - 65.8
-    - 130.2
-    - 96.6
-    - 139.4
-    - 124.9
-    - 114.9
-  hotFactor: 1.036
-  macroHotLen: 150
-  macroCoolLen: 100
+    seconds: 165.5
+    dog: 0
+  waveBaseSeconds: 130
+  waveShape:
+  - 0.805
+  - 0.926
+  - 0.85
+  - 1.018
+  - 1.141
+  - 1.262
+  waveSizeFromSeconds:
+  - 74
+  - 100
+  - 160
   breatherSeconds: 105.5
   buildSeconds: 124.9
   peakSeconds: 147.2
   milestoneEvery: 50
   milestoneSize: 11
-  milestoneMinSeconds: 203.8
-  milestoneMaxSeconds: 213
-  milestonePoolMaxSeconds: 234
-  jitter: 0.025
+  milestoneSeconds: 185
   timeTol: 0.06
   sizeRotation: 080000000a0000000a000000090000000a0000000a000000090000000a0000000a0000000a000000
   sizeRanges:

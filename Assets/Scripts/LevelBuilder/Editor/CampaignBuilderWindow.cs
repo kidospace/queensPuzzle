@@ -42,13 +42,13 @@ namespace QueensPuzzle
         // graph data, rebuilt only on Show graph: the curve's targets and the built levels, drawn
         // together on one plot; each line has a checkbox. null = that line has no data (no curve).
         int[] targets, built;
-        byte[] roles;
+        byte[] roles, lessons;   // lessons: 0 none, 1-3 the stage of a trick lesson
         int dataFrom, maxSeconds;
         [SerializeField] bool showTargets = true, showBuilt = true;
 
         // screen-space cache, rebuilt when data, checkboxes or rect changes
         Vector3[] targetLine, builtLine;
-        Vector3[] milestones;
+        Vector3[] milestones, lessonDots = new Vector3[0];   // lessonDots: z = half size
         Rect cachedRect;
         bool cacheStale = true;
 
@@ -770,6 +770,7 @@ namespace QueensPuzzle
             targets = config != null ? new int[n] : null;
             built = new int[n];
             roles = new byte[n];
+            lessons = new byte[n];
             dataFrom = from;
             maxSeconds = 1;
             try
@@ -782,6 +783,7 @@ namespace QueensPuzzle
                         var t = config.GetTarget(from + i);
                         targets[i] = Mathf.RoundToInt(t.targetSeconds);
                         roles[i] = (byte)t.role;
+                        lessons[i] = (byte)(t.tricks.lesson ? t.tricks.stage : 0);
                         if (targets[i] > maxSeconds) maxSeconds = targets[i];
                     }
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
@@ -854,6 +856,18 @@ namespace QueensPuzzle
                 GL.Vertex3(p.x + s, p.y + s, 0);
                 GL.Vertex3(p.x - s, p.y + s, 0);
             }
+            // lesson levels: a green square on the first (the trick is learned), a small one on the two after
+            var green = pro ? new Color(0.35f, 0.80f, 0.45f) : new Color(0.10f, 0.60f, 0.25f);
+            GL.Color(green);
+            for (int i = 0; i < lessonDots.Length; i++)
+            {
+                var p = lessonDots[i];
+                float h = p.z;   // half size, by stage
+                GL.Vertex3(p.x - h, p.y - h, 0);
+                GL.Vertex3(p.x + h, p.y - h, 0);
+                GL.Vertex3(p.x + h, p.y + h, 0);
+                GL.Vertex3(p.x - h, p.y + h, 0);
+            }
             GL.End();
 
             GL.PopMatrix();
@@ -893,7 +907,8 @@ namespace QueensPuzzle
             string text = $"Level {level}"
                 + (hasTarget ? $"  |  target {targets[i]} s" : "")
                 + (showBuilt ? $"  |  built {built[i]} s" : "")
-                + (milestone ? "  |  milestone" : "");
+                + (milestone ? "  |  milestone" : "")
+                + TrickNote(level);
             var style = new GUIStyle(EditorStyles.helpBox)
             {
                 alignment = TextAnchor.MiddleLeft,
@@ -907,6 +922,28 @@ namespace QueensPuzzle
             if (box.xMax > plot.xMax) box.x = Event.current.mousePosition.x - box.width - 12f;
             if (box.yMin < plot.yMin) box.y = Event.current.mousePosition.y + 12f;
             GUI.Label(box, text, style);
+        }
+
+        // What the curve asks of the level's tricks, and what is wrong with the built level's tricks (if anything).
+        string TrickNote(int level)
+        {
+            if (config == null) return "";
+            var t = config.GetTarget(level);
+            string s = "";
+            if (t.tricks.lesson)
+            {
+                string[] stage = { "learn", "practise", "prove" };
+                string times = t.tricks.maxUses == 0 ? $"×{t.tricks.minUses}+" : t.tricks.minUses == t.tricks.maxUses ? $"×{t.tricks.minUses}" : $"×{t.tricks.minUses}-{t.tricks.maxUses}";
+                s += $"  |  {stage[Mathf.Clamp(t.tricks.stage - 1, 0, 2)]} {t.tricks.teach} {times}";
+            }
+            if (t.dog) s += "  |  dog";
+            var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
+            if (lvl != null)
+            {
+                string bad = CampaignCurve.TrickProblem(t, CampaignCurve.ReportOf(lvl));
+                if (bad != null) s += $"  |  built: {bad}";
+            }
+            return s;
         }
 
         void RebuildScreenCache(Rect plot, Rect full)
@@ -924,6 +961,16 @@ namespace QueensPuzzle
                     if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone)
                         miles.Add(ToScreen(plot, i, on.Length, on[i]));
             milestones = miles.ToArray();
+
+            var dots = new System.Collections.Generic.List<Vector3>();
+            if (on != null && lessons != null)
+                for (int i = 0; i < on.Length; i++)
+                    if (lessons[i] > 0)
+                    {
+                        var p = ToScreen(plot, i, on.Length, on[i]);
+                        dots.Add(new Vector3(p.x, p.y, lessons[i] == 1 ? 4.5f : 2.5f));
+                    }
+            lessonDots = dots.ToArray();
         }
 
         // Two points per pixel column (max then min) — spikes and breathers both survive
