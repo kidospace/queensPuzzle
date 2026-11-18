@@ -14,9 +14,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   placeFactor:
   - level: 1
-    factor: 1
+    factor: 4.89
+  - level: 2
+    factor: 4
+  - level: 3
+    factor: 2.14
+  - level: 4
+    factor: 2.53
+  - level: 5
+    factor: 1.39
+  - level: 6
+    factor: 1.82
+  - level: 7
+    factor: 1.91
+  - level: 8
+    factor: 1.52
+  - level: 9
+    factor: 1.77
+  - level: 10
+    factor: 1.33
+  - level: 11
+    factor: 1.7
   - level: 12
-    factor: 1
+    factor: 1.42
   - level: 13
     factor: 1.32
   - level: 40
@@ -43,29 +63,29 @@ MonoBehaviour:
     factor: 0.88
   learnLevels:
   - size: 4
-    seconds: 19.7
+    seconds: 4.5
   - size: 4
-    seconds: 24.2
+    seconds: 3.5
   - size: 6
-    seconds: 35.3
+    seconds: 13.1
   - size: 6
-    seconds: 36.5
+    seconds: 15
   - size: 8
-    seconds: 57.1
+    seconds: 41.8
   - size: 6
-    seconds: 34.5
+    seconds: 15.4
   - size: 6
-    seconds: 40.5
+    seconds: 15.7
   - size: 8
-    seconds: 58.8
+    seconds: 55.2
   - size: 8
-    seconds: 62.4
+    seconds: 58.2
   - size: 7
-    seconds: 56.9
+    seconds: 46
   - size: 6
-    seconds: 27
+    seconds: 24.1
   - size: 6
-    seconds: 37.1
+    seconds: 30.2
   - size: 8
     seconds: 52
   - size: 8

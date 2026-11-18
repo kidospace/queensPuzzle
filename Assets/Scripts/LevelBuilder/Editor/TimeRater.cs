@@ -41,13 +41,14 @@ namespace QueensPuzzle
     /// </summary>
     public static class TimeRater
     {
-        /// <summary>Seconds for a regular player, rounded.</summary>
-        public static int Seconds(int n, int[] region, int[] sol, in WeightRater.Report r)
-            => (int)Math.Round(SecondsExact(n, region, sol, r));
+        /// <summary>Seconds for a regular player, rounded. <paramref name="revealedRows"/>: rows whose
+        /// queen starts revealed on the board (null / empty = none) — pass the same ones the report was rated with.</summary>
+        public static int Seconds(int n, int[] region, int[] sol, in WeightRater.Report r, int[] revealedRows = null)
+            => (int)Math.Round(SecondsExact(n, region, sol, r, revealedRows));
 
         /// <summary>The same, not rounded — what the slot windows are checked against.</summary>
-        public static double SecondsExact(int n, int[] region, int[] sol, in WeightRater.Report r)
-            => Math.Exp(Ln(r, Roads(n, region, sol)));
+        public static double SecondsExact(int n, int[] region, int[] sol, in WeightRater.Report r, int[] revealedRows = null)
+            => Math.Exp(Ln(r, Roads(n, region, sol, revealedRows)));
 
         static double Ln(in WeightRater.Report r, double roads) =>
             - 0.32580
@@ -95,15 +96,21 @@ namespace QueensPuzzle
 
         /// <summary>
         /// Seconds summed over the positions players are likely to stand in, by their share.
+        /// The walk starts from the queens revealed at the start, and prices only the ones the
+        /// player places himself.
         /// </summary>
-        static double Roads(int n, int[] region, int[] sol)
+        static double Roads(int n, int[] region, int[] sol, int[] revealedRows)
         {
             var open = new bool[n * n];
             int[] row = new int[n], col = new int[n], reg = new int[n];
-            var here = new List<Position> { new Position { placed = new int[0], share = 1 } };
+            int given = revealedRows == null ? 0 : revealedRows.Length;
+            var start = new int[given];
+            for (int i = 0; i < given; i++) start[i] = revealedRows[i] * n + sol[revealedRows[i]];
+            Array.Sort(start);
+            var here = new List<Position> { new Position { placed = start, share = 1 } };
             double total = 0;
 
-            for (int queen = 0; queen < n; queen++)
+            for (int queen = given; queen < n; queen++)
             {
                 here.RemoveAll(p => p.share < MinShare);
                 here = here.OrderByDescending(p => p.share).ToList();   // stable: ties keep their order
@@ -130,7 +137,7 @@ namespace QueensPuzzle
                         if (places < best) best = places;
                     }
 
-                    total += share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best));
+                    total += share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best, queen == given));
 
                     // who goes where: mostly the tightest queen, a colour read before a line
                     double sum = 0;
@@ -181,8 +188,9 @@ namespace QueensPuzzle
         /// Seconds the next queen costs from a position: the solver is run from there until it can
         /// place a queen, and what it needed on the way is priced. <paramref name="easiest"/> is
         /// the fewest places any unplaced queen has left — 1 means a queen is plainly forced.
+        /// <paramref name="first"/>: the first queen the player places himself.
         /// </summary>
-        static double QueenSeconds(int n, int[] region, int[] sol, int[] placed, int easiest)
+        static double QueenSeconds(int n, int[] region, int[] sol, int[] placed, int easiest, bool first)
         {
             var s = new SolveTracer.Board(n, region);
             foreach (int c in placed) s.SeedQueen(c);
@@ -227,7 +235,7 @@ namespace QueensPuzzle
             if (byLine) paid++;   // reading a line costs like a trick
 
             return -10.60713
-                + (placed.Length == 0 ? -8.10833 : 0)          // the first queen: the board is still being read
+                + (first ? -8.10833 : 0)                       // the first queen: the board is still being read
                 + (open < 6 ? -0.65191 : 0)
                 + (open < 12 ? -1.74372 : 0)
                 + 5.68797 * Math.Log(1 + open)

@@ -18,7 +18,7 @@ namespace QueensPuzzle {
                     if (lvl == null) continue;
                     if (EditorUtility.DisplayCancelableProgressBar("Rating levels", path, (float)i / guids.Length)) break;
                     try {
-                        var rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns);
+                        var rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows);
                         if (lvl.weight != rep.weight) {
                             lvl.weight = rep.weight;
                             EditorUtility.SetDirty(lvl);

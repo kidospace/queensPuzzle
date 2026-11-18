@@ -56,15 +56,26 @@ namespace QueensPuzzle
         }
 
         // Measured on recordings (22 Oct – 10 Nov 2026): the regular player's real time on each level
-        // against the board's own rating, middle value per stretch of levels. Levels 1-12 (boards
-        // under 8x8) are not measured and stay at 1; nothing is measured past ~1,200, the last value holds.
+        // against the board's own rating, middle value per stretch of levels. Levels 1-12 are fixed boards
+        // with 900-1,150 players each, so each has its own measured factor (it also carries what the rating
+        // misses on boards under 8x8, which it was not fitted for). Nothing is measured past ~1,200, the last value holds.
         [Header("Place in the game")]
         [Tooltip("How much longer (or shorter) the same board takes at a level than it takes an experienced player. " +
                  "Read between the points on a log scale of the level; before the first and after the last point the value holds.")]
         public PlacePoint[] placeFactor =
         {
-            new PlacePoint { level = 1,    factor = 1.00f },
-            new PlacePoint { level = 12,   factor = 1.00f },
+            new PlacePoint { level = 1,   factor = 4.89f },
+            new PlacePoint { level = 2,   factor = 4.00f },
+            new PlacePoint { level = 3,   factor = 2.14f },
+            new PlacePoint { level = 4,   factor = 2.53f },
+            new PlacePoint { level = 5,   factor = 1.39f },
+            new PlacePoint { level = 6,   factor = 1.82f },
+            new PlacePoint { level = 7,   factor = 1.91f },
+            new PlacePoint { level = 8,   factor = 1.52f },
+            new PlacePoint { level = 9,   factor = 1.77f },
+            new PlacePoint { level = 10,  factor = 1.33f },
+            new PlacePoint { level = 11,  factor = 1.70f },
+            new PlacePoint { level = 12,  factor = 1.42f },
             new PlacePoint { level = 13,   factor = 1.32f },
             new PlacePoint { level = 40,   factor = 1.32f },
             new PlacePoint { level = 60,   factor = 1.28f },
@@ -93,8 +104,8 @@ namespace QueensPuzzle
         [Tooltip("One entry per level: its board size and its seconds. A level on a milestone number is a milestone.")]
         public LearnLevel[] learnLevels =
         {
-            L(4, 19.7f), L(4, 24.2f), L(6, 35.3f), L(6, 36.5f), L(8, 57.1f), L(6, 34.5f), L(6, 40.5f), L(8, 58.8f), L(8, 62.4f), L(7, 56.9f),   // 1-10
-            L(6, 27.0f), L(6, 37.1f), L(8, 52.0f), L(8, 55.9f), L(8, 65.1f), L(8, 47.6f), L(8, 60.6f), L(8, 52.0f), L(8, 64.6f), L(9, 79.5f),   // 11-20
+            L(4, 4.5f), L(4, 3.5f), L(6, 13.1f), L(6, 15.0f), L(8, 41.8f), L(6, 15.4f), L(6, 15.7f), L(8, 55.2f), L(8, 58.2f), L(7, 46.0f),   // 1-10
+            L(6, 24.1f), L(6, 30.2f), L(8, 52.0f), L(8, 55.9f), L(8, 65.1f), L(8, 47.6f), L(8, 60.6f), L(8, 52.0f), L(8, 64.6f), L(9, 79.5f),   // 11-20
             L(8, 49.0f), L(8, 57.8f), L(8, 58.1f), L(8, 55.6f), L(8, 60.2f), L(8, 54.7f), L(9, 79.1f), L(8, 60.0f), L(10, 106.0f), L(10, 116.3f),   // 21-30
             L(8, 50.8f), L(8, 55.3f), L(8, 59.6f), L(8, 59.0f), L(10, 100.5f), L(8, 55.4f), L(9, 82.0f), L(8, 63.1f), L(10, 108.6f), L(10, 119.8f),   // 31-40
             L(8, 53.5f), L(8, 57.6f), L(8, 64.7f), L(9, 76.7f), L(10, 103.6f), L(8, 61.4f), L(9, 88.8f), L(8, 59.8f), L(10, 109.2f), L(11, 153.8f),   // 41-50

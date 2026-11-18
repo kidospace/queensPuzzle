@@ -27,6 +27,9 @@ namespace QueensPuzzle
     /// multiplies deeper cost by Nest per level and hits a flat wall at MaxProbe.
     /// The known unique solution guides which wrong cell to disprove (luck-free, cheapest first).
     ///
+    /// Queens revealed at the start of a level (LevelData.revealedRows) are on the board before the
+    /// player's first move, so the solve starts from them — a trick they make unnecessary is not counted.
+    ///
     /// The total is the level's WEIGHT (int) — how heavy it is to solve.
     /// Rough feel: &lt;10 trivial, ~40 easy, ~100 medium, ~300 hard, 400+ brutal.
     /// Full model documented in docs/weight-model.svg.
@@ -74,11 +77,14 @@ namespace QueensPuzzle
             public int[] guessCosts;     // one entry per stuck point (consecutive guesses merge into one run)
         }
 
-        public static Report Rate(int n, int[] region, int[] solution)
+        /// <param name="revealedRows">Rows whose queen starts revealed on the board (null / empty = none).</param>
+        public static Report Rate(int n, int[] region, int[] solution, int[] revealedRows = null)
         {
             var m = new Metrics();
             var ctx = new Ctx();
             var s = new SolveTracer.Board(n, region);
+            if (revealedRows != null)
+                foreach (int row in revealedRows) s.SeedQueen(row * n + solution[row]);
             int weight = 0;
             bool solved = true;
             var prevTech = SolveTechnique.None; // last paid trick — a repeat halves the think cost

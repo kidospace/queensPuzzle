@@ -23,7 +23,7 @@ namespace QueensPuzzle {
                     if (lvl == null) continue;
                     if (EditorUtility.DisplayCancelableProgressBar("Checking guess walls", path, (float)i / guids.Length)) break;
                     try {
-                        var rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns);
+                        var rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows);
                         if (!rep.solved) broken.Add(path);
                         else if (rep.trials > 0) walls.Add((path, rep));
                         done++;

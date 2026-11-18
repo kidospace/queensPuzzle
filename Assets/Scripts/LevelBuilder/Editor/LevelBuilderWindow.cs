@@ -619,6 +619,10 @@ namespace QueensPuzzle.EditorTools
             if (!list.Remove(row)) list.Add(row);
             list.Sort();
             _level.revealedRows = list.ToArray();
+            // a revealed queen changes what the player has to do — rate the level again
+            _report = WeightRater.Rate(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
+            _seconds = TimeRater.Seconds(_level.size, _level.regions, _level.solutionColumns, _report.Value, _level.revealedRows);
+            _level.weight = _report.Value.weight;
             if (EditorUtility.IsPersistent(_level)) EditorUtility.SetDirty(_level);
             Repaint();
         }
@@ -1207,8 +1211,8 @@ namespace QueensPuzzle.EditorTools
         void SetLevel(LevelData lvl)
         {
             _level = lvl;
-            _report = lvl != null ? WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns) : (WeightRater.Report?)null;
-            _seconds = lvl != null ? TimeRater.Seconds(lvl.size, lvl.regions, lvl.solutionColumns, _report.Value) : 0;
+            _report = lvl != null ? WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows) : (WeightRater.Report?)null;
+            _seconds = lvl != null ? TimeRater.Seconds(lvl.size, lvl.regions, lvl.solutionColumns, _report.Value, lvl.revealedRows) : 0;
             _trace = lvl != null ? SolveTracer.Build(lvl.size, lvl.regions, lvl.solutionColumns) : null;
             AnnotateGuessCosts(_trace);
             _importText = lvl != null ? LevelToGridText(lvl) : "";
@@ -1281,9 +1285,9 @@ namespace QueensPuzzle.EditorTools
 
         void Recheck()
         {
-            var rep = WeightRater.Rate(_level.size, _level.regions, _level.solutionColumns);
+            var rep = WeightRater.Rate(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
             _report = rep;
-            _seconds = TimeRater.Seconds(_level.size, _level.regions, _level.solutionColumns, rep);
+            _seconds = TimeRater.Seconds(_level.size, _level.regions, _level.solutionColumns, rep, _level.revealedRows);
             _level.weight = rep.weight;
             _trace = SolveTracer.Build(_level.size, _level.regions, _level.solutionColumns);
             AnnotateGuessCosts(_trace);

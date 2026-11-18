@@ -25,18 +25,19 @@ namespace QueensPuzzle
         // A built level stores its board, not its seconds, so the seconds need the board rated again.
         // Kept per asset (and dropped when the board changes) so a count or a graph over a range
         // costs the rating once, not on every repaint.
-        static readonly System.Collections.Generic.Dictionary<int, (int weight, int size, double secs)> _secs
-            = new System.Collections.Generic.Dictionary<int, (int, int, double)>();
+        static readonly System.Collections.Generic.Dictionary<int, (int weight, int size, int revealed, double secs)> _secs
+            = new System.Collections.Generic.Dictionary<int, (int, int, int, double)>();
 
         /// <summary>Calibrated seconds of a built level — the board's own, for an experienced player
         /// (rates the board; cached per asset).</summary>
         public static double SecondsOf(LevelData lvl)
         {
             int id = lvl.GetInstanceID();
-            if (_secs.TryGetValue(id, out var c) && c.weight == lvl.weight && c.size == lvl.size) return c.secs;
+            int revealed = lvl.revealedRows == null ? 0 : lvl.revealedRows.Length;
+            if (_secs.TryGetValue(id, out var c) && c.weight == lvl.weight && c.size == lvl.size && c.revealed == revealed) return c.secs;
             double s = TimeRater.SecondsExact(lvl.size, lvl.regions, lvl.solutionColumns,
-                WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns));
-            _secs[id] = (lvl.weight, lvl.size, s);
+                WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows), lvl.revealedRows);
+            _secs[id] = (lvl.weight, lvl.size, revealed, s);
             return s;
         }
 

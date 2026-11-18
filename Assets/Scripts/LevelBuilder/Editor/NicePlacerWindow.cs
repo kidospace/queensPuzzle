@@ -235,7 +235,7 @@ namespace QueensPuzzle.EditorTools
                     name = Path.GetFileNameWithoutExtension(path),
                     number = int.TryParse(Path.GetFileNameWithoutExtension(path), out int num) ? num : -1,
                     lvl = lvl,
-                    rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns),
+                    rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows),
                     hash = lvl.ContentHash(),
                 });
             }
