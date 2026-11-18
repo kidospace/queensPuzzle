@@ -141,7 +141,7 @@ namespace QueensPuzzle
             new TrickOpening { trick = Trick.Squeeze,               level = 16 },
             new TrickOpening { trick = Trick.Subset2LinesToRegions, level = 31 },
             new TrickOpening { trick = Trick.Subset2RegionsToLines, level = 41 },
-            new TrickOpening { trick = Trick.Subset3,               level = 61 },
+            new TrickOpening { trick = Trick.Subset3,               level = 61, proveUses = 1 },   // twice on one board made it far longer than the level asks
             new TrickOpening { trick = Trick.Choke,                 level = 81 },
             new TrickOpening { trick = Trick.Fish,                  level = 101, proveUses = 1 },   // two on one board: 1 in ~1,300 boards
         };
@@ -179,7 +179,7 @@ namespace QueensPuzzle
             L(9, 95.4f), L(9, 90.5f), L(10, 102.2f), L(10, 111.1f), L(10, 120.0f), L(9, 88.2f), L(9, 97.0f), L(9, 91.8f), L(10, 104.2f), L(10, 113.5f),   // 71-80
             L(9, 91.1f), L(10, 100.7f), L(10, 116.6f), L(9, 99.2f), L(9, 99.1f), L(9, 93.3f), L(10, 106.5f), L(10, 116.4f), L(10, 126.2f), L(9, 90.3f),   // 81-90
             L(10, 100.1f), L(9, 94.1f), L(10, 107.9f), L(10, 118.2f), L(10, 128.5f), L(9, 90.9f), L(10, 101.1f), L(9, 94.8f), L(10, 109.2f), L(10, 155.6f),   // 91-100
-            L(9, 95.2f), L(10, 105.1f), L(10, 121.6f), L(10, 103.3f), L(10, 102.5f), L(9, 95.8f), L(10, 111.0f), L(10, 122.3f), L(10, 133.7f), L(9, 92.1f),   // 101-110
+            L(9, 95.2f), L(10, 115.0f), L(10, 121.6f), L(10, 103.3f), L(10, 102.5f), L(9, 95.8f), L(10, 111.0f), L(10, 122.3f), L(10, 133.7f), L(9, 92.1f),   // 101-110
             L(10, 103.4f), L(9, 96.4f), L(10, 112.3f), L(10, 124.1f), L(10, 135.9f), L(9, 92.5f), L(10, 104.2f), L(9, 96.8f), L(10, 113.2f), L(10, 125.3f),   // 111-120
             L(10, 137.4f), L(9, 92.5f), L(10, 104.6f), L(9, 97.0f), L(10, 113.8f), L(10, 126.5f), L(10, 139.1f), L(9, 92.6f), L(10, 105.2f), L(9, 97.4f),   // 121-130
             L(10, 115.0f), L(10, 128.0f), L(10, 141.1f), L(9, 92.9f), L(10, 105.9f), L(9, 97.8f), L(10, 116.0f), L(10, 129.6f), L(10, 143.1f), L(9, 93.2f),   // 131-140

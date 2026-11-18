@@ -82,7 +82,7 @@ MonoBehaviour:
     proveUses: 0
   - trick: 6
     level: 61
-    proveUses: 0
+    proveUses: 1
   - trick: 7
     level: 81
     proveUses: 0
@@ -397,7 +397,7 @@ MonoBehaviour:
     seconds: 95.2
     dog: 0
   - size: 10
-    seconds: 105.1
+    seconds: 115
     dog: 0
   - size: 10
     seconds: 121.6
