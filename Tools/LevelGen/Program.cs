@@ -6,6 +6,9 @@
 //   LevelGen sim   <job file> <boards>         the same, one board after another and nothing written:
 //                                              a fixed order, to compare with the editor line by line
 //   LevelGen rate  <set folder> [max level]    rate the levels of a set (weight, seconds)
+//   LevelGen fill  <drawing> <set folder> <first number> <how many> [tries]
+//                                              complete a drawing (a text grid: a palette colour per cell, "." = empty)
+//                                              into levels spread from its shortest to its longest, what was drawn untouched
 //
 // The job file is what the editor writes with PoolBuilder.Pack: gates, options and the slots.
 // To stop a build: create "<job file>.stop" (or Ctrl+C). Levels already written stay.
@@ -44,6 +47,7 @@ static class Program
         if (args.Length >= 3 && args[0] == "build") return Build(args[1], args[2]);
         if (args.Length >= 3 && args[0] == "sim") return Sim(args[1], int.Parse(args[2]));
         if (args.Length >= 3 && args[0] == "colors") return Colors(args[1], args[2]);
+        if (args.Length >= 5 && args[0] == "fill") return Fill(args[1], args[2], int.Parse(args[3]), int.Parse(args[4]), args.Length > 5 ? int.Parse(args[5]) : 20000);
         if (args.Length >= 2 && args[0] == "rate") return Rate(args[1], args.Length > 2 ? int.Parse(args[2]) : int.MaxValue);
         Console.Error.WriteLine("usage: LevelGen build <job file> <set folder> | sim <job file> <boards> | rate <set folder> [max level]");
         return 1;
@@ -58,16 +62,18 @@ static class Program
         string stopFile = jobFile + ".stop";
         if (File.Exists(stopFile)) File.Delete(stopFile);
         int slots = open.Count;
-        Console.WriteLine($"build: {slots} slots · threads {opt.threadCount} · seed base {opt.seedBase} · colours {(opt.colors == null ? "off" : "on")} · into {folder}");
+        int drawnSlots = open.Count(t => t.drawn);
+        Console.WriteLine($"build: {slots} slots{(drawnSlots > 0 ? $" ({drawnSlots} drawn, {opt.drawings.Count} drawings in the pool)" : "")} · threads {opt.threadCount} · seed base {opt.seedBase} · colours {(opt.colors == null ? "off" : "on")} · into {folder}");
 
         var clock = Stopwatch.StartNew();
         double lastLine = 0;
-        var (made, attempts, uncolourable) = PoolBuilder.Run(gates, open, opt,
+        var (made, attempts, uncolourable, undrawn) = PoolBuilder.Run(gates, open, opt,
             f =>
             {
                 WriteLevel(folder, f);
                 Console.WriteLine($"{clock.Elapsed:hh\\:mm\\:ss} level {f.slot.level} filled · {f.slot.boardSize}x{f.slot.boardSize} · asks {f.slot.targetSeconds:0} s · seed {f.seed}"
-                                + (f.revealedRows == null ? "" : $" · queen revealed in row {f.revealedRows[0]}"));
+                                + (f.revealedRows == null ? "" : $" · queen revealed in row {f.revealedRows[0]}")
+                                + (f.drawing == 0 ? "" : $" · drawing {f.drawing} ({opt.drawings.Find(d => d.number == f.drawing).name})"));
             },
             (done, left, boards) =>
             {
@@ -81,6 +87,7 @@ static class Program
 
         Console.WriteLine($"done: filled {made} of {slots} · boards {attempts} · {clock.Elapsed.TotalSeconds:0} s"
                         + (uncolourable > 0 ? $" · {uncolourable} board(s) discarded: no colour set fits" : "")
+                        + (undrawn > 0 ? $" · {undrawn} drawn slot(s) built as ordinary levels: no drawing of their size whose kind is free there" : "")
                         + (open.Count > 0 ? " · still open: " + string.Join(",", open.Select(t => t.level)) : ""));
         return 0;
     }
@@ -101,7 +108,8 @@ static class Program
           .Append("  weight: ").Append(f.weight).Append('\n')
           .Append("  seed: ").Append(f.seed).Append('\n')
           .Append("  revealedRows: ").Append(Hex(f.revealedRows)).Append('\n')
-          .Append("  regionColors: ").Append(Hex(f.regionColors)).Append('\n');
+          .Append("  regionColors: ").Append(Hex(f.regionColors)).Append('\n')
+          .Append("  drawing: ").Append(f.drawing).Append('\n');
         string path = Path.Combine(folder, f.slot.level + ".asset");
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, sb.ToString());       // whole file first, then swapped in: the editor never sees half a level
@@ -142,6 +150,41 @@ static class Program
             Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
                 "{{\"seed\":{0},\"size\":{1},\"ok\":true,\"hash\":{2},\"trials\":{3},\"seconds\":{4:R},\"level\":{5},\"row\":{6},\"weight\":{7}}}",
                 s, size, h, rep.trials, secs, level, row, weight));
+        }
+        return 0;
+    }
+
+    // ---- fill ----------------------------------------------------------------------------------
+
+    static int Fill(string drawingFile, string folder, int first, int howMany, int tries)
+    {
+        var drawing = StencilFiller.Drawing.Parse(File.ReadAllText(drawingFile), out string bad);
+        if (drawing == null) { Console.WriteLine("failed: " + bad); return 1; }
+        int n = drawing.size;
+        int[] paint = drawing.paint;
+        int[] ids = StencilFiller.FromPalette(paint, out int[] idToColor);
+        string problem = idToColor.Length >= n ? "every colour is used — nothing left to fill the empty cells with" : StencilFiller.ValidateStencil(n, ids);
+        if (problem != null) { Console.WriteLine("failed: " + problem); return 1; }
+
+        var clock = Stopwatch.StartNew();
+        var all = StencilFiller.Complete(n, ids, tries, 1000, null, howMany * 40);
+        Console.WriteLine($"{Path.GetFileNameWithoutExtension(drawingFile)}: {n}x{n}, {idToColor.Length} painted colours · {all.Count} completions in {clock.Elapsed.TotalSeconds:0.0} s"
+                        + (all.Count > 0 ? $" · from {all[0].time.seconds:0} s to {all[all.Count - 1].time.seconds:0} s" : ""));
+        if (all.Count == 0) return 0;
+
+        Directory.CreateDirectory(folder);
+        int[] colors = LevelColors.Stored(StencilFiller.Colors(n, idToColor));
+        for (int k = 0; k < Math.Min(howMany, all.Count); k++)
+        {
+            var f = all[howMany == 1 ? all.Count / 2 : (int)Math.Round((all.Count - 1) * (double)k / (howMany - 1))];   // spread over the range
+            WriteLevel(folder, new PoolBuilder.Filled
+            {
+                slot = new LevelTarget { level = first + k, boardSize = n },
+                region = f.region, cols = f.cols, weight = f.rep.weight, seed = f.seed, regionColors = colors,
+            });
+            Console.WriteLine($"  level {first + k}: {f.time.seconds:0} s · wall {f.time.wall:0.00} · start {f.time.start:0.00} · {CampaignCurve.TrickSteps(f.rep)} trick steps");
+            for (int r = 0; r < n; r++)
+                Console.WriteLine("     " + string.Join(" ", Enumerable.Range(0, n).Select(c => ((char)(f.region[r * n + c] < idToColor.Length ? 'A' + f.region[r * n + c] : 'a' + f.region[r * n + c])).ToString())));
         }
         return 0;
     }

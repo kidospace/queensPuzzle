@@ -179,6 +179,23 @@ namespace QueensPuzzle
                  "The board asked for is this ÷ the level's place factor, on the milestone size.")]
         public float milestoneSeconds = 185f;
 
+        // A drawn level is built around a drawing from the pool (Sets/DRAWINGS): the shape stays, the rest
+        // of the board is completed to the level's seconds. Which levels are drawn is written here, so it is
+        // known before anything is built; WHICH drawing a level gets is the builder's choice, kept on the level.
+        // A trick's lesson level, a milestone and a level that opens with a queen stay ordinary.
+        public const int DrawnCycle = 50;
+        [Header("Drawn levels")]
+        [Tooltip("No level before this one is drawn.")]
+        public int drawnFromLevel = 15;
+        [Tooltip("The drawn places in every 50 levels: 23 = levels 23, 73, 123 … Ten places = 20% of the levels.")]
+        public int[] drawnPlaces = { 3, 8, 14, 17, 23, 29, 34, 38, 43, 47 };
+        [Tooltip("Two levels this close (in levels) are never built from the same kind of drawing.")]
+        public int drawnKindApart = 40;
+
+        /// <summary>Is this level number one of the drawn places?</summary>
+        public bool IsDrawnPlace(int level) =>
+            drawnPlaces != null && level >= drawnFromLevel && Array.IndexOf(drawnPlaces, level % DrawnCycle) >= 0;
+
         [Header("Matching & variation")]
         [Tooltip("RELATIVE tolerance: accept a board within target ± (this × target seconds). 0.06 = ±6%. " +
                  "The rating itself is ~7% off on a board, so much tighter than this only slows the build.")]
@@ -247,6 +264,7 @@ namespace QueensPuzzle
         {
             var t = SlotAt(level);
             t.tricks = TrickRuleAt(level);
+            t.drawn = IsDrawnPlace(level) && !t.tricks.lesson && t.role != Role.Milestone && !t.dog;
             return t;
         }
 

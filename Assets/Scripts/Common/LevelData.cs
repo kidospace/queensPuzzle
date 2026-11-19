@@ -33,6 +33,9 @@ namespace QueensPuzzle
         [Tooltip("Optional palette (SORegionsColors) index per region id — painted levels keep their authored colours. Null/empty = region k uses colour k.")]
         public int[] regionColors;
 
+        [Tooltip("The drawing (Sets/DRAWINGS/<number>.txt) this level was built around. 0 = an ordinary level. The colours of what was drawn are the drawing's own, not the colour rules'.")]
+        public int drawing;
+
         /// <summary>Region id at the given cell.</summary>
         public int RegionAt(int row, int col) => regions[row * size + col];
 

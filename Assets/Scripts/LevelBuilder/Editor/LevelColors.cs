@@ -104,14 +104,16 @@ namespace QueensPuzzle
         /// <summary>
         /// True when the board breaks either rule — a close (or identical) pair anywhere, or a
         /// forbidden family pair touching. <paramref name="regionColors"/>: palette index per region,
-        /// null / empty = region k shows colour k.
+        /// null / empty = region k shows colour k. On a level built around a drawing the first
+        /// <paramref name="painted"/> regions are the drawn ones: a pair of those is not checked.
         /// </summary>
-        public static bool HasIssues(int n, int[] regionColors, Rules r, bool[,] adj)
+        public static bool HasIssues(int n, int[] regionColors, Rules r, bool[,] adj, int painted = 0)
         {
             int Of(int region) => regionColors != null && region < regionColors.Length ? regionColors[region] : region;
             for (int a = 0; a < n; a++)
                 for (int b = a + 1; b < n; b++)
                 {
+                    if (b < painted) continue;   // both drawn by hand: theirs to break the rules
                     int ca = Of(a), cb = Of(b);
                     if (ca >= r.Count || cb >= r.Count) continue;
                     if (ca == cb || Dist(r, ca, cb) < r.colorMinDist) return true;
@@ -129,9 +131,14 @@ namespace QueensPuzzle
         /// Distance alone is not enough: a set can be perfectly distinguishable and still ugly —
         /// hues bunched on one side of the wheel, or a pale cream sitting next to a dark green.
         /// So many valid sets are generated and the one that also reads as balanced is kept.
+        ///
+        /// On a level built around a drawing, <paramref name="painted"/> is the colour of each drawn
+        /// region (regions 0..k-1): those stay, and only the other regions are chosen — far from the
+        /// drawn colours as from each other.
         /// </summary>
-        public static int[] Pick(int n, int seed, Rules r, bool[,] adj)
+        public static int[] Pick(int n, int seed, Rules r, bool[,] adj, int[] painted = null)
         {
+            int fixedCount = painted == null ? 0 : painted.Length;
             if (n > r.Count) return null;
             var rng = new Random(seed);
             int[] best = null;
@@ -139,11 +146,11 @@ namespace QueensPuzzle
 
             for (int attempt = 0; attempt < 600; attempt++)
             {
-                var set = TrySpreadSet(n, rng, r);
+                var set = TrySpreadSet(n, rng, r, painted);
                 if (set == null) continue;
                 float s = HarmonyScore(set, r);
                 if (s <= bestScore) continue;
-                var assign = ArrangeOnRegions(set, adj, r);
+                var assign = ArrangeOnRegions(set, adj, r, fixedCount);
                 if (assign == null) continue;   // no arrangement keeps forbidden pairs apart
                 bestScore = s; best = assign;
                 if (attempt > 250) break;   // enough candidates seen
@@ -160,11 +167,13 @@ namespace QueensPuzzle
 
         // Place the picked colours on the regions so no forbidden pair touches.
         // Exhaustive backtracking — null only when no permutation works for this set.
-        static int[] ArrangeOnRegions(int[] set, bool[,] adj, Rules r)
+        // The first fixedCount colours of the set already belong to regions 0..fixedCount-1 (a drawing).
+        static int[] ArrangeOnRegions(int[] set, bool[,] adj, Rules r, int fixedCount)
         {
             int n = set.Length;
             var assign = new int[n];
             var used = new bool[n];
+            for (int i = 0; i < fixedCount; i++) { used[i] = true; assign[i] = set[i]; }
 
             bool Place(int region)
             {
@@ -183,11 +192,12 @@ namespace QueensPuzzle
                 return false;
             }
 
-            return Place(0) ? assign : null;
+            return Place(fixedCount) ? assign : null;
         }
 
         // One greedy attempt: shuffle the palette, take colours that clear colorMinDist.
-        static int[] TrySpreadSet(int n, Random rng, Rules r)
+        // The colours of a drawing come first, as they are; the rest keep their distance from them too.
+        static int[] TrySpreadSet(int n, Random rng, Rules r, int[] painted)
         {
             var order = new int[r.Count];
             for (int i = 0; i < order.Length; i++) order[i] = i;
@@ -199,6 +209,7 @@ namespace QueensPuzzle
 
             var picked = new int[n];
             int count = 0;
+            if (painted != null) foreach (int c in painted) picked[count++] = c;
             foreach (int c in order)
             {
                 bool ok = true;

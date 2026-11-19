@@ -24,6 +24,7 @@
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/PoolBuilder.cs" />
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/CampaignCurve.cs" />
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/LevelColors.cs" />
+    <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/StencilFiller.cs" />
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/LevelGenerator.cs" />
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/SolutionPlacer.cs" />
     <Compile Include="../../Assets/Scripts/LevelBuilder/Editor/RegionGrower.cs" />

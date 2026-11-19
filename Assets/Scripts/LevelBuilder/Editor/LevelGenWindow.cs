@@ -53,6 +53,16 @@ namespace QueensPuzzle
                     EditorUtility.DisplayDialog("Level Gen", $"Run #{r.id} is already building some of these levels into {outputFolder}.\nStop it first, or pick another range.", "OK");
                     return false;
                 }
+            // A run picks its drawings knowing the set and itself, not another run still going: two of them
+            // on drawn levels close together could put one kind of drawing side by side.
+            var drawn = open.Where(t => t.drawn).Select(t => t.level).ToList();
+            foreach (var r in running)
+                if (r.folder == folder && r.DrawnLevels().Any(a => drawn.Any(b => Math.Abs(a - b) <= opt.kindApart)))
+                {
+                    EditorUtility.DisplayDialog("Level Gen", $"Run #{r.id} is building drawn levels within {opt.kindApart} levels of this range.\n" +
+                        "Two runs do not see each other's drawings, so the same kind could land side by side.\n\nWait for it to end, or pick a range further away.", "OK");
+                    return false;
+                }
             if (!(running.Count > 0 && File.Exists(Exe)) && !EnsureExe(out _buildError))
             {
                 EditorUtility.DisplayDialog("Level Gen", "The builder could not be built:\n\n" + _buildError, "OK");
@@ -161,6 +171,15 @@ namespace QueensPuzzle
                 foreach (string line in File.ReadAllLines(dir + "/job.txt"))
                     if (line.StartsWith("slot ")) set.Add(int.Parse(line.Split(' ')[1]));
                 return set;
+            }
+
+            /// <summary>The run's drawn slots (the last number of a slot line).</summary>
+            public List<int> DrawnLevels()
+            {
+                var list = new List<int>();
+                foreach (string line in File.ReadAllLines(dir + "/job.txt"))
+                    if (line.StartsWith("slot ") && line.TrimEnd().EndsWith(" 1")) list.Add(int.Parse(line.Split(' ')[1]));
+                return list;
             }
 
             // take in what the run has written since the last look

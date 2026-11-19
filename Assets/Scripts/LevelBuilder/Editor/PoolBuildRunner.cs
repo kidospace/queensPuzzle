@@ -22,6 +22,55 @@ namespace QueensPuzzle
             public string tolLabel;   // display only, e.g. "time ±6%"
             public float maxSeconds;  // stop after this long and leave the rest open (0 = until done or cancelled)
             public LevelColors.Rules colors;   // every built level is coloured by these (null = left uncoloured)
+            public int kindApart;     // two levels this close are never built from the same kind of drawing
+        }
+
+        /// <summary>
+        /// What a build with drawn slots needs besides the slots: the pool of drawings (the DRAWINGS
+        /// folder beside the set) and which levels of the set are already built from a drawing.
+        /// Does nothing when no open slot is drawn.
+        /// </summary>
+        public static void AddDrawings(ref PoolBuilder.Options o, System.Collections.Generic.IList<LevelTarget> open, string outputFolder)
+        {
+            var rebuilt = new System.Collections.Generic.HashSet<int>();
+            bool any = false;
+            foreach (var t in open)
+            {
+                rebuilt.Add(t.level);
+                any |= t.drawn;
+            }
+            if (!any) return;
+
+            o.drawings = new System.Collections.Generic.List<StencilFiller.Drawing>();
+            string dir = System.IO.Path.GetDirectoryName(outputFolder).Replace('\\', '/') + "/" + StencilFiller.DrawingsFolder;
+            if (System.IO.Directory.Exists(dir))
+                foreach (string file in System.IO.Directory.GetFiles(dir, "*.txt"))
+                {
+                    if (!int.TryParse(System.IO.Path.GetFileNameWithoutExtension(file), out int number)) continue;
+                    var d = StencilFiller.Drawing.Parse(System.IO.File.ReadAllText(file), out string error);
+                    if (d == null) { Debug.LogWarning($"[PoolBuild] drawing {number} could not be read — {error}. Left out."); continue; }
+                    d.number = number;
+                    o.drawings.Add(d);
+                }
+            o.drawings.Sort((a, b) => a.number.CompareTo(b.number));
+
+            // every drawn level of the set, not only the ones near the slots: the kinds are counted over the
+            // whole set, so a kind gets its turns evenly however the set is cut into builds. Read from the
+            // files as text — a few seconds for a few thousand levels, once before a build starts.
+            o.drawn = new System.Collections.Generic.List<(int level, int drawing)>();
+            if (!System.IO.Directory.Exists(outputFolder)) return;
+            foreach (string file in System.IO.Directory.GetFiles(outputFolder, "*.asset"))
+            {
+                if (!int.TryParse(System.IO.Path.GetFileNameWithoutExtension(file), out int l) || rebuilt.Contains(l)) continue;   // rebuilt: about to be replaced
+                string text = System.IO.File.ReadAllText(file);
+                int at = text.LastIndexOf("\n  drawing: ", System.StringComparison.Ordinal);
+                if (at < 0) continue;
+                at += "\n  drawing: ".Length;
+                int end = at;
+                while (end < text.Length && char.IsDigit(text[end])) end++;
+                if (int.TryParse(text.Substring(at, end - at), out int number) && number > 0) o.drawn.Add((l, number));
+            }
+            o.drawn.Sort();
         }
 
         public sealed class ScanResult
@@ -60,16 +109,18 @@ namespace QueensPuzzle
             string outputFolder, Options opt)
         {
             EnsureFolder(outputFolder);
+            var o = new PoolBuilder.Options { threadCount = opt.threadCount, seedBase = opt.seedBase, maxSeconds = opt.maxSeconds, colors = opt.colors, kindApart = opt.kindApart };
+            AddDrawings(ref o, open, outputFolder);
             try
             {
                 AssetDatabase.StartAssetEditing();   // files are still written per level; Unity imports them once at the end
-                var (made, attempts, uncolourable) = PoolBuilder.Run(gates, open,
-                    new PoolBuilder.Options { threadCount = opt.threadCount, seedBase = opt.seedBase, maxSeconds = opt.maxSeconds, colors = opt.colors },
+                var (made, attempts, uncolourable, undrawn) = PoolBuilder.Run(gates, open, o,
                     f => SaveLevel(outputFolder, f),
                     (done, left, boards) => !EditorUtility.DisplayCancelableProgressBar(opt.title,
                         $"filled {done} · open {left} · boards {boards} · threads {opt.threadCount} · {opt.tolLabel}",
                         done / (float)(done + left)));
                 if (uncolourable > 0) Debug.LogWarning($"[PoolBuild] {uncolourable} board(s) fitted a slot but no colour set fits them — discarded.");
+                if (undrawn > 0) Debug.LogWarning($"[PoolBuild] {undrawn} drawn slot(s) built as ordinary levels: the pool has no drawing of their board size whose kind is free there.");
                 return (made, attempts);
             }
             finally
@@ -106,9 +157,11 @@ namespace QueensPuzzle
         }
 
         /// <summary>Is a built level what its slot asks for — the board size, the time AND the tricks?
-        /// A dog slot holds a board with exactly one revealed queen; any other slot, a board with none.</summary>
+        /// A dog slot holds a board with exactly one revealed queen; any other slot, a board with none.
+        /// A drawn slot holds a level built around a drawing; any other slot, an ordinary one.</summary>
         public static bool Fits(in LevelTarget t, LevelData lvl) =>
             lvl.size == t.boardSize
+            && (lvl.drawing > 0) == t.drawn
             && (lvl.revealedRows == null ? 0 : lvl.revealedRows.Length) == (t.dog ? 1 : 0)
             && CampaignCurve.InTimeWindow(t, SecondsOf(lvl))
             && CampaignCurve.TricksOk(t, ReportOf(lvl));
@@ -123,6 +176,7 @@ namespace QueensPuzzle
             data.seed = f.seed;
             data.revealedRows = f.revealedRows ?? new int[0];
             data.regionColors = f.regionColors;
+            data.drawing = f.drawing;
             AssetDatabase.CreateAsset(data, $"{outputFolder}/{f.slot.level}.asset");
         }
 

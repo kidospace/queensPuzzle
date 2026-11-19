@@ -18,6 +18,7 @@ namespace QueensPuzzle
         public Role role;
         public bool dog;            // the level opens with one queen already on the board (the builder picks which)
         public TrickRule tricks;    // which tricks the board may / must need (default: anything goes)
+        public bool drawn;          // the board is built around a drawing from the pool (the builder picks which)
     }
 
     public enum Role { Breather, Normal, Build, Peak, Milestone }

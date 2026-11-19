@@ -37,6 +37,7 @@ namespace QueensPuzzle
         bool setGap;     // a level exists past the run → hole in the sequence
         [SerializeField] bool overrideOffTol = true;
         int offTolCount = -1;                       // -1 = needs recount
+        int offDrawnCount;                          // of those: an ordinary level on a drawn place, or the other way round
         (int, int, int, Object) offTolKey;          // (from, to, setIdx, config) the count was made for
         int threadCount = Mathf.Max(1, System.Environment.ProcessorCount - 1);
 
@@ -44,6 +45,7 @@ namespace QueensPuzzle
         // together on one plot; each line has a checkbox. null = that line has no data (no curve).
         int[] targets, built;
         byte[] roles, lessons;   // lessons: 0 none, 1-3 the stage of a trick lesson
+        byte[] drawnMarks;       // 0 not a drawn place · 1 built from a drawing · 2 built, but an ordinary level · 3 not built
         int dataFrom, maxSeconds;
         [SerializeField] bool showTargets = true, showBuilt = true;
 
@@ -74,7 +76,7 @@ namespace QueensPuzzle
             var found = new System.Collections.Generic.List<string>();
             if (System.IO.Directory.Exists(SetsRoot))
                 foreach (var d in System.IO.Directory.GetDirectories(SetsRoot))
-                    found.Add(System.IO.Path.GetFileName(d));
+                    if (System.IO.Path.GetFileName(d) != StencilFiller.DrawingsFolder) found.Add(System.IO.Path.GetFileName(d));   // drawings are not a set
             found.Sort(System.StringComparer.OrdinalIgnoreCase);
             if (found.Count == 0) found.Add("Campaign");   // created on first generate
             sets = found.ToArray();
@@ -158,7 +160,8 @@ namespace QueensPuzzle
                 {
                     UpdateOffTolCount();
                     EditorGUILayout.LabelField(" ",
-                        $"{offTolCount} existing level(s) not what their slot asks (board size, or time ±{config.timeTol * 100:0}%)", EditorStyles.miniLabel);
+                        $"{offTolCount} existing level(s) not what their slot asks — {offDrawnCount} because of a drawing (an ordinary level on a drawn place), " +
+                        $"{offTolCount - offDrawnCount} for their board size, time ±{config.timeTol * 100:0}% or tricks", EditorStyles.miniLabel);
                 }
                 using (new EditorGUI.DisabledScope(config == null))
                 {
@@ -225,8 +228,9 @@ namespace QueensPuzzle
         {
             var scan = OpenSlots();
             if (scan == null) return;
-            LevelGenWindow.Start($"{SetName} {from}–{to}", OutputFolder, config.Gates, scan.open,
-                new PoolBuilder.Options { threadCount = threadCount, seedBase = seedBase, colors = Rules(PaletteLab()) });
+            var opt = new PoolBuilder.Options { threadCount = threadCount, seedBase = seedBase, colors = Rules(PaletteLab()), kindApart = config.drawnKindApart };
+            PoolBuildRunner.AddDrawings(ref opt, scan.open, OutputFolder);
+            LevelGenWindow.Start($"{SetName} {from}–{to}", OutputFolder, config.Gates, scan.open, opt);
         }
 
         // generate → rate → fit into any open slot whose TIME it matches (±timeTol, fixed) — no widening,
@@ -255,6 +259,7 @@ namespace QueensPuzzle
                     seedBase = seedBase,
                     title = "Generating campaign levels",
                     colors = Rules(PaletteLab()),
+                    kindApart = config.drawnKindApart,
                     tolLabel = $"time ±{config.timeTol * 100:0}%",
                 });
 
@@ -477,7 +482,7 @@ namespace QueensPuzzle
             {
                 if (!int.TryParse(System.IO.Path.GetFileNameWithoutExtension(file), out int l)) continue;
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
-                if (lvl == null) continue;
+                if (lvl == null || lvl.drawing > 0) continue;   // a drawn level's colours are the drawing's; the build checked the rest
                 int n = lvl.size;
                 var adj = neighbors ? LevelColors.Adjacency(lvl.size, lvl.regions) : null;
                 for (int a = 0; a < n; a++)
@@ -547,6 +552,7 @@ namespace QueensPuzzle
 
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                     if (lvl == null) continue;
+                    if (lvl.drawing > 0) { skipped++; continue; }   // built around a drawing: its colours are not ours to change
 
                     var adj = LevelColors.Adjacency(lvl.size, lvl.regions);
                     if (!LevelColors.HasIssues(lvl.size, lvl.regionColors, rules, adj)) { skipped++; continue; }   // clean — keep shipped colours
@@ -605,13 +611,14 @@ namespace QueensPuzzle
             var key = (from, to, setIdx, (Object)config);
             if (offTolCount >= 0 && key == offTolKey) return;
             offTolKey = key;
-            offTolCount = 0;
+            offTolCount = offDrawnCount = 0;
             for (int l = from; l <= to; l++)
             {
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                 if (lvl == null) continue;
                 var t = config.GetTarget(l);
                 if (!PoolBuildRunner.Fits(t, lvl)) offTolCount++;   // size and time, like the build
+                if ((lvl.drawing > 0) != t.drawn) offDrawnCount++;
             }
         }
 
@@ -629,6 +636,7 @@ namespace QueensPuzzle
             factors = new float[n];
             roles = new byte[n];
             lessons = new byte[n];
+            drawnMarks = new byte[n];
             dataFrom = from;
             try
             {
@@ -646,6 +654,8 @@ namespace QueensPuzzle
                     }
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
                     builtBoard[i] = lvl != null ? (float)PoolBuildRunner.SecondsOf(lvl) : 0f;
+                    if (config != null && config.GetTarget(from + i).drawn)
+                        drawnMarks[i] = (byte)(lvl == null ? 3 : lvl.drawing > 0 ? 1 : 2);
                 }
             }
             finally { EditorUtility.ClearProgressBar(); }
@@ -767,6 +777,27 @@ namespace QueensPuzzle
                 withPlaceFactor ? "Seconds: a regular player at this level (board × place factor)"
                                 : "Seconds: the board itself, experienced player (no place factor)", unitLab);
 
+            // the drawn places, a row of marks under the title: what is there now
+            if (drawnMarks != null)
+            {
+                var drawnOk = new Color(0.72f, 0.48f, 0.96f);
+                var drawnNot = new Color(1f, 0.86f, 0.25f);
+                int marks = 0, ordinary = 0;
+                for (int i = 0; i < drawnMarks.Length; i++)
+                {
+                    if (drawnMarks[i] == 0) continue;
+                    marks++;
+                    if (drawnMarks[i] == 2) ordinary++;
+                    float x = plot.xMin + i / (float)Mathf.Max(1, drawnMarks.Length - 1) * plot.width;
+                    if (drawnMarks[i] == 1) EditorGUI.DrawRect(new Rect(x - 1.5f, plot.yMin + 20f, 3f, 9f), drawnOk);
+                    else if (drawnMarks[i] == 2) EditorGUI.DrawRect(new Rect(x - 1.5f, plot.yMin + 20f, 3f, 9f), drawnNot);
+                    else EditorGUI.DrawRect(new Rect(x - 1.5f, plot.yMin + 26f, 3f, 3f), drawnNot);   // nothing built yet: a dot
+                }
+                if (marks > 0)
+                    GUI.Label(new Rect(plot.xMin + 6, plot.yMin + 30, plot.width - 12, 16),
+                        $"Drawn places: {marks} — purple = built from a drawing, yellow = an ordinary level stands there ({ordinary}), yellow dot = not built", unitLab);
+            }
+
             DrawGraphHover(plot, ink, blue, orange, red);
         }
 
@@ -820,9 +851,13 @@ namespace QueensPuzzle
                 s += $"  |  {stage[Mathf.Clamp(t.tricks.stage - 1, 0, 2)]} {t.tricks.teach} {times}";
             }
             if (t.dog) s += "  |  dog";
+            if (t.drawn) s += "  |  drawn";
             var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
             if (lvl != null)
             {
+                if (t.drawn && lvl.drawing == 0) s += "  |  built: an ordinary level, the place asks for a drawing";
+                else if (!t.drawn && lvl.drawing > 0) s += $"  |  built: from drawing {lvl.drawing}, the place asks for an ordinary level";
+                else if (lvl.drawing > 0) s += $"  |  built: from drawing {lvl.drawing}";
                 string bad = CampaignCurve.TrickProblem(t, PoolBuildRunner.ReportOf(lvl));
                 if (bad != null) s += $"  |  built: {bad}";
             }
