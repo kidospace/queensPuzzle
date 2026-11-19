@@ -53,6 +53,9 @@ namespace qp {
             Resolved = true;
             Done = true;
             Debug.Log($"[MaxBoot] MAX initialized — consent geography: {Geography}");
+            // AppLovin predefined event: once per launch, starts their per-user SDK funnel.
+            // Singular's __SESSION__ → landing postback is separate (MMP side); they want both.
+            MaxSdk.TrackEvent("app_open");
             var pending = _pending;
             _pending = null;
             pending?.Invoke();
