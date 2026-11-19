@@ -32,6 +32,11 @@ namespace qp {
         /// <summary>How many levels shipped - read from the pack header (0 when no pack).</summary>
         public static int LevelCount => EnsurePack() ? _packCount : 0;
 
+        /// <summary>Is this level (0-based, as AppData.LevelIdx) a hard one? The pack says, per place;
+        /// past the pack's end the answer follows the board the level maps to.</summary>
+        public static bool IsHard(int levelIdx) =>
+            EnsurePack() && LevelPack.IsHard(_pack, PackIndex(Mathf.Max(0, levelIdx)));
+
         public static LevelPack.Level LoadLevel() {
 #if UNITY_EDITOR
             // Level Builder "Play" hands a specific level over via SessionState - it wins in-editor.

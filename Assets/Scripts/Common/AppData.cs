@@ -21,8 +21,8 @@ namespace qp {
         public static readonly PlayerPrefsHelper.IntHolder LevelIdx = new PlayerPrefsHelper.IntHolder("qp_level_idx", 0);
 
         // Whether the current level gets the Hard skin ($Hard on the level button, $LevelContainerHard
-        // in GP). No hard levels yet — everything is regular.
-        public static bool IsHardLevel => false;
+        // in GP). The level pack says which places are hard (the curve decides, at export).
+        public static bool IsHardLevel => LevelLoader.IsHard(LevelIdx);
 
         // How many times the CURRENT level was started, and which level the counter belongs to.
         // Reset only when a different level begins — LevelAttempts == 1 on the win = first try.

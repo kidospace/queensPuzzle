@@ -21,10 +21,14 @@ namespace QueensPuzzle
         [MenuItem("QueensPuzzle/Export Levels to Resources")]
         public static void Export() => Export(DefaultSource, "Puzzby");
 
-        public static void Export(string sourceFolder, string setName)
+        /// <summary><paramref name="isHard"/>: which level numbers are hard levels (the curve says) - written
+        /// into the pack per place. Null = none.</summary>
+        public static void Export(string sourceFolder, string setName, Func<int, bool> isHard = null)
         {
             var levels = GatherNumberedLevels(sourceFolder, setName);
             if (levels == null) return;
+            if (isHard != null)
+                for (int i = 0; i < levels.Count; i++) levels[i].hard = isHard(i + 1);
 
             ResolveLevelSetId(setName, levels, levelSetId =>
             {
@@ -280,6 +284,7 @@ namespace QueensPuzzle
                     foreach (int r in level.revealedRows)
                         if (r >= 0 && r < 16) revealed |= (ushort)(1 << r);
                 h = h * 31 + revealed;
+                h = h * 31 + (level.hard ? 1 : 0);
 
                 for (int i = 0; i < level.size; i++)
                     h = h * 31 + (level.regionColors != null && i < level.regionColors.Length ? level.regionColors[i] : i);

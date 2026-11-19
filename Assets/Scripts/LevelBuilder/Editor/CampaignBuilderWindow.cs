@@ -177,7 +177,7 @@ namespace QueensPuzzle
                     }
                 }
                 if (GUILayout.Button("Export levels → Resources"))
-                    LevelResourcesExporter.Export(OutputFolder, SetName);
+                    LevelResourcesExporter.Export(OutputFolder, SetName, config != null ? config.IsHard : (System.Func<int, bool>)null);
             }
 
             DrawColorsSection();

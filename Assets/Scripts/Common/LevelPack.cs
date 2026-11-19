@@ -13,13 +13,15 @@ namespace QueensPuzzle
     /// Plain layout (before encryption):
     ///   "QPLV" (4B) - version (1B) - levelSetId (string) - count (int32)
     ///   lookup table: count x int32 - byte offset of each level from the payload start
-    ///   payload, per level: size (1B) - weight (uint16) - revealedRows bitmask (uint16)
+    ///   payload, per level: size (1B) - weight (uint16) - revealedRows bitmask (uint16) - flags (1B, from version 3)
     ///     - regions (size^2 bytes) - solutionColumns (size bytes) - regionColors (size bytes)
+    ///   flags: bit 0 = this PLACE in the set is a hard level (the curve's word, written at export).
+    ///   A version 2 pack (no flags byte) still reads: nothing in it is hard.
 
     /// </summary>
     public static class LevelPack
     {
-        const byte Version = 2;
+        const byte Version = 3;
         static readonly byte[] MagicBytes = { (byte)'Q', (byte)'P', (byte)'L', (byte)'V' };
 
         /// <summary>
@@ -35,6 +37,7 @@ namespace QueensPuzzle
             public int[] solutionColumns;  // size entries
             public int[] revealedRows;     // may be null
             public int[] regionColors;     // may be null -> identity is written on encode
+            public bool hard;              // the place this level stands at is a hard one - shown with the Hard skin
 
             /// <summary>Region id at the given cell.</summary>
             public int RegionAt(int row, int col) => regions[row * size + col];
@@ -97,6 +100,7 @@ namespace QueensPuzzle
                         foreach (int r in l.revealedRows)
                             if (r >= 0 && r < 16) revealed |= (ushort)(1 << r);
                     pw.Write(revealed);
+                    pw.Write((byte)(l.hard ? 1 : 0));
 
                     foreach (int g in l.regions) pw.Write((byte)g);
                     foreach (int c in l.solutionColumns) pw.Write((byte)c);
@@ -155,6 +159,7 @@ namespace QueensPuzzle
                 l.weight = r.ReadUInt16();
 
                 ushort revealed = r.ReadUInt16();
+                if (h.version >= 3) l.hard = (r.ReadByte() & 1) != 0;
                 if (revealed != 0)
                 {
                     var rows = new List<int>(4);
@@ -172,9 +177,24 @@ namespace QueensPuzzle
             }
         }
 
+        /// <summary>Is the place at this index a hard level? Reads the one byte, not the level.</summary>
+        public static bool IsHard(byte[] plain, int index)
+        {
+            using (var h = OpenHeader(plain))
+            {
+                if (h.version < 3 || index < 0 || index >= h.count) return false;
+                var r = h.reader;
+                r.BaseStream.Position = h.lookupStart + index * 4L;
+                int offset = r.ReadInt32();
+                r.BaseStream.Position = h.payloadStart + offset + 5;   // past size, weight, revealed rows
+                return (r.ReadByte() & 1) != 0;
+            }
+        }
+
         sealed class Header : IDisposable
         {
             public BinaryReader reader;
+            public byte version;
             public string levelSetId;
             public int count;
             public long lookupStart;
@@ -190,7 +210,7 @@ namespace QueensPuzzle
                 if (magic.Length < 4 || magic[i] != MagicBytes[i])
                     throw new InvalidDataException("not a level pack");
             byte version = r.ReadByte();
-            if (version != Version) throw new InvalidDataException($"level pack version {version}, expected {Version}");
+            if (version != Version && version != 2) throw new InvalidDataException($"level pack version {version}, expected {Version}");
 
             string levelSetId = r.ReadString();
             int count = r.ReadInt32();
@@ -198,6 +218,7 @@ namespace QueensPuzzle
             return new Header
             {
                 reader = r,
+                version = version,
                 levelSetId = levelSetId,
                 count = count,
                 lookupStart = lookupStart,

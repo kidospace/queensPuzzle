@@ -163,7 +163,7 @@ MonoBehaviour:
     seconds: 74.3
     dog: 0
   - size: 9
-    seconds: 82.5
+    seconds: 90.6
     dog: 0
   - size: 8
     seconds: 64.5
@@ -208,7 +208,7 @@ MonoBehaviour:
     seconds: 88.7
     dog: 0
   - size: 9
-    seconds: 95.6
+    seconds: 109.9
     dog: 0
   - size: 8
     seconds: 72.7
@@ -316,7 +316,7 @@ MonoBehaviour:
     seconds: 111.1
     dog: 0
   - size: 10
-    seconds: 120
+    seconds: 130.2
     dog: 0
   - size: 9
     seconds: 88.2
@@ -358,7 +358,7 @@ MonoBehaviour:
     seconds: 116.4
     dog: 0
   - size: 10
-    seconds: 126.2
+    seconds: 139.5
     dog: 0
   - size: 9
     seconds: 90.3
@@ -436,7 +436,7 @@ MonoBehaviour:
     seconds: 124.1
     dog: 0
   - size: 10
-    seconds: 135.9
+    seconds: 146.2
     dog: 0
   - size: 9
     seconds: 92.5
@@ -472,7 +472,7 @@ MonoBehaviour:
     seconds: 126.5
     dog: 0
   - size: 10
-    seconds: 139.1
+    seconds: 148
     dog: 0
   - size: 9
     seconds: 92.6
@@ -508,7 +508,7 @@ MonoBehaviour:
     seconds: 129.6
     dog: 0
   - size: 10
-    seconds: 143.1
+    seconds: 150.4
     dog: 0
   - size: 9
     seconds: 93.2
