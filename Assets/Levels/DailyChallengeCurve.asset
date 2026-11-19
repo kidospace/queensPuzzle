@@ -15,47 +15,33 @@ MonoBehaviour:
   campaign: {fileID: 11400000, guid: 24ad190ce3404a248b16aa9bd2a1c092, type: 2}
   epochDate: 2026-01-05
   weekdayFactor:
-  - 0.957
-  - 0.986
-  - 1.013
-  - 0.972
-  - 1.026
-  - 1.05
-  - 0.957
+  - 0.89
+  - 0.965
+  - 1.03
+  - 0.93
+  - 1.065
+  - 1.125
+  - 0.89
   jitter: 0.025
   tiers:
-  - name: Tier2
+  - name: A
     progressMin: 21
-    progressMax: 50
-    secondsMin: 97.7
-    secondsMax: 114.9
-    baseSeconds: 107.2
-    weeks: 5
-  - name: Tier3
-    progressMin: 51
-    progressMax: 100
-    secondsMin: 108.9
-    secondsMax: 124.9
-    baseSeconds: 117.6
+    progressMax: 80
+    secondsMin: 98
+    secondsMax: 130
+    baseSeconds: 113
     weeks: 8
-  - name: Tier4
-    progressMin: 101
-    progressMax: 150
-    secondsMin: 118.9
-    secondsMax: 135
-    baseSeconds: 127.1
+  - name: B
+    progressMin: 81
+    progressMax: 250
+    secondsMin: 132
+    secondsMax: 175
+    baseSeconds: 152
     weeks: 8
-  - name: Tier5
-    progressMin: 151
-    progressMax: 200
-    secondsMin: 130.2
-    secondsMax: 147.2
-    baseSeconds: 139.4
-    weeks: 8
-  - name: Endless
-    progressMin: 201
+  - name: C
+    progressMin: 251
     progressMax: 2147483647
-    secondsMin: 139.4
-    secondsMax: 154
-    baseSeconds: 144.9
+    secondsMin: 169
+    secondsMax: 223
+    baseSeconds: 194
     weeks: 52
