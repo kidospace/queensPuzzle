@@ -110,8 +110,10 @@ namespace qp {
             CurrentLevelWeight = level != null ? level.weight : 0;
         }
 
-        // Levels per wave in the campaign curve (CampaignCurveConfig wave templates).
-        const int WaveLen = 20;
+        // Levels per wave in the campaign curve: one wave from milestone to milestone
+        // (CampaignCurveConfig.milestoneEvery). Shuffling whole waves keeps every milestone on
+        // the 50th level of its block — this needs a pack whose length is a multiple of 50.
+        const int WaveLen = 50;
 
         // Maps the ever-growing LevelIdx to a pack index. Within the pack it's 1:1; past the
         // end the game turns endless: the last tenth of the pack loops forever, whole waves
