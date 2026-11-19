@@ -14,18 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   epochDate: 2026-01-05
   tiers:
-  - name: Tier2
+  - name: A
     progressMin: 21
-    progressMax: 50
-  - name: Tier3
-    progressMin: 51
-    progressMax: 100
-  - name: Tier4
-    progressMin: 101
-    progressMax: 150
-  - name: Tier5
-    progressMin: 151
-    progressMax: 200
-  - name: Endless
-    progressMin: 201
+    progressMax: 80
+  - name: B
+    progressMin: 81
+    progressMax: 250
+  - name: C
+    progressMin: 251
     progressMax: 2147483647
