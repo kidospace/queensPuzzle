@@ -36,7 +36,7 @@ namespace QueensPuzzle.EditorTools
             var found = new List<string>();
             if (System.IO.Directory.Exists(LevelsFolder))
                 foreach (var d in System.IO.Directory.GetDirectories(LevelsFolder))
-                    found.Add(System.IO.Path.GetFileName(d));
+                    if (System.IO.Path.GetFileName(d) != StencilFiller.DrawingsFolder) found.Add(System.IO.Path.GetFileName(d));   // drawings are not a set
             found.Sort(System.StringComparer.OrdinalIgnoreCase);
             if (found.Count == 0) found.AddRange(new[] { "MSet", "Puzzby" }); // created on first save
             _sets = found.ToArray();
@@ -86,7 +86,9 @@ namespace QueensPuzzle.EditorTools
         int[] _paintRegions;
         int _paintN;
         int _paintColor;           // -1 = the "empty" colour (erase back to unpainted)
-        int _fillAttempts = 500;   // Fill re-rolls (solution + growth + repair) before giving up
+        int _fillAttempts = 5000;  // Fill re-rolls (solution + growth + repair) before giving up
+        int _drawingNumber = 1;    // the drawing Load / Save drawing work on (DRAWINGS/<number>.txt)
+        string _drawingName;       // the name the loaded drawing carries, kept when it is saved again
 
         [MenuItem("QueensPuzzle/Level Builder")]
         public static void Open()
@@ -365,20 +367,6 @@ namespace QueensPuzzle.EditorTools
             }
         }
 
-        // palette indexes → region ids 0..k-1 (ascending palette order); -1 (empty) passes through
-        static int[] RemapPaint(int[] paint, out int[] idToColor)
-        {
-            var distinct = new SortedSet<int>();
-            foreach (int v in paint) if (v >= 0) distinct.Add(v);
-            idToColor = new int[distinct.Count];
-            var map = new Dictionary<int, int>();
-            int next = 0;
-            foreach (int v in distinct) { idToColor[next] = v; map[v] = next; next++; }
-            var ids = new int[paint.Length];
-            for (int i = 0; i < paint.Length; i++) ids[i] = paint[i] < 0 ? -1 : map[paint[i]];
-            return ids;
-        }
-
         static bool IsIdentity(int[] a)
         {
             for (int i = 0; i < a.Length; i++) if (a[i] != i) return false;
@@ -466,6 +454,77 @@ namespace QueensPuzzle.EditorTools
                 _fillAttempts = Mathf.Clamp(EditorGUILayout.IntField(_fillAttempts, GUILayout.Width(60)), 1, 100000);
                 if (GUILayout.Button("Fill — complete the empty cells", GUILayout.Height(24))) FillFromPaint();
             }
+
+            // drawings: the shape alone, kept as a file. A build completes it anew for every level it goes into.
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label("drawing", EditorStyles.miniLabel, GUILayout.Width(54));
+                _drawingNumber = Mathf.Max(1, EditorGUILayout.IntField(_drawingNumber, GUILayout.Width(60)));
+                if (GUILayout.Button("<", GUILayout.Height(24), GUILayout.Width(30))) LoadDrawing(_drawingNumber - 1);
+                if (GUILayout.Button("Load drawing", GUILayout.Height(24))) LoadDrawing(_drawingNumber);
+                if (GUILayout.Button(">", GUILayout.Height(24), GUILayout.Width(30))) LoadDrawing(_drawingNumber + 1);
+                if (GUILayout.Button("Save drawing", GUILayout.Height(24))) SaveDrawing();
+            }
+        }
+
+        static string DrawingPath(int number) => $"{LevelsFolder}/{StencilFiller.DrawingsFolder}/{number}.txt";
+
+        void LoadDrawing(int number)
+        {
+            if (number < 1) return;
+            string file = DrawingPath(number);
+            if (!System.IO.File.Exists(file)) { _status = $"No drawing {number} ({file})."; Repaint(); return; }
+            var d = StencilFiller.Drawing.Parse(System.IO.File.ReadAllText(file), out string error);
+            if (d == null) { _status = $"Drawing {number} could not be read — {error}."; Repaint(); return; }
+            _drawingNumber = number;
+            _drawingName = d.name;
+            int n = _paintN = _requestedN = d.size;
+            _paintRegions = d.paint;
+            int painted = 0;
+            foreach (int v in d.paint) if (v >= 0) painted++;
+            string range = d.secondsTo > 0 ? $" · completes from {d.secondsFrom} to {d.secondsTo} s ({d.completions} found)" : " · not measured yet";
+            _status = $"Drawing {number}: {(d.name.Length > 0 ? d.name + " — " : "")}{n}x{n}, {painted} of {n * n} cells painted{range}.";
+            Repaint();
+        }
+
+        // Saving a drawing is also checking it: one that breaks the game's rules is not saved, and one that
+        // passes is completed a few thousand times to learn how many levels it gives and how long they are.
+        void SaveDrawing()
+        {
+            EnsurePaintGrid();
+            if (System.Array.IndexOf(_paintRegions, -1) < 0) { _status = "Not saved — nothing is empty. A drawing is the shape alone; clear the cells a build should fill (the × brush)."; Repaint(); return; }
+            int[] ids = StencilFiller.FromPalette(_paintRegions, out int[] colours);
+            string problem = colours.Length == 0 ? "nothing painted — draw something first."
+                : colours.Length >= _paintN ? $"{colours.Length} colours on a {_paintN}x{_paintN} board — leave at least one colour unused, the empty cells are filled with new regions."
+                : StencilFiller.ValidateStencil(_paintN, ids);
+            if (problem != null) { _status = "Not saved — " + problem; Repaint(); return; }
+
+            string file = DrawingPath(_drawingNumber);
+            if (System.IO.File.Exists(file) && !EditorUtility.DisplayDialog("Save drawing", $"Drawing {_drawingNumber} exists. Replace it?", "Replace", "Cancel")) return;
+
+            int tries = Mathf.Max(_fillAttempts, 2000);
+            List<StencilFiller.Completion> found;
+            try
+            {
+                found = StencilFiller.Complete(_paintN, ids, tries, System.Environment.TickCount, (done, got) =>
+                    !EditorUtility.DisplayCancelableProgressBar("Save drawing",
+                        $"completing the drawing — {done} of {tries} tries, {got} level(s) so far (Cancel saves what is known)", done / (float)tries));
+            }
+            finally { EditorUtility.ClearProgressBar(); }
+
+            var d = new StencilFiller.Drawing { name = _drawingName ?? "", size = _paintN, paint = _paintRegions, completions = found.Count };
+            if (found.Count > 0)
+            {
+                d.secondsFrom = Mathf.RoundToInt((float)found[0].time.seconds);
+                d.secondsTo = Mathf.RoundToInt((float)found[found.Count - 1].time.seconds);
+            }
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
+            System.IO.File.WriteAllText(file, d.ToText());
+            AssetDatabase.Refresh();
+            _status = found.Count > 0
+                ? $"Saved drawing {_drawingNumber}: {found.Count} level(s) in {tries} tries, from {d.secondsFrom} to {d.secondsTo} s."
+                : $"Saved drawing {_drawingNumber}, but NO level came out of it in {tries} tries — it cannot be built from as it is. Leave more cells empty, or raise the attempts.";
+            Repaint();
         }
 
         // the unpainted look, on the board and in the palette
@@ -473,37 +532,31 @@ namespace QueensPuzzle.EditorTools
 
         void FillFromPaint()
         {
-            var ids = RemapPaint(_paintRegions, out int[] heroColors);
-            if (heroColors.Length > _paintN)
+            var ids = StencilFiller.FromPalette(_paintRegions, out int[] heroColors);
+            if (System.Array.IndexOf(ids, -1) < 0) { BuildFromPaint(); return; }   // nothing empty — the plain Build
+            LevelData data = null;
+            string error = heroColors.Length == 0 ? "nothing painted — draw something first."
+                : heroColors.Length >= _paintN ? $"{heroColors.Length} colours painted on a {_paintN}x{_paintN} board — leave at least one colour unused, " +
+                                                 "the empty cells are filled with NEW regions (what you painted never grows)."
+                : StencilFiller.ValidateStencil(_paintN, ids);
+            if (error == null)
             {
-                _status = $"Build failed — {heroColors.Length} colours painted, but a {_paintN}x{_paintN} board has only {_paintN} regions.";
-                Repaint();
-                return;
+                try
+                {
+                    if (StencilFiller.TryFillRaw(_paintN, ids, _fillAttempts, System.Environment.TickCount, out int[] region, p =>
+                            EditorUtility.DisplayProgressBar("Fill",
+                                $"completing the drawing — attempt {(int)(p * _fillAttempts) + 1}/{_fillAttempts}…", p)))
+                        data = LevelImporter.BuildFromRegions(_paintN, region, out error);
+                    else
+                        error = $"no unique completion in {_fillAttempts} attempts — leave more cells empty, or raise the attempts.";
+                }
+                finally { EditorUtility.ClearProgressBar(); }
             }
-
-            LevelData data;
-            string error;
-            try
-            {
-                data = StencilFiller.Fill(_paintN, ids, _fillAttempts, out error, p =>
-                    EditorUtility.DisplayProgressBar("Fill",
-                        $"completing the drawing — attempt {(int)(p * _fillAttempts) + 1}/{_fillAttempts}…", p));
-            }
-            finally { EditorUtility.ClearProgressBar(); }
 
             if (data == null) { _status = "Build failed — " + error; Repaint(); return; }
 
             // painted regions keep their palette colours; filled-in regions take unused ones in order
-            var colors = new int[_paintN];
-            System.Array.Copy(heroColors, colors, heroColors.Length);
-            var taken = new HashSet<int>(heroColors);
-            int nextClr = 0;
-            for (int id = heroColors.Length; id < _paintN; id++)
-            {
-                while (taken.Contains(nextClr)) nextClr++;
-                colors[id] = nextClr;
-                taken.Add(nextClr);
-            }
+            var colors = StencilFiller.Colors(_paintN, heroColors);
             data.regionColors = IsIdentity(colors) ? null : colors;
 
             SetLevel(data);
@@ -514,7 +567,7 @@ namespace QueensPuzzle.EditorTools
 
         void BuildFromPaint()
         {
-            var ids = RemapPaint(_paintRegions, out int[] idToColor);
+            var ids = StencilFiller.FromPalette(_paintRegions, out int[] idToColor);
             LevelData data = null;
             string error;
             if (System.Array.IndexOf(ids, -1) >= 0)

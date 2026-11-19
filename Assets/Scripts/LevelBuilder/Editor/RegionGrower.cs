@@ -98,7 +98,8 @@ namespace QueensPuzzle
         /// unaffected, but <paramref name="alt"/> now double-books one region and is broken.
         /// Returns false if no safe move exists (caller should re-grow from scratch).
         /// <paramref name="locked"/> (optional) marks cells that must never change region — the
-        /// stencil Fill locks every painted cell so repairs only reshape the filled-in cells.
+        /// stencil Fill locks every painted cell, and a region holding a locked cell takes no new
+        /// cell either: a repair only moves cells between the filled-in regions.
         /// </summary>
         public static bool TryBreakAlternative(int n, int[] region, int[] solutionColumns, int[] alt, Random rng,
             bool[] locked = null)
@@ -108,6 +109,15 @@ namespace QueensPuzzle
                 if (alt[r] != solutionColumns[r]) wrongRows.Add(r);
             Shuffle(wrongRows, rng);
 
+            // a painted region is exactly what was painted: it gives no cell away (its cells are
+            // locked) and takes none in either
+            bool[] painted = null;
+            if (locked != null)
+            {
+                painted = new bool[n];
+                for (int i = 0; i < locked.Length; i++) if (locked[i]) painted[region[i]] = true;
+            }
+
             foreach (int r in wrongRows)
             {
                 int idx = r * n + alt[r];
@@ -115,6 +125,7 @@ namespace QueensPuzzle
                 int from = region[idx];
 
                 var targets = NeighborRegions(idx, n, region, from);
+                if (painted != null) targets.RemoveAll(t => painted[t]);
                 Shuffle(targets, rng);
 
                 foreach (int to in targets)
