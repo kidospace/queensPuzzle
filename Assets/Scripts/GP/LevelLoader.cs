@@ -112,17 +112,30 @@ namespace qp {
 
         // Levels per wave in the campaign curve: one wave from milestone to milestone
         // (CampaignCurveConfig.milestoneEvery). Shuffling whole waves keeps every milestone on
-        // the 50th level of its block — this needs a pack whose length is a multiple of 50.
+        // the 50th level of its block.
         const int WaveLen = 50;
 
+        // Where the endless loop starts (0-based: level 1201). The place factor is measured up
+        // to level 1200 and flat after it, so every wave from here on is built for the same
+        // player and can come in any order. A multiple of WaveLen, so blocks start right after
+        // a milestone.
+        const int LoopFrom = 1200;
+
         // Maps the ever-growing LevelIdx to a pack index. Within the pack it's 1:1; past the
-        // end the game turns endless: the last tenth of the pack loops forever, whole waves
+        // end the game turns endless: levels LoopFrom+1 .. end loop forever, whole waves
         // shuffled per lap (so laps differ but the difficulty rhythm inside a wave survives).
-        // Seeded by lap number only - every player sees the same levels in the same order.
+        // Only whole waves from LoopFrom loop - a pack whose length isn't a multiple of 50 just
+        // leaves its last partial wave out of the loop. Seeded by lap number only - every
+        // player sees the same levels in the same order.
         static int PackIndex(int levelIdx) {
             if (levelIdx < _packCount) return levelIdx;
 
-            int waves = _packCount / 10 / WaveLen;   // whole waves in the loop region
+            int loopStart = LoopFrom;
+            int waves = (_packCount - loopStart) / WaveLen;
+            if (waves < 1) {                         // pack too short for LoopFrom: the last tenth
+                waves = _packCount / 10 / WaveLen;
+                loopStart = _packCount - waves * WaveLen;
+            }
             if (waves < 1) return _packCount - 1;    // pack too small to loop - old clamp behavior
 
             int loopLen = waves * WaveLen;
@@ -137,7 +150,7 @@ namespace qp {
                 int j = (int)(Hash((uint)lap * 0x9E3779B9u + (uint)i) % (uint)(i + 1));
                 (perm[i], perm[j]) = (perm[j], perm[i]);
             }
-            return _packCount - loopLen + perm[pos / WaveLen] * WaveLen + pos % WaveLen;
+            return loopStart + perm[pos / WaveLen] * WaveLen + pos % WaveLen;
         }
 
         static uint Hash(uint x) {   // lowbias32 - same deterministic hash the campaign curve uses
