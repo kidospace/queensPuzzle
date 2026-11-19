@@ -54,7 +54,7 @@ namespace QueensPuzzle
         public static (int made, long attempts, int uncolourable) Run(GenerationGates gates, List<LevelTarget> open, Options opt,
             Action<Filled> onFilled, Func<int, int, long, bool> keepGoing)
         {
-            var queue = new System.Collections.Concurrent.ConcurrentQueue<(int[] region, int[] cols, int seed, WeightRater.Report rep, double seconds, int size)>();
+            var queue = new System.Collections.Concurrent.ConcurrentQueue<(int[] region, int[] cols, int seed, WeightRater.Report rep, TimeRater.Time time, int size)>();
             int made = 0, uncolourable = 0;
 
             // workers: generate + rate off the calling thread (TryGenerateRaw, Rate and TimeRater are thread-safe)
@@ -76,7 +76,7 @@ namespace QueensPuzzle
                         if (!ok) continue;
                         var rep = WeightRater.Rate(size, region, cols);
                         if (rep.trials > 0) continue;   // guess wall — discarded on the worker
-                        queue.Enqueue((region, cols, s, rep, TimeRater.SecondsExact(size, region, cols, rep), size));
+                        queue.Enqueue((region, cols, s, rep, TimeRater.Rate(size, region, cols, rep), size));
                     }
                 }) { IsBackground = true, Name = $"PoolGen{w}" };
                 workers[w].Start();
@@ -93,7 +93,7 @@ namespace QueensPuzzle
                     bool filled = false;
                     while (open.Count > 0 && queue.TryDequeue(out var c))
                     {
-                        int slot = FindSlot(gates, open, c.size, c.region, c.cols, c.rep, c.seconds, out int[] revealed, out int weight);
+                        int slot = FindSlot(gates, open, c.size, c.region, c.cols, c.rep, c.time, out int[] revealed, out int weight);
                         if (slot >= 0)
                         {
                             int[] colors = null;
@@ -137,9 +137,9 @@ namespace QueensPuzzle
         public static string Pack(in GenerationGates g, IList<LevelTarget> open, in Options opt)
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append("gates ").Append(g.maxTrials).Append(' ').Append(F(g.maxPeakShare)).Append(' ').Append(F(g.minSecondsPerStep)).Append(' ')
-              .Append(F(g.secondsPerRow)).Append(' ').Append(g.maxPaidSteps).Append(' ').Append(g.milestoneMaxPaidSteps).Append(' ')
-              .Append(F(g.maxStartShare)).Append(' ').Append(F(g.peakMaxStartShare)).Append('\n');
+            sb.Append("gates ").Append(g.maxTrials).Append(' ').Append(F(g.maxWall)).Append(' ').Append(F(g.minSecondsPerStep)).Append(' ')
+              .Append(F(g.secondsPerRow)).Append(' ').Append(g.maxSteps).Append(' ').Append(g.milestoneMaxSteps).Append(' ')
+              .Append(F(g.maxStart)).Append(' ').Append(F(g.peakMaxStart)).Append('\n');
             sb.Append("options ").Append(opt.threadCount).Append(' ').Append(opt.seedBase).Append(' ').Append(F(opt.maxSeconds)).Append('\n');
             foreach (var t in open)
                 sb.Append("slot ").Append(t.level).Append(' ').Append(t.boardSize).Append(' ').Append(F(t.boardSeconds)).Append(' ')
@@ -161,8 +161,8 @@ namespace QueensPuzzle
                 if (p[0] == "gates")
                     g = new GenerationGates
                     {
-                        maxTrials = int.Parse(p[1]), maxPeakShare = PF(p[2]), minSecondsPerStep = PF(p[3]), secondsPerRow = PF(p[4]),
-                        maxPaidSteps = int.Parse(p[5]), milestoneMaxPaidSteps = int.Parse(p[6]), maxStartShare = PF(p[7]), peakMaxStartShare = PF(p[8]),
+                        maxTrials = int.Parse(p[1]), maxWall = PF(p[2]), minSecondsPerStep = PF(p[3]), secondsPerRow = PF(p[4]),
+                        maxSteps = int.Parse(p[5]), milestoneMaxSteps = int.Parse(p[6]), maxStart = PF(p[7]), peakMaxStart = PF(p[8]),
                     };
                 else if (p[0] == "options")
                     opt = new Options { threadCount = int.Parse(p[1]), seedBase = int.Parse(p[2]), maxSeconds = PF(p[3]), colors = colors };
@@ -195,7 +195,7 @@ namespace QueensPuzzle
         /// lands closest to its seconds.
         /// </summary>
         public static int FindSlot(in GenerationGates gates, List<LevelTarget> open, int size,
-            int[] region, int[] cols, in WeightRater.Report rep, double seconds, out int[] revealed, out int weight)
+            int[] region, int[] cols, in WeightRater.Report rep, in TimeRater.Time time, out int[] revealed, out int weight)
         {
             int best = -1, bestPrio = -1;
             revealed = null;
@@ -208,7 +208,7 @@ namespace QueensPuzzle
                 if (prio <= bestPrio) continue;
                 if (!t.dog)
                 {
-                    if (!CampaignCurve.PassesGates(gates, t, rep, seconds)) continue;
+                    if (!CampaignCurve.PassesGates(gates, t, rep, time)) continue;
                     bestPrio = prio; best = i; revealed = null; weight = rep.weight;
                     continue;
                 }
@@ -231,9 +231,9 @@ namespace QueensPuzzle
                 rows[0] = row;
                 var rep = WeightRater.Rate(size, region, cols, rows);
                 if (rep.trials > 0) continue;
-                double secs = TimeRater.SecondsExact(size, region, cols, rep, rows);
-                if (!CampaignCurve.PassesGates(gates, t, rep, secs)) continue;
-                double gap = Math.Abs(secs - t.boardSeconds);
+                var time = TimeRater.Rate(size, region, cols, rep, rows);
+                if (!CampaignCurve.PassesGates(gates, t, rep, time)) continue;
+                double gap = Math.Abs(time.seconds - t.boardSeconds);
                 if (gap < bestGap) { bestGap = gap; best = row; weight = rep.weight; }
             }
             return best;

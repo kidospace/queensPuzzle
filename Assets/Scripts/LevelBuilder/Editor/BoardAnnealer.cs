@@ -4,16 +4,17 @@ using System.Collections.Generic;
 namespace QueensPuzzle
 {
     /// <summary>
-    /// What Generate aims for. seconds (calibrated, see <see cref="TimeRater"/>) is required; peak / evenness / steps / startShare are
-    /// optional (&lt;= 0 = don't care). Each tolerance is a % of its target value — a level
-    /// counts as on-target when every active term is within its tolerance.
+    /// What Generate aims for, all read from the board's time (<see cref="TimeRater"/>): seconds is
+    /// required; wall / steps / start are optional (&lt;= 0 = don't care). Each tolerance is a % of its
+    /// target value — a level counts as on-target when every active term is within its tolerance.
     /// </summary>
     public struct LevelFingerprint
     {
-        public int seconds, peak, steps; // steps = paid steps (queen shadows excluded)
-        public float evenness;            // 0..1
-        public float startShare;          // 0..1 — share of the rating in the solve's first third (opening shape)
-        public int tolSecondsPct, tolPeakPct, tolEvennessPct, tolStepsPct, tolStartPct;
+        public int seconds;
+        public int steps;    // uses of a trick in the whole solve
+        public float wall;   // the heaviest queen's seconds ÷ the average queen's
+        public float start;  // the first third of the queens' seconds ÷ an even spread's
+        public int tolSecondsPct, tolWallPct, tolStepsPct, tolStartPct;
     }
 
     /// <summary>
@@ -26,7 +27,7 @@ namespace QueensPuzzle
     ///
     ///   cost = Σ %-beyond-tolerance per fingerprint term  +  gamma * neighbourStdDev%
     ///
-    /// The first term aims at the requested fingerprint (seconds / peak / evenness / steps, each
+    /// The first term aims at the requested fingerprint (seconds / wall / steps / start, each
     /// within its % tolerance). The second term — the spread of the board's OWN one-flip
     /// neighbours' seconds — steers away from fragile "knife-edge" boards (where one different
     /// cell swings the time wildly) toward stable ones that play like they're rated.
@@ -34,7 +35,7 @@ namespace QueensPuzzle
     ///
     /// Pure C# (no Unity types); the editor wrapper <c>LevelSteerer</c> turns the result into an asset.
     /// </summary>
-    public static class WeightAnnealer
+    public static class BoardAnnealer
     {
         /// <summary>
         /// Anneals from a valid unique starting board toward the <paramref name="target"/> fingerprint.
@@ -98,21 +99,20 @@ namespace QueensPuzzle
         static double Cost(int n, int[] region, int[] sol, LevelFingerprint target, float gamma)
         {
             var rep = WeightRater.Rate(n, region, sol);
-            double cost = FingerprintGap(rep, TimeRater.SecondsExact(n, region, sol, rep), target);
+            double cost = FingerprintGap(rep, TimeRater.Rate(n, region, sol, rep), target);
             // stability, in the same units (% of the target seconds)
             double stdDevPct = Math.Sqrt(NeighbourVariance(n, region)) * 100.0 / Math.Max(1, target.seconds);
             return cost + gamma * stdDevPct;
         }
 
         /// <summary>Sum of the %-beyond-tolerance gaps of all active fingerprint terms. 0 = on target.</summary>
-        public static double FingerprintGap(WeightRater.Report rep, double seconds, LevelFingerprint t)
-            => Gap(seconds, t.seconds, t.tolSecondsPct)
-             + Gap(rep.peak, t.peak, t.tolPeakPct)
-             + Gap(rep.evenness, t.evenness, t.tolEvennessPct)
-             + Gap(rep.paidSteps, t.steps, t.tolStepsPct)
-             + Gap(rep.startShare, t.startShare, t.tolStartPct);
+        public static double FingerprintGap(in WeightRater.Report rep, in TimeRater.Time time, LevelFingerprint t)
+            => Gap(time.seconds, t.seconds, t.tolSecondsPct)
+             + Gap(time.wall, t.wall, t.tolWallPct)
+             + Gap(CampaignCurve.TrickSteps(rep), t.steps, t.tolStepsPct)
+             + Gap(time.start, t.start, t.tolStartPct);
 
-        public static bool OnTarget(WeightRater.Report rep, double seconds, LevelFingerprint t) => FingerprintGap(rep, seconds, t) <= 0;
+        public static bool OnTarget(in WeightRater.Report rep, in TimeRater.Time time, LevelFingerprint t) => FingerprintGap(rep, time, t) <= 0;
 
         // % deviation beyond the tolerance; 0 inside the tolerance or when the term is "don't care".
         static double Gap(double value, double target, int tolPct)
@@ -123,7 +123,7 @@ namespace QueensPuzzle
         }
 
         // Population variance of the seconds of every legal one-cell-flip neighbour that stays unique.
-        // Hundreds of boards a step, and only their spread matters — so the quick one-road estimate.
+        // Hundreds of boards a step, and only their spread matters — so the quick one-solve estimate.
         static double NeighbourVariance(int n, int[] region)
         {
             var secs = new List<double>();

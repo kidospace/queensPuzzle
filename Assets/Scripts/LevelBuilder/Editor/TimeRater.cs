@@ -5,11 +5,11 @@ using System.Linq;
 namespace QueensPuzzle
 {
     /// <summary>
-    /// The calibrated rating: seconds a regular player needs for a board.
+    /// The rating of a board: the seconds a regular player needs for it. Time is the only measure —
+    /// there is no other score of a board.
     ///
-    /// <see cref="WeightRater"/> solves a board along ONE road, cheapest trick first. Players are on
-    /// that road for only about 6 queens in 10 — most take the queen with the fewest places left,
-    /// and reach positions the rater never stood in. So a board is rated over MANY roads:
+    /// Players do not solve a board along one road: most take the queen with the fewest places
+    /// left, and reach positions a single solve never stood in. So a board is rated over MANY roads:
     ///
     ///   1. <see cref="Roads"/> walks the board the way players do: from each position, the next
     ///      queen is mostly the one with the fewest places left. That gives, queen by queen, the
@@ -17,75 +17,91 @@ namespace QueensPuzzle
     ///   2. In every such position the solver is asked what it takes to place the next queen from
     ///      THERE, and that is priced in seconds (<see cref="QueenSeconds"/>) with prices measured
     ///      on the recordings — 2.5 million queens, each player's gap divided by his own pace.
-    ///   3. The seconds are summed over the positions by their share, and joined with the rater's
-    ///      own report (<see cref="Ln"/>).
+    ///   3. The seconds are summed over the positions by their share, and set to the players' real
+    ///      level times with the board size and how often each trick is needed (<see cref="Ln"/>).
     ///
-    /// Fitted on recordings of 22 Oct – 10 Nov 2026: 1,017 campaign levels, boards 8x8 to 11x11,
-    /// first-try wins, the level's place in the game fitted apart and left out — so this is the
-    /// BOARD ALONE, whichever slot it lands in. A slot asks in the same unit:
-    /// <see cref="CampaignCurveConfig.SecondsOf"/>.
+    /// The walk also gives the board's SHAPE in seconds (<see cref="Time"/>): how far the heaviest
+    /// queen stands above the average one, and how much of the time falls on the first third.
     ///
-    /// On levels kept out of the fit (both stages):
-    ///                         typical miss   off 20%+ of 100   off 30%+ of 100
-    ///   the weight alone          15%              36                19
-    ///   one road, re-weighed       7.8%            11                 2
-    ///   many roads (this)          7.0%             4                 0
+    /// <see cref="Ln"/> is fitted on 843 campaign boards, 8x8 to 11x11, played 1 Sep – 9 Nov 2026:
+    /// first-try wins, each player's time divided by his own pace, the level's place in the game
+    /// taken out — so this is the BOARD ALONE, whichever slot it lands in. Boards under 8x8 (the
+    /// first twelve levels) have no clean player data; there the fit is held to the seconds those
+    /// tutorial boards were given before. On boards kept out of the fit: typically 7.4% off,
+    /// 8 of 100 off by 20%+, 1 of 100 by 30%+.
     ///
-    /// The numbers below are a fit, not prices: some are negative because the fields overlap. Do
-    /// not read them one by one, and refit them all together when the rater, the trick list or the
-    /// level set changes.
+    /// The numbers in <see cref="Ln"/> are a fit, not prices — do not read them one by one, and
+    /// refit them together when the solver, the trick list or the level set changes.
     ///
     /// Pure C# (no Unity types): thread-safe, runs on the pool-build workers. It costs a few dozen
-    /// short solves per board; where a search compares hundreds of near-identical boards a step,
-    /// <see cref="QuickSeconds"/> is the one-road estimate from the report alone.
+    /// short solves per board.
     /// </summary>
     public static class TimeRater
     {
-        /// <summary>Seconds for a regular player, rounded. <paramref name="revealedRows"/>: rows whose
-        /// queen starts revealed on the board (null / empty = none) — pass the same ones the report was rated with.</summary>
+        /// <summary>What the rating says about a board.</summary>
+        public struct Time
+        {
+            public double seconds;      // a regular, experienced player
+            public float wall;          // the heaviest queen's seconds ÷ the average queen's (1 = all alike, 3 = one queen is a wall)
+            public float start;         // the first third of the queens' seconds ÷ an even spread's (1 = even, above = starts hard)
+        }
+
+        /// <summary>Rates a board. <paramref name="revealedRows"/>: rows whose queen starts revealed on
+        /// the board (null / empty = none) — pass the same ones the report was rated with.</summary>
+        public static Time Rate(int n, int[] region, int[] sol, in WeightRater.Report r, int[] revealedRows = null)
+        {
+            var perQueen = new double[n - (revealedRows == null ? 0 : revealedRows.Length)];
+            double roads = Roads(n, region, sol, revealedRows, perQueen);
+            double wall = 0, start = 0;
+            int third = (perQueen.Length + 2) / 3;
+            for (int i = 0; i < perQueen.Length; i++)
+            {
+                if (perQueen[i] > wall) wall = perQueen[i];
+                if (i < third) start += perQueen[i];
+            }
+            // both against an even spread of the time over the queens, so a small board (fewer queens,
+            // each a bigger share) is not read as walled or front-loaded just for its size
+            return new Time
+            {
+                seconds = Math.Exp(Ln(r, roads)),
+                wall = (float)(wall / (roads / perQueen.Length)),
+                start = (float)(start / (roads * third / perQueen.Length)),
+            };
+        }
+
+        /// <summary>Seconds for a regular player, rounded.</summary>
         public static int Seconds(int n, int[] region, int[] sol, in WeightRater.Report r, int[] revealedRows = null)
-            => (int)Math.Round(SecondsExact(n, region, sol, r, revealedRows));
+            => (int)Math.Round(Rate(n, region, sol, r, revealedRows).seconds);
 
         /// <summary>The same, not rounded — what the slot windows are checked against.</summary>
         public static double SecondsExact(int n, int[] region, int[] sol, in WeightRater.Report r, int[] revealedRows = null)
-            => Math.Exp(Ln(r, Roads(n, region, sol, revealedRows)));
+            => Rate(n, region, sol, r, revealedRows).seconds;
 
         static double Ln(in WeightRater.Report r, double roads) =>
-            - 0.32580
-            + 0.67963 * Math.Log(roads)
-            + 0.14294 * r.size
-            + 0.29139 * Math.Log(1 + r.weight)
-            - 0.20205 * Math.Log(1 + r.findCost)
-            - 0.08050 * Math.Log(1 + r.thinkCost)
-            + 0.02052 * Math.Log(1 + r.peak)
-            + 0.00389 * r.cycles
-            - 0.02084 * r.paidSteps
-            + 0.01863 * r.lineSingles
-            + 0.02436 * r.lineToRegionUses
-            + 0.01199 * r.regionToLineUses
-            + 0.00697 * r.squeezeUses
-            + 0.01817 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
-            - 0.02969 * (r.regionChokeUses + r.lineChokeUses);
+            - 0.24225
+            + 0.87682 * Math.Log(roads)
+            + 0.06584 * r.size
+            + 0.01891 * r.lineSingles
+            + 0.01037 * r.lineToRegionUses
+            - 0.00585 * r.regionToLineUses
+            + 0.00374 * r.squeezeUses
+            + 0.02841 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
+            + 0.02888 * (r.regionChokeUses + r.lineChokeUses);
 
         /// <summary>
-        /// One road only, from the report alone (typically 7.8% off, against 7.0%). For a search
-        /// that has to compare many boards cheaply — not a board's rating.
+        /// A cheap estimate from one solve alone, no roads walked (typically 6% from the rating). For a
+        /// search that has to compare hundreds of near-identical boards a step — not a board's rating.
         /// </summary>
         public static double QuickSeconds(in WeightRater.Report r) => Math.Exp(
-              1.16955
-            + 0.19286 * r.size
-            + 0.32067 * Math.Log(1 + r.weight)
-            + 0.09986 * Math.Log(1 + r.findCost)
-            - 0.09196 * Math.Log(1 + r.thinkCost)
-            + 0.04365 * Math.Log(1 + r.peak)
-            + 0.00358 * r.cycles
-            - 0.03108 * r.paidSteps
-            + 0.04106 * r.lineSingles
-            + 0.04323 * r.lineToRegionUses
-            + 0.01860 * r.regionToLineUses
-            + 0.01867 * r.squeezeUses
-            + 0.04320 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
-            - 0.01702 * (r.regionChokeUses + r.lineChokeUses));
+              2.17791
+            + 0.23035 * r.size
+            + 0.00111 * r.cycles
+            + 0.05282 * r.lineSingles
+            + 0.04247 * r.lineToRegionUses
+            + 0.03093 * r.regionToLineUses
+            + 0.04239 * r.squeezeUses
+            + 0.10124 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
+            + 0.06077 * (r.regionChokeUses + r.lineChokeUses));
 
         // ---- many roads ---------------------------------------------------------------
 
@@ -97,9 +113,9 @@ namespace QueensPuzzle
         /// <summary>
         /// Seconds summed over the positions players are likely to stand in, by their share.
         /// The walk starts from the queens revealed at the start, and prices only the ones the
-        /// player places himself.
+        /// player places himself. <paramref name="perQueen"/> gets the seconds of each of those, in order.
         /// </summary>
-        static double Roads(int n, int[] region, int[] sol, int[] revealedRows)
+        static double Roads(int n, int[] region, int[] sol, int[] revealedRows, double[] perQueen)
         {
             var open = new bool[n * n];
             int[] row = new int[n], col = new int[n], reg = new int[n];
@@ -137,7 +153,9 @@ namespace QueensPuzzle
                         if (places < best) best = places;
                     }
 
-                    total += share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best, queen == given));
+                    double q = share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best, queen == given));
+                    total += q;
+                    perQueen[queen - given] += q;
 
                     // who goes where: mostly the tightest queen, a colour read before a line
                     double sum = 0;

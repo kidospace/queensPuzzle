@@ -54,8 +54,7 @@ namespace QueensPuzzle.EditorTools
 
         int _requestedN = 8;
         int _targetSeconds;      // what Generate aims for; 0 = instant random board (no steering)
-        int _targetPeak;        // optional fingerprint targets; 0 = don't care
-        float _targetEvenness;
+        float _targetWall;      // optional fingerprint targets; 0 = don't care
         float _targetStart;
         int _targetSteps;
         int _levelNumber = 1;   // slot for numbered Load / Save ({set}/{n}.asset)
@@ -65,6 +64,7 @@ namespace QueensPuzzle.EditorTools
 
         [SerializeField] LevelData _level;
         WeightRater.Report? _report;
+        TimeRater.Time _time;   // the loaded level's rating (its seconds are also in _seconds, rounded)
         int _seconds;           // the loaded board's calibrated seconds (TimeRater), taken with _report
         TraceNode[] _trace;   // built on Generate / Load / Recheck for display — not stored on the asset
         string _status = "Pick the parameters and press Generate.";
@@ -106,22 +106,20 @@ namespace QueensPuzzle.EditorTools
         const string PrefLoadSet = "QP.LevelBuilder.LoadSet";
         const string PrefSaveSet = "QP.LevelBuilder.SaveSet";
         const string PrefTolSeconds = "QP.LevelBuilder.TolSeconds";
-        const string PrefTolPeak = "QP.LevelBuilder.TolPeak";
-        const string PrefTolEvenness = "QP.LevelBuilder.TolEvenness";
+        const string PrefTolWall = "QP.LevelBuilder.TolWall";
         const string PrefTolSteps = "QP.LevelBuilder.TolSteps";
         const string PrefTolStart = "QP.LevelBuilder.TolStart";
         const string PrefWarmStart = "QP.LevelBuilder.WarmStart";
 
         // fingerprint tolerances, in % — how far a generated level may deviate per parameter
-        int _tolSeconds = 10, _tolPeak = 15, _tolEvenness = 10, _tolSteps = 20, _tolStart = 15;
+        int _tolSeconds = 10, _tolWall = 15, _tolSteps = 20, _tolStart = 15;
         bool _warmStart = true; // Generate mutates the loaded board (when sizes match) instead of a random start
 
         void OnEnable()
         {
             RefreshSets();
             _tolSeconds = EditorPrefs.GetInt(PrefTolSeconds, 10);
-            _tolPeak = EditorPrefs.GetInt(PrefTolPeak, 15);
-            _tolEvenness = EditorPrefs.GetInt(PrefTolEvenness, 10);
+            _tolWall = EditorPrefs.GetInt(PrefTolWall, 15);
             _tolSteps = EditorPrefs.GetInt(PrefTolSteps, 20);
             _tolStart = EditorPrefs.GetInt(PrefTolStart, 15);
             _warmStart = EditorPrefs.GetBool(PrefWarmStart, true);
@@ -198,14 +196,12 @@ namespace QueensPuzzle.EditorTools
                 EditorGUILayout.LabelField("Target fingerprint", GUILayout.Width(146));
                 GUILayout.Label("secs", EditorStyles.miniLabel, GUILayout.Width(42));
                 _targetSeconds = Mathf.Max(0, EditorGUILayout.IntField(_targetSeconds, GUILayout.Width(36)));
-                GUILayout.Label("peak", EditorStyles.miniLabel, GUILayout.Width(32));
-                _targetPeak = Mathf.Max(0, EditorGUILayout.IntField(_targetPeak, GUILayout.Width(36)));
-                GUILayout.Label("even", EditorStyles.miniLabel, GUILayout.Width(32));
-                _targetEvenness = Mathf.Clamp(EditorGUILayout.FloatField(_targetEvenness, GUILayout.Width(36)), 0f, 1f);
+                GUILayout.Label("wall", EditorStyles.miniLabel, GUILayout.Width(32));
+                _targetWall = Mathf.Max(0f, EditorGUILayout.FloatField(_targetWall, GUILayout.Width(36)));
                 GUILayout.Label("steps", EditorStyles.miniLabel, GUILayout.Width(36));
                 _targetSteps = Mathf.Max(0, EditorGUILayout.IntField(_targetSteps, GUILayout.Width(36)));
                 GUILayout.Label("start", EditorStyles.miniLabel, GUILayout.Width(32));
-                _targetStart = Mathf.Clamp(EditorGUILayout.FloatField(_targetStart, GUILayout.Width(36)), 0f, 1f);
+                _targetStart = Mathf.Max(0f, EditorGUILayout.FloatField(_targetStart, GUILayout.Width(36)));
                 using (new EditorGUI.DisabledScope(!_report.HasValue))
                     if (GUILayout.Button("⟵ level", EditorStyles.miniButton, GUILayout.Width(56)))
                         CopyFingerprintFromReport();
@@ -217,10 +213,8 @@ namespace QueensPuzzle.EditorTools
                 EditorGUILayout.LabelField("Tolerance %", GUILayout.Width(146));
                 GUILayout.Label("secs", EditorStyles.miniLabel, GUILayout.Width(42));
                 _tolSeconds = Mathf.Clamp(EditorGUILayout.IntField(_tolSeconds, GUILayout.Width(36)), 0, 100);
-                GUILayout.Label("peak", EditorStyles.miniLabel, GUILayout.Width(32));
-                _tolPeak = Mathf.Clamp(EditorGUILayout.IntField(_tolPeak, GUILayout.Width(36)), 0, 100);
-                GUILayout.Label("even", EditorStyles.miniLabel, GUILayout.Width(32));
-                _tolEvenness = Mathf.Clamp(EditorGUILayout.IntField(_tolEvenness, GUILayout.Width(36)), 0, 100);
+                GUILayout.Label("wall", EditorStyles.miniLabel, GUILayout.Width(32));
+                _tolWall = Mathf.Clamp(EditorGUILayout.IntField(_tolWall, GUILayout.Width(36)), 0, 100);
                 GUILayout.Label("steps", EditorStyles.miniLabel, GUILayout.Width(36));
                 _tolSteps = Mathf.Clamp(EditorGUILayout.IntField(_tolSteps, GUILayout.Width(36)), 0, 100);
                 GUILayout.Label("start", EditorStyles.miniLabel, GUILayout.Width(32));
@@ -229,12 +223,11 @@ namespace QueensPuzzle.EditorTools
             if (EditorGUI.EndChangeCheck())
             {
                 EditorPrefs.SetInt(PrefTolSeconds, _tolSeconds);
-                EditorPrefs.SetInt(PrefTolPeak, _tolPeak);
-                EditorPrefs.SetInt(PrefTolEvenness, _tolEvenness);
+                EditorPrefs.SetInt(PrefTolWall, _tolWall);
                 EditorPrefs.SetInt(PrefTolSteps, _tolSteps);
                 EditorPrefs.SetInt(PrefTolStart, _tolStart);
             }
-            EditorGUILayout.LabelField(" ", "secs 0 = random · peak/even/steps/start 0 = ignore · auto-fills on Load", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField(" ", "secs 0 = random · wall/steps/start 0 = ignore · wall = heaviest queen ÷ average, start = first third ÷ even · auto-fills on Load", EditorStyles.miniLabel);
 
             EditorGUI.BeginChangeCheck();
             _warmStart = EditorGUILayout.ToggleLeft("Warm start — mutate the loaded board (same size) instead of a random start", _warmStart);
@@ -320,7 +313,7 @@ namespace QueensPuzzle.EditorTools
                 {
                     SetLevel(picked);
                     CopyFingerprintFromReport();
-                    _status = $"Loaded {picked.name} ({picked.size}x{picked.size}) — weight {_report?.weight}.";
+                    _status = $"Loaded {picked.name} ({picked.size}x{picked.size}) — ~{_seconds} s.";
                 }
                 Repaint();
             }
@@ -515,7 +508,7 @@ namespace QueensPuzzle.EditorTools
 
             SetLevel(data);
             _paintMode = false;   // show the solved board
-            _status = $"Filled {data.size}x{data.size} — weight {data.weight}, unique ✓. Press Save to keep it.";
+            _status = $"Filled {data.size}x{data.size} — unique ✓. Press Save to keep it.";
             Repaint();
         }
 
@@ -532,7 +525,7 @@ namespace QueensPuzzle.EditorTools
             data.regionColors = IsIdentity(idToColor) ? null : idToColor;
             SetLevel(data);       // SetLevel clears _paintRegions so it re-seeds from the built level next time
             _paintMode = false;   // show the solved board
-            _status = $"Built {data.size}x{data.size} — weight {data.weight}, unique ✓. Press Save to keep it.";
+            _status = $"Built {data.size}x{data.size} — unique ✓. Press Save to keep it.";
             Repaint();
         }
 
@@ -621,7 +614,8 @@ namespace QueensPuzzle.EditorTools
             _level.revealedRows = list.ToArray();
             // a revealed queen changes what the player has to do — rate the level again
             _report = WeightRater.Rate(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
-            _seconds = TimeRater.Seconds(_level.size, _level.regions, _level.solutionColumns, _report.Value, _level.revealedRows);
+            _time = TimeRater.Rate(_level.size, _level.regions, _level.solutionColumns, _report.Value, _level.revealedRows);
+            _seconds = Mathf.RoundToInt((float)_time.seconds);
             _level.weight = _report.Value.weight;
             if (EditorUtility.IsPersistent(_level)) EditorUtility.SetDirty(_level);
             Repaint();
@@ -776,8 +770,7 @@ namespace QueensPuzzle.EditorTools
                 string prefix = nd.kind == NodeKind.TrialBranch ? (detourBranch ? "✗ " : "✓ ")
                               : nd.outcome == Outcome.DeadEnd ? "✗ "
                               : nd.outcome == Outcome.Unresolved ? "… " : "";
-                string cost = nd.cost > 0 ? (nd.streak ? $"+{nd.cost} (streak ×½)  " : $"+{nd.cost}  ") : "";
-                string label = $"{i}.  [{TechniqueTag(nd.technique)}]  {cost}{prefix}{nd.note}";
+                string label = $"{i}.  [{TechniqueTag(nd.technique)}]  {prefix}{nd.note}";
                 if (detourBranch && !_expandedBranches.Contains(i))
                     label += $"   ({SubtreeSize(trace, i)} hidden steps — dead end)";
                 else if (nd.kind == NodeKind.TrialBranch && !detourBranch)
@@ -858,55 +851,43 @@ namespace QueensPuzzle.EditorTools
 
         // ---- footer ------------------------------------------------------------------
 
-        static int TechCost(WeightRater.Report rep, SolveTechnique t) =>
-            rep.techCost != null ? rep.techCost[(int)t] : 0;
-
-        // One line per technique actually used: uses, its share of the weight, and a bar.
-        static void TechRow(string name, int uses, int cost, int total)
+        // One line per technique actually used.
+        static void TechRow(string name, int uses)
         {
-            if (uses == 0) return;
-            int share = total > 0 ? Mathf.RoundToInt(cost * 100f / total) : 0;
-            string bar = new string('▮', Mathf.Clamp(Mathf.RoundToInt(cost * 20f / Mathf.Max(total, 1)), 0, 20));
-            EditorGUILayout.LabelField($"{name}:   ×{uses}   —   {cost} pts ({share}%)   {bar}");
+            if (uses > 0) EditorGUILayout.LabelField($"{name}:   ×{uses}");
         }
 
         void DrawFooter()
         {
             if (_level != null)
             {
-                string weightText = _report.HasValue ? _report.Value.weight.ToString() : "-";
                 // calibrated seconds for a regular player (TimeRater) — the board alone, no level factor
                 string timeText = _report.HasValue ? $"  ·  ~{_seconds} s" : "";
-                EditorGUILayout.HelpBox(
-                    $"{_level.size}x{_level.size}  ·  seed {_level.seed}  ·  weight {weightText}{timeText}  ·  unique ✓",
-                    MessageType.None);
+                EditorGUILayout.HelpBox($"{_level.size}x{_level.size}  ·  seed {_level.seed}{timeText}  ·  unique ✓", MessageType.None);
 
                 if (_report.HasValue)
-                {
-                    var rep = _report.Value;
-                    _showBreakdown = EditorGUILayout.Foldout(_showBreakdown,
-                        $"Rating breakdown — weight {rep.weight}  (~{_seconds} s for a regular player)", true);
-                }
+                    _showBreakdown = EditorGUILayout.Foldout(_showBreakdown, $"Rating breakdown — ~{_seconds} s for a regular player", true);
                 if (_report.HasValue && _showBreakdown)
                 {
                     var rep = _report.Value;
-                    string shape = rep.evenness >= 0.7f ? "smooth grind" : rep.evenness <= 0.4f ? "peaky — has a wall" : "mixed";
-                    string opening = rep.startShare > 0.4f ? "STARTS HARD" : rep.startShare < 0.2f ? "easy opening" : "ok opening";
-                    EditorGUILayout.LabelField($"find (scanning) {rep.findCost}   +   think (tricks) {rep.thinkCost}   +   guesses {rep.guessCost}");
-                    EditorGUILayout.LabelField($"peak {rep.peak}   ·   evenness {rep.evenness:0.00}   ·   paid steps {rep.paidSteps}  —  {shape}");
-                    EditorGUILayout.LabelField($"start {rep.startShare:P0} of the weight in the first third  —  {opening}");
+                    string wall = _time.wall > 2.7f ? "HAS A WALL" : _time.wall < 1.8f ? "even" : "ok";
+                    string opening = _time.start > 1.5f ? "STARTS HARD" : _time.start < 1f ? "easy opening" : "ok opening";
+                    EditorGUILayout.LabelField($"wall {_time.wall:0.00} — the heaviest queen takes that many times the average queen  —  {wall}");
+                    EditorGUILayout.LabelField($"start {_time.start:0.00} — the first third against an even spread of the time  —  {opening}");
+                    EditorGUILayout.LabelField($"steps {CampaignCurve.TrickSteps(rep)} — uses of a trick");
                     EditorGUILayout.Space(4);
-                    TechRow("Queen shadow (free)", rep.techUses[(int)SolveTechnique.QueenScope], 0, rep.weight);
-                    TechRow("Region single", rep.regionSingles, TechCost(rep, SolveTechnique.RegionSingle), rep.weight);
-                    TechRow("Line single", rep.lineSingles, TechCost(rep, SolveTechnique.LineSingle), rep.weight);
-                    TechRow("Line→region", rep.lineToRegionUses, TechCost(rep, SolveTechnique.LineToRegion), rep.weight);
-                    TechRow("Region→line", rep.regionToLineUses, TechCost(rep, SolveTechnique.RegionToLine), rep.weight);
-                    TechRow("Squeeze", rep.squeezeUses, TechCost(rep, SolveTechnique.Squeeze), rep.weight);
-                    TechRow("Subset L→R", rep.subsetLineToRegionUses, TechCost(rep, SolveTechnique.SubsetLineToRegion), rep.weight);
-                    TechRow("Subset R→L", rep.subsetRegionToLineUses, TechCost(rep, SolveTechnique.SubsetRegionToLine), rep.weight);
-                    TechRow("Region choke", rep.regionChokeUses, TechCost(rep, SolveTechnique.RegionChoke), rep.weight);
-                    TechRow("Positional fish", rep.fishUses, TechCost(rep, SolveTechnique.Fish), rep.weight);
-                    TechRow(rep.maxTrialDepth >= 2 ? $"Guesses (nested ×{rep.maxTrialDepth})" : "Guesses", rep.trials, rep.guessCost, rep.weight);
+                    TechRow("Queen shadow", rep.techUses[(int)SolveTechnique.QueenScope]);
+                    TechRow("Region single", rep.regionSingles);
+                    TechRow("Line single", rep.lineSingles);
+                    TechRow("Line→region", rep.lineToRegionUses);
+                    TechRow("Region→line", rep.regionToLineUses);
+                    TechRow("Squeeze", rep.squeezeUses);
+                    TechRow("Subset L→R", rep.subsetLineToRegionUses);
+                    TechRow("Subset R→L", rep.subsetRegionToLineUses);
+                    TechRow("Region choke", rep.regionChokeUses);
+                    TechRow("Positional fish", rep.fishUses);
+                    TechRow("Line choke", rep.lineChokeUses);
+                    TechRow("Guesses", rep.trials);
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField($"Steps: {rep.cycles}     Placed: {rep.placements}     Eliminated: {rep.eliminations}");
                 }
@@ -922,22 +903,19 @@ namespace QueensPuzzle.EditorTools
             if (!_report.HasValue) return;
             var r = _report.Value;
             _targetSeconds = _seconds;
-            _targetPeak = r.peak;
-            _targetEvenness = Mathf.Round(r.evenness * 100f) / 100f;
-            _targetSteps = r.paidSteps;
-            _targetStart = Mathf.Round(r.startShare * 100f) / 100f;
+            _targetWall = Mathf.Round(_time.wall * 100f) / 100f;
+            _targetSteps = CampaignCurve.TrickSteps(r);
+            _targetStart = Mathf.Round(_time.start * 100f) / 100f;
         }
 
         LevelFingerprint TargetFingerprint() => new LevelFingerprint
         {
             seconds = _targetSeconds,
-            peak = _targetPeak,
-            evenness = _targetEvenness,
+            wall = _targetWall,
             steps = _targetSteps,
-            startShare = _targetStart,
+            start = _targetStart,
             tolSecondsPct = _tolSeconds,
-            tolPeakPct = _tolPeak,
-            tolEvennessPct = _tolEvenness,
+            tolWallPct = _tolWall,
             tolStepsPct = _tolSteps,
             tolStartPct = _tolStart,
         };
@@ -1040,18 +1018,17 @@ namespace QueensPuzzle.EditorTools
 
             SetLevel(lvl);
             if (_genFp.seconds <= 0)
-                _status = $"Generated {lvl.size}x{lvl.size} (seed {_genSeed}) — weight {lvl.weight}, unique ✓";
+                _status = $"Generated {lvl.size}x{lvl.size} (seed {_genSeed}) — unique ✓";
             else
             {
                 var rep = _report.Value;
                 var fp = _genFp;
-                string hit = WeightAnnealer.OnTarget(rep, _seconds, fp) ? "✓ on target" : "closest reachable";
+                string hit = BoardAnnealer.OnTarget(rep, _time, fp) ? "✓ on target" : "closest reachable";
                 string got = $"{_seconds} s"
-                    + (fp.peak > 0 ? $" · peak {rep.peak}" : "")
-                    + (fp.evenness > 0 ? $" · even {rep.evenness:0.00}" : "")
-                    + (fp.steps > 0 ? $" · steps {rep.paidSteps}" : "")
-                    + (fp.startShare > 0 ? $" · start {rep.startShare:0.00}" : "");
-                _status = $"Aimed {fp.seconds} s/{(fp.peak > 0 ? fp.peak.ToString() : "-")}/{(fp.evenness > 0 ? fp.evenness.ToString("0.00") : "-")}/{(fp.steps > 0 ? fp.steps.ToString() : "-")} → {got} — {hit} ({(_genWarm ? "warm" : "cold")}, {_genSw.Elapsed.TotalSeconds:0.0}s).";
+                    + (fp.wall > 0 ? $" · wall {_time.wall:0.00}" : "")
+                    + (fp.steps > 0 ? $" · steps {CampaignCurve.TrickSteps(rep)}" : "")
+                    + (fp.start > 0 ? $" · start {_time.start:0.00}" : "");
+                _status = $"Aimed {fp.seconds} s → {got} — {hit} ({(_genWarm ? "warm" : "cold")}, {_genSw.Elapsed.TotalSeconds:0.0}s).";
             }
             Repaint();
         }
@@ -1062,7 +1039,7 @@ namespace QueensPuzzle.EditorTools
             if (lvl == null) { _status = "Import failed — " + error; Repaint(); return; }
 
             SetLevel(lvl);
-            _status = $"Imported {lvl.size}x{lvl.size} — weight {lvl.weight}, unique ✓. Press Save to keep it.";
+            _status = $"Imported {lvl.size}x{lvl.size} — unique ✓. Press Save to keep it.";
             Repaint();
         }
 
@@ -1085,7 +1062,7 @@ namespace QueensPuzzle.EditorTools
             _requestedN = Mathf.Clamp(lvl.size, LevelGenerator.MinSize, LevelGenerator.MaxSize);
             CopyFingerprintFromReport();
             EditorGUIUtility.PingObject(lvl);
-            _status = $"Loaded level {_levelNumber} ({lvl.size}x{lvl.size}) — weight {_report?.weight}.";
+            _status = $"Loaded level {_levelNumber} ({lvl.size}x{lvl.size}) — ~{_seconds} s.";
             Repaint();
         }
 
@@ -1212,53 +1189,12 @@ namespace QueensPuzzle.EditorTools
         {
             _level = lvl;
             _report = lvl != null ? WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows) : (WeightRater.Report?)null;
-            _seconds = lvl != null ? TimeRater.Seconds(lvl.size, lvl.regions, lvl.solutionColumns, _report.Value, lvl.revealedRows) : 0;
+            _time = lvl != null ? TimeRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, _report.Value, lvl.revealedRows) : default;
+            _seconds = Mathf.RoundToInt((float)_time.seconds);
             _trace = lvl != null ? SolveTracer.Build(lvl.size, lvl.regions, lvl.solutionColumns) : null;
-            AnnotateGuessCosts(_trace);
             _importText = lvl != null ? LevelToGridText(lvl) : "";
             _paintRegions = null;   // re-seed the paint grid from the new level on next use
             _selectedStep = -1;
-        }
-
-        // Price every guess from the tree itself, so the numbers always match what the list
-        // shows: a refuted branch = setup + the work inside its dead end (+ setup per nested
-        // guess); the guess row (TrialRoot) = the sum of its refuted branches. Processed in
-        // reverse so branch prices exist before their root sums them.
-        static void AnnotateGuessCosts(TraceNode[] trace)
-        {
-            if (trace == null) return;
-            for (int i = trace.Length - 1; i >= 0; i--)
-            {
-                if (trace[i].kind == NodeKind.TrialBranch)
-                    trace[i].cost = trace[i].outcome != Outcome.Continues
-                        ? WeightRater.GuessSetup + DeadEndWork(trace, i)
-                        : WeightRater.GuessSetup;   // the true cell: its test proves nothing but is still paid
-                else if (trace[i].kind == NodeKind.TrialRoot)
-                {
-                    int sum = 0;
-                    for (int j = i + 1; j < trace.Length; j++)
-                        if (trace[j].parent == i && trace[j].kind == NodeKind.TrialBranch)
-                            sum += trace[j].cost;
-                    trace[i].cost = sum;
-                }
-            }
-        }
-
-        // Deduction work inside a branch's exploration, plus a setup fee for each nested guess.
-        static int DeadEndWork(TraceNode[] trace, int root)
-        {
-            int sum = 0; bool entered = false;
-            for (int j = root + 1; j < trace.Length; j++)
-            {
-                bool under = false;
-                for (int p = trace[j].parent; p >= 0; p = trace[p].parent)
-                    if (p == root) { under = true; break; }
-                if (!under) { if (entered) break; continue; }   // DFS order — leaving means done
-                entered = true;
-                if (trace[j].kind == NodeKind.TrialRoot) sum += WeightRater.GuessSetup;
-                else if (trace[j].kind != NodeKind.TrialBranch) sum += trace[j].cost;
-            }
-            return sum;
         }
 
         // Guided path = no ancestor is a refuted trial branch (those are the what-if detours).
@@ -1287,13 +1223,13 @@ namespace QueensPuzzle.EditorTools
         {
             var rep = WeightRater.Rate(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
             _report = rep;
-            _seconds = TimeRater.Seconds(_level.size, _level.regions, _level.solutionColumns, rep, _level.revealedRows);
+            _time = TimeRater.Rate(_level.size, _level.regions, _level.solutionColumns, rep, _level.revealedRows);
+            _seconds = Mathf.RoundToInt((float)_time.seconds);
             _level.weight = rep.weight;
             _trace = SolveTracer.Build(_level.size, _level.regions, _level.solutionColumns);
-            AnnotateGuessCosts(_trace);
             if (AssetDatabase.Contains(_level)) { EditorUtility.SetDirty(_level); AssetDatabase.SaveAssets(); }
             _selectedStep = -1;
-            _status = $"Rechecked: weight {rep.weight} ({rep.technique}) — {_trace.Length} solve steps.";
+            _status = $"Rechecked: ~{_seconds} s ({rep.technique}) — {_trace.Length} solve steps.";
             Repaint();
         }
 

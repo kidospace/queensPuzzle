@@ -578,9 +578,9 @@ MonoBehaviour:
     maxSeconds: 277.8
   secondsPerRow: 1.231
   maxTrials: 0
-  maxPeakShare: 0.4
-  minSecondsPerStep: 6.5
-  maxPaidSteps: 18
-  milestoneMaxPaidSteps: 24
-  maxStartShare: 0.55
-  peakMaxStartShare: 0.65
+  maxWall: 2.7
+  minSecondsPerStep: 8.5
+  maxSteps: 14
+  milestoneMaxSteps: 20
+  maxStart: 1.5
+  peakMaxStart: 1.65

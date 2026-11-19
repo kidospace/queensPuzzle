@@ -1,11 +1,10 @@
 using System;
-using UnityEngine;
 
 namespace QueensPuzzle
 {
     /// <summary>
-    /// Editor wrapper around <see cref="WeightAnnealer"/>: generates a unique starting board,
-    /// steers its region map toward the requested seconds, then assembles a rated, traced asset.
+    /// Generates a unique starting board and steers its region map toward the requested
+    /// fingerprint with <see cref="BoardAnnealer"/>.
     /// </summary>
     public static class LevelSteerer
     {
@@ -13,29 +12,10 @@ namespace QueensPuzzle
         public const float Gamma = 0.5f;
 
         /// <summary>
-        /// Generates a level steered to <paramref name="target"/>. Pass <paramref name="warmRegion"/> +
-        /// <paramref name="warmSol"/> (a same-size reference board) to anneal FROM it — starts on the
-        /// fingerprint and mutates into a different board — instead of climbing from a random start.
-        /// </summary>
-        public static LevelData Generate(LevelFingerprint target, int n, int seed,
-            int[] warmRegion = null, int[] warmSol = null, Action<float> onProgress = null)
-        {
-            if (!TrySteerRaw(target, n, seed, warmRegion, warmSol, out int[] region, out int[] sol, out int weight, onProgress))
-                return null;
-
-            var data = ScriptableObject.CreateInstance<LevelData>();
-            data.size = n;
-            data.regions = region;
-            data.solutionColumns = sol;
-            data.seed = seed;
-            data.weight = weight;
-            return data;
-        }
-
-        /// <summary>
-        /// Thread-safe core of <see cref="Generate"/>: steers to a raw region/solution/weight without
-        /// touching the Unity object model — safe to run on a worker thread (pass a null
-        /// <paramref name="onProgress"/> off the main thread).
+        /// Steers to <paramref name="target"/> and returns the raw region/solution/weight. Pass
+        /// <paramref name="warmRegion"/> + <paramref name="warmSol"/> (a same-size reference board) to anneal FROM it —
+        /// starts on the fingerprint and mutates into a different board — instead of climbing from a random start.
+        /// No Unity types: safe on a worker thread (pass a null <paramref name="onProgress"/> off the main thread).
         /// </summary>
         public static bool TrySteerRaw(LevelFingerprint target, int n, int seed,
             int[] warmRegion, int[] warmSol, out int[] region, out int[] sol, out int weight,
@@ -60,7 +40,7 @@ namespace QueensPuzzle
                 { region = null; sol = null; weight = 0; return false; }
             }
 
-            region = WeightAnnealer.Steer(n, startRegion, startSol,
+            region = BoardAnnealer.Steer(n, startRegion, startSol,
                 target, Gamma, Iterations, seed,
                 out sol, p => onProgress?.Invoke(0.1f + p * 0.9f), minDrift);
             if (region == null || sol == null) { weight = 0; return false; }

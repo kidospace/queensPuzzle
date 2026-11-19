@@ -129,8 +129,9 @@ static class Program
             double secs = -1;
             if (rep.trials == 0)
             {
-                secs = TimeRater.SecondsExact(size, region, cols, rep);
-                int slot = PoolBuilder.FindSlot(gates, open, size, region, cols, rep, secs, out int[] revealed, out weight);
+                var time = TimeRater.Rate(size, region, cols, rep);
+                secs = time.seconds;
+                int slot = PoolBuilder.FindSlot(gates, open, size, region, cols, rep, time, out int[] revealed, out weight);
                 if (slot >= 0)
                 {
                     level = open[slot].level;
@@ -183,11 +184,11 @@ static class Program
                 int size = int.Parse(Field(y, "size"));
                 int[] region = Ints(Field(y, "regions")), sol = Ints(Field(y, "solutionColumns")), revealed = Ints(Field(y, "revealedRows"));
                 var rep = WeightRater.Rate(size, region, sol, revealed);
-                double secs = TimeRater.SecondsExact(size, region, sol, rep, revealed);
+                var time = TimeRater.Rate(size, region, sol, rep, revealed);
                 rated++;
                 Console.WriteLine(string.Format(CultureInfo.InvariantCulture,
-                    "{{\"level\":{0},\"size\":{1},\"revealed\":{2},\"storedWeight\":{3},\"weight\":{4},\"paidSteps\":{5},\"peak\":{6},\"trials\":{7},\"seconds\":{8:R}}}",
-                    n, size, revealed.Length, Field(y, "weight"), rep.weight, rep.paidSteps, rep.peak, rep.trials, secs));
+                    "{{\"level\":{0},\"size\":{1},\"revealed\":{2},\"storedWeight\":{3},\"weight\":{4},\"trials\":{5},\"seconds\":{6:R},\"wall\":{7:R},\"start\":{8:R},\"steps\":{9}}}",
+                    n, size, revealed.Length, Field(y, "weight"), rep.weight, rep.trials, time.seconds, time.wall, time.start, CampaignCurve.TrickSteps(rep)));
             }
             catch (Exception e) { failed++; Console.Error.WriteLine($"level {n}: {e.GetType().Name}: {e.Message}"); }
         }

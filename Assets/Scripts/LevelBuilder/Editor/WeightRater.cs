@@ -3,38 +3,20 @@ using System;
 namespace QueensPuzzle
 {
     /// <summary>
-    /// Rates a level by solving it the way a human would and summing the effort of every step —
-    /// a long solve on a big board weighs more even when each move is easy.
-    ///
-    /// Every deduction costs   Find · open / Anchor  +  weight :
-    ///   the find part is scanning a cluttered board for the next move (scales with how many
-    ///   cells are still open); the weight is the thinking cost of the trick itself (tenths):
-    ///     region single      0    line single     10    one-colour line 10
-    ///     trapped region    20    squeeze         40    subset L→R 30+10k
-    ///     subset R→L   40+10k    region choke 80+10k   fish        50+10k
-    ///     line choke 80+10k′
-    ///   (choke's k = candidate cells of the starved region — every one must be checked;
-    ///    line choke: try each of a small unit's k′ cells — if the try's SHADOW ALONE
-    ///    starves another unit, the cell is X. One look deep; any what-if that needs
-    ///    forced moves after the try is a GUESS, not a trick)
-    ///   Queen shadow is free — the eyes are already on the queen that was just placed.
-    ///   Streak: the same trick again, right after (no other paid step between) → think cost
-    ///   halved — the pattern is still loaded in the player's head. A guess breaks the streak;
-    ///   chokes streak weakly (3/4, not 1/2 — each one is still a fresh what-if).
-    ///
-    /// A stuck board costs a guess: GuessSetup + the chain of forced moves to the cheapest
-    /// contradiction (pencil profile — the chain is board work, not head work). Nesting
-    /// multiplies deeper cost by Nest per level and hits a flat wall at MaxProbe.
-    /// The known unique solution guides which wrong cell to disprove (luck-free, cheapest first).
+    /// Solves a board the way a human would and reports what the solve needed: how often each
+    /// trick, how many steps, whether it had to guess. The board's rating is its TIME
+    /// (<see cref="TimeRater"/>), which is built on this report.
     ///
     /// Queens revealed at the start of a level (LevelData.revealedRows) are on the board before the
     /// player's first move, so the solve starts from them — a trick they make unnecessary is not counted.
     ///
-    /// The total is the level's WEIGHT (int) — how heavy it is to solve.
-    /// Rough feel: &lt;10 trivial, ~40 easy, ~100 medium, ~300 hard, 400+ brutal.
-    /// Full model documented in docs/weight-model.svg.
+    /// <see cref="Report.weight"/> is the older score of a board: the sum of a hand-set cost per step
+    /// (<see cref="TrickWeights"/>), plus the cost of guessing where the solve is stuck. Nothing in
+    /// the level tools reads it any more. It is still computed because the GAME does: it is stamped on
+    /// every level and shipped in the level pack (the daily challenge's "faster than" line, the win-stats
+    /// server). When the game stops using it, it goes — and TrickWeights with it.
     ///
-    /// Pure C# (no Unity types) so it is unit-testable and runs at build time.
+    /// Pure C# (no Unity types) so it runs at build time, inside the editor and outside it.
     /// </summary>
     public static class WeightRater
     {
@@ -48,7 +30,7 @@ namespace QueensPuzzle
         {
             public bool solved;
             public string technique;
-            public int weight;           // sum of step costs (integer, tenths scale)
+            public int weight;           // the older score, kept for the game only (see the class note)
             public int size;
             public int cycles;
             public int placements;
@@ -65,18 +47,8 @@ namespace QueensPuzzle
             public int subsetRegionToLine3Uses;
             public int fishUses;
             public int lineChokeUses;
-            public int trials;
-            public int maxTrialDepth;
-            public int findCost;         // total scanning cost (the 3·open/25 parts)
-            public int thinkCost;        // total trick-weight cost
-            public int guessCost;        // total cost of all guesses (setup + chains)
-            public int peak;             // cost of the single most expensive step (the "wall")
-            public float evenness;       // 0..1 — 1 = every step costs the same (grind), →0 = one step holds it all (peak)
-            public float startShare;     // 0..1 — share of the weight paid in the FIRST THIRD of the solve (high = starts hard)
-            public int paidSteps;        // steps that cost anything (queen shadows and free endgame moves excluded)
-            public int[] techCost;       // cost per SolveTechnique (find + think of its steps)
+            public int trials;           // guesses the solve needed (a board with any is never built)
             public int[] techUses;       // uses per SolveTechnique
-            public int[] guessCosts;     // one entry per stuck point (consecutive guesses merge into one run)
         }
 
         /// <param name="revealedRows">Rows whose queen starts revealed on the board (null / empty = none).</param>
@@ -91,10 +63,7 @@ namespace QueensPuzzle
             bool solved = true;
             var prevTech = SolveTechnique.None; // last paid trick — a repeat halves the think cost
 
-            // Guess costs grouped per stuck point: a row with k options costs k-1 consecutive
-            // guesses — one run, shown as one number on the trace's TrialRoot row.
-            var guessRuns = new System.Collections.Generic.List<int>();
-            bool prevWasGuess = false;
+            bool prevWasGuess = false;   // consecutive guesses at one stuck point pay the setup once
 
             while (!s.Solved)
             {
@@ -107,9 +76,7 @@ namespace QueensPuzzle
                 {
                     bool streak = step.tech == prevTech && TrickWeights.Streakable(step.tech);
                     if (TrickWeights.Streakable(step.tech)) prevTech = step.tech;
-                    int cost = Tally(step, open, streak, m);
-                    if (cost > 0) m.costs.Add(cost);
-                    weight += cost;
+                    weight += Tally(step, open, streak, m);
                     prevWasGuess = false;   // a deduction resumed — the guess run (if any) is over
                     continue;
                 }
@@ -133,11 +100,7 @@ namespace QueensPuzzle
                 // a human can't know which option is the true one — one inconclusive test of
                 // the true cell is paid once per stuck point (folded into the run's first X)
                 if (!prevWasGuess) bestCost += GuessSetup;
-                m.guessCost += bestCost;
-                if (bestCost > 0) m.costs.Add(bestCost);
                 weight += bestCost;
-                if (prevWasGuess && guessRuns.Count > 0) guessRuns[guessRuns.Count - 1] += bestCost;
-                else guessRuns.Add(bestCost);
                 prevWasGuess = true;
                 s.KnownX(best);
             }
@@ -165,42 +128,10 @@ namespace QueensPuzzle
                 fishUses = m.fishUses,
                 lineChokeUses = m.lineChokeUses,
                 trials = m.trials,
-                maxTrialDepth = m.maxTrialDepth,
-                findCost = m.findCost,
-                thinkCost = m.thinkCost,
-                guessCost = m.guessCost,
-                techCost = m.techCost,
                 techUses = m.techUses,
-                guessCosts = guessRuns.ToArray(),
             };
             rep.technique = TechniqueName(m, rep.solved);
-            rep.paidSteps = m.costs.Count;
-            foreach (int c in m.costs) rep.peak = Math.Max(rep.peak, c);
-            rep.startShare = StartShare(m.costs, weight);   // before Evenness — it sorts the list
-            rep.evenness = Evenness(m.costs);
             return rep;
-        }
-
-        // Share of the weight paid in the first third of the solve's paid steps — high means the
-        // level opens with its hardest thinking (bad shape: players quit on a cold wall).
-        static float StartShare(System.Collections.Generic.List<int> costs, int total)
-        {
-            if (costs.Count == 0 || total <= 0) return 0f;
-            int third = (costs.Count + 2) / 3, sum = 0;
-            for (int i = 0; i < third; i++) sum += costs[i];
-            return (float)sum / total;
-        }
-
-        // 1 − Gini of the step costs: 1 = all steps cost the same, →0 = one step carries everything.
-        static float Evenness(System.Collections.Generic.List<int> costs)
-        {
-            if (costs.Count < 2) return 1f;
-            costs.Sort();
-            double sum = 0, weighted = 0;
-            for (int i = 0; i < costs.Count; i++) { sum += costs[i]; weighted += (i + 1.0) * costs[i]; }
-            if (sum <= 0) return 1f;
-            double gini = 2.0 * weighted / (costs.Count * sum) - (costs.Count + 1.0) / costs.Count;
-            return (float)(1.0 - gini);
         }
 
         static string TechniqueName(Metrics m, bool solved)
@@ -238,12 +169,7 @@ namespace QueensPuzzle
                 case SolveTechnique.Fish:               m.fishUses++;               m.eliminations += step.cells.Length; break;
                 case SolveTechnique.LineChoke:         m.lineChokeUses++;         m.eliminations += step.cells.Length; break;
             }
-            int find = TrickWeights.Find * open / TrickWeights.Anchor;
-            int think = streak ? TrickWeights.StreakThink(step.tech, step.k) : TrickWeights.Of(step.tech, step.k);
-            m.findCost += find;
-            m.thinkCost += think;
-            m.techCost[(int)step.tech] += find + think;
-            return find + think;
+            return TrickWeights.StepCost(step.tech, step.k, open, streak);
         }
 
         // Cost of following one wrong hypothesis to its contradiction (cheapest path wins).
@@ -290,11 +216,8 @@ namespace QueensPuzzle
             public int cycles, placements, regionSingles, lineSingles, eliminations,
                 lineToRegionUses, regionToLineUses, squeezeUses, regionChokeUses,
                 subsetLineToRegionUses, subsetRegionToLineUses, subsetLineToRegion3Uses, subsetRegionToLine3Uses,
-                fishUses, lineChokeUses, trials, maxTrialDepth,
-                findCost, thinkCost, guessCost;
-            public int[] techCost = new int[16];
+                fishUses, lineChokeUses, trials, maxTrialDepth;
             public int[] techUses = new int[16];
-            public System.Collections.Generic.List<int> costs = new System.Collections.Generic.List<int>();
         }
     }
 }

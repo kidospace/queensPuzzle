@@ -99,9 +99,9 @@ namespace QueensPuzzle
                 return b;
             }
 
-            int Add(int parent, NodeKind kind, SolveTechnique tech, Outcome outcome, TraceMark[] marks, string note, int cost = 0, bool streak = false)
+            int Add(int parent, NodeKind kind, SolveTechnique tech, Outcome outcome, TraceMark[] marks, string note)
             {
-                Nodes.Add(new TraceNode { parent = parent, technique = tech, kind = kind, outcome = outcome, marks = marks, note = note, cost = cost, streak = streak });
+                Nodes.Add(new TraceNode { parent = parent, technique = tech, kind = kind, outcome = outcome, marks = marks, note = note });
                 return Nodes.Count - 1;
             }
 
@@ -122,20 +122,15 @@ namespace QueensPuzzle
             public Outcome Run(int parent, int depth, bool guided)
             {
                 int cur = parent;
-                var prevTech = SolveTechnique.None; // last paid trick — a repeat halves the think cost
                 while (true)
                 {
                     if (HasEmptyUnit()) return Outcome.DeadEnd;
                     if (placed == n) return Outcome.Solved;
 
-                    int open = OpenCells();
                     if (NextStep(out var step))
                     {
-                        bool streak = step.tech == prevTech && TrickWeights.Streakable(step.tech);
-                        if (TrickWeights.Streakable(step.tech)) prevTech = step.tech;
                         var marks = step.kind == NodeKind.Placement ? QueenAt(step.cells[0]) : XMarks(step.cells);
-                        cur = Add(cur, step.kind, step.tech, Outcome.Continues, marks, step.note,
-                            TrickWeights.StepCost(step.tech, step.k, open, streak), streak);
+                        cur = Add(cur, step.kind, step.tech, Outcome.Continues, marks, step.note);
                         continue;
                     }
 
@@ -166,11 +161,10 @@ namespace QueensPuzzle
                     if (!guided || rightCell < 0) return Outcome.DeadEnd; // an impossible line — every option exhausted
                     Place(rightCell / n, rightCell % n);
                     cur = rightBranch;
-                    prevTech = SolveTechnique.None;      // a guess is a context switch — streak broken
                 }
             }
 
-            // ---- one shared deduction step: the trace, the weight and the hint all go through here ----
+            // ---- one shared deduction step: the trace, the rating and the hint all go through here ----
 
             public struct DeductionStep { public NodeKind kind; public SolveTechnique tech; public int k; public int[] cells; public int[] cause; public string note; }
 
@@ -211,7 +205,7 @@ namespace QueensPuzzle
                 if (TryRegionToLine(out note)) return Elimed(SolveTechnique.RegionToLine, 0, note, out step);
                 if (TrySqueeze(out note)) return Elimed(SolveTechnique.Squeeze, 0, note, out step);
 
-                // the k-scaling tricks in TRUE weight order, so the cheapest representation fires
+                // the k-scaling tricks in their order (KOrder), so the form a human finds fires
                 // first — a k=7 line subset is the same fact as a k=2 region subset seen from the
                 // other side, and the k=2 view is what a human finds.
                 foreach (var (tech, k, _, _) in KOrder())
@@ -243,19 +237,20 @@ namespace QueensPuzzle
                 return false;
             }
 
-            // (technique, k) pairs sorted by weight; ties break colour-cued before positional.
-            List<(SolveTechnique tech, int k, int w, int tie)> KOrder()
+            // The k-scaling tricks in the ORDER a solve tries them — a rank, nothing more. A subset over
+            // k lines comes at rank k+3 seen line→region, k+4 seen region→line, a fish of k at k+5,
+            // and the region choke at 10 (beside the 7-line subset). Ties break colour-cued before
+            // positional: choke, then subsets, then fish.
+            List<(SolveTechnique tech, int k, int rank, int tie)> KOrder()
             {
-                // choke's real cost depends on the region it starves — order it by its cheapest form (k=2)
-                var order = new List<(SolveTechnique tech, int k, int w, int tie)>
-                { (SolveTechnique.RegionChoke, 0, TrickWeights.Of(SolveTechnique.RegionChoke, 2), 0) };
+                var order = new List<(SolveTechnique tech, int k, int rank, int tie)> { (SolveTechnique.RegionChoke, 0, 10, 0) };
                 for (int k = 2; k < n; k++)
                 {
-                    order.Add((SolveTechnique.SubsetLineToRegion, k, TrickWeights.Of(SolveTechnique.SubsetLineToRegion, k), 1));
-                    order.Add((SolveTechnique.SubsetRegionToLine, k, TrickWeights.Of(SolveTechnique.SubsetRegionToLine, k), 1));
-                    order.Add((SolveTechnique.Fish, k, TrickWeights.Of(SolveTechnique.Fish, k), 2));
+                    order.Add((SolveTechnique.SubsetLineToRegion, k, k + 3, 1));
+                    order.Add((SolveTechnique.SubsetRegionToLine, k, k + 4, 1));
+                    order.Add((SolveTechnique.Fish, k, k + 5, 2));
                 }
-                order.Sort((a, b) => a.w != b.w ? a.w - b.w : a.tie - b.tie);
+                order.Sort((a, b) => a.rank != b.rank ? a.rank - b.rank : a.tie - b.tie);
                 return order;
             }
 

@@ -36,12 +36,8 @@ namespace QueensPuzzle {
                 EditorUtility.ClearProgressBar();
             }
 
-            foreach (var (path, rep) in walls.OrderByDescending(w => w.rep.guessCost)) {
-                int worstRun = rep.guessCosts.Length > 0 ? rep.guessCosts.Max() : 0;
-                Debug.LogWarning($"[CheckGuessWalls] GUESS WALL {path} — weight {rep.weight}, " +
-                    $"{rep.trials} guess(es) at {rep.guessCosts.Length} stuck point(s), depth {rep.maxTrialDepth}, " +
-                    $"guess cost {rep.guessCost} (worst run {worstRun})", AssetDatabase.LoadAssetAtPath<LevelData>(path));
-            }
+            foreach (var (path, rep) in walls.OrderByDescending(w => w.rep.trials))
+                Debug.LogWarning($"[CheckGuessWalls] GUESS WALL {path} — {rep.trials} guess(es)", AssetDatabase.LoadAssetAtPath<LevelData>(path));
             foreach (string path in broken)
                 Debug.LogError($"[CheckGuessWalls] UNSOLVABLE {path} — solver could not finish even with guessing",
                     AssetDatabase.LoadAssetAtPath<LevelData>(path));

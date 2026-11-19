@@ -67,27 +67,32 @@ namespace QueensPuzzle
 
         public static bool TricksOk(in LevelTarget t, in WeightRater.Report rep) => TrickProblem(t, rep) == null;
 
+        /// <summary>How many times a solve needed a trick of any kind — the board's length in steps.</summary>
+        public static int TrickSteps(in WeightRater.Report r) =>
+            r.lineSingles + r.lineToRegionUses + r.regionToLineUses + r.squeezeUses
+            + r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses + r.regionChokeUses + r.lineChokeUses;
+
         /// <summary>
-        /// Accept/reject one rated candidate for a slot. <paramref name="seconds"/> is its
-        /// <see cref="TimeRater"/> rating, taken once per board. Board size must match separately.
+        /// Accept/reject one rated candidate for a slot. <paramref name="time"/> is its
+        /// <see cref="TimeRater"/> rating, taken once per board: its seconds and how they are spread
+        /// over the solve. Board size must match separately.
         /// </summary>
-        public static bool PassesGates(in GenerationGates c, in LevelTarget t, in WeightRater.Report rep, double seconds)
+        public static bool PassesGates(in GenerationGates c, in LevelTarget t, in WeightRater.Report rep, in TimeRater.Time time)
         {
             if (!rep.solved || rep.trials > c.maxTrials) return false;
-            if (!InTimeWindow(t, seconds)) return false;
+            if (!InTimeWindow(t, time.seconds)) return false;
             if (!TricksOk(t, rep)) return false;
             bool milestone = t.role == Role.Milestone;
-            if (rep.paidSteps > (milestone ? c.milestoneMaxPaidSteps : c.maxPaidSteps)) return false;
+            int steps = TrickSteps(rep);
+            if (steps > (milestone ? c.milestoneMaxSteps : c.maxSteps)) return false;   // marathon
             // breathers skip the wall / grind / start gates, so onboarding is not rejected
-            if (t.role != Role.Breather && rep.paidSteps > 0)
+            if (t.role != Role.Breather && steps > 0)
             {
-                if (rep.peak / (float)rep.weight > c.maxPeakShare) return false;            // wall
-                double as10x10 = seconds / System.Math.Pow(c.secondsPerRow, rep.size - 10);
-                if (as10x10 / rep.paidSteps < c.minSecondsPerStep) return false;            // grind
-                // with few steps the first third always holds most of the rating, and that's
-                // fine on an easy board — hence no start gate on breathers either
+                if (time.wall > c.maxWall) return false;                                    // wall: one queen holds the board
+                double as10x10 = time.seconds / System.Math.Pow(c.secondsPerRow, rep.size - 10);
+                if (as10x10 / steps < c.minSecondsPerStep) return false;                    // grind: many cheap steps
                 bool hardSlot = milestone || t.role == Role.Peak;
-                if (rep.startShare > (hardSlot ? c.peakMaxStartShare : c.maxStartShare)) return false;
+                if (time.start > (hardSlot ? c.peakMaxStart : c.maxStart)) return false;   // opens with its hardest
             }
             return true;
         }

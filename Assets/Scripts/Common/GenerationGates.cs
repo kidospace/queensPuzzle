@@ -8,12 +8,12 @@ namespace QueensPuzzle
     public struct GenerationGates
     {
         public int maxTrials;
-        public float maxPeakShare;
-        public float minSecondsPerStep;   // as on a 10x10 board
+        public float maxWall;             // the heaviest queen's seconds ÷ the average queen's
+        public float minSecondsPerStep;   // as on a 10x10 board; a step = one use of a trick
         public float secondsPerRow;       // to read any board size as 10x10
-        public int maxPaidSteps;
-        public int milestoneMaxPaidSteps;
-        public float maxStartShare;
-        public float peakMaxStartShare;
+        public int maxSteps;              // uses of a trick in the whole solve
+        public int milestoneMaxSteps;
+        public float maxStart;            // the first third of the queens' seconds ÷ an even spread's
+        public float peakMaxStart;
     }
 }

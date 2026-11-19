@@ -214,28 +214,33 @@ namespace QueensPuzzle
         [Header("Quality gates")]
         [Tooltip("No guessing, ever.")]
         public int maxTrials = 0;
-        [Tooltip("The single most expensive deduction step may hold at most this share of the rating.")]
-        public float maxPeakShare = 0.40f;
-        [Tooltip("Grinder reject: a paid step must be worth at least this many seconds (as on a 10x10 board).")]
-        public float minSecondsPerStep = 6.5f;
-        [Tooltip("Marathon reject.")]
-        public int maxPaidSteps = 18;
-        public int milestoneMaxPaidSteps = 24;
-        [Tooltip("Levels must open gently: share of the rating paid in the first third of the solve.")]
-        public float maxStartShare = 0.55f;
-        public float peakMaxStartShare = 0.65f;
+        // All in the board's SECONDS (TimeRater), spread over its queens. The values were set on 1,624
+        // random boards, 8x8 to 11x11: wall rejects ~5 of 100, start ~27 (peak slots ~11), steps ~8
+        // (milestones ~0), seconds per step none — it only guards against a kind of board the
+        // generator does not make today.
+        [Tooltip("Wall reject: the heaviest queen may take at most this many times the average queen's seconds.")]
+        public float maxWall = 2.7f;
+        [Tooltip("Grinder reject: a use of a trick must be worth at least this many seconds (as on a 10x10 board).")]
+        public float minSecondsPerStep = 8.5f;
+        [Tooltip("Marathon reject: at most this many uses of a trick in the whole solve.")]
+        public int maxSteps = 14;
+        public int milestoneMaxSteps = 20;
+        [Tooltip("Levels must open gently: the first third of the queens may take at most this many times " +
+                 "what an even spread of the board's seconds would put there.")]
+        public float maxStart = 1.5f;
+        public float peakMaxStart = 1.65f;
 
         /// <summary>The gate fields above as plain data — what the pool builder consumes.</summary>
         public GenerationGates Gates => new GenerationGates
         {
             maxTrials = maxTrials,
-            maxPeakShare = maxPeakShare,
+            maxWall = maxWall,
             minSecondsPerStep = minSecondsPerStep,
             secondsPerRow = secondsPerRow,
-            maxPaidSteps = maxPaidSteps,
-            milestoneMaxPaidSteps = milestoneMaxPaidSteps,
-            maxStartShare = maxStartShare,
-            peakMaxStartShare = peakMaxStartShare,
+            maxSteps = maxSteps,
+            milestoneMaxSteps = milestoneMaxSteps,
+            maxStart = maxStart,
+            peakMaxStart = peakMaxStart,
         };
 
         public LevelTarget GetTarget(int level)
