@@ -46,6 +46,7 @@ namespace QueensPuzzle
         int[] targets, built;
         byte[] roles, lessons;   // lessons: 0 none, 1-3 the stage of a trick lesson
         byte[] drawnMarks;       // 0 not a drawn place · 1 built from a drawing · 2 built, but an ordinary level · 3 not built
+        bool[] hardMarks;        // the curve shows this level as a hard one
         int dataFrom, maxSeconds;
         [SerializeField] bool showTargets = true, showBuilt = true;
 
@@ -637,6 +638,7 @@ namespace QueensPuzzle
             roles = new byte[n];
             lessons = new byte[n];
             drawnMarks = new byte[n];
+            hardMarks = new bool[n];
             dataFrom = from;
             try
             {
@@ -651,6 +653,7 @@ namespace QueensPuzzle
                         factors[i] = t.placeFactor;
                         roles[i] = (byte)t.role;
                         lessons[i] = (byte)(t.tricks.lesson ? t.tricks.stage : 0);
+                        hardMarks[i] = t.hard;
                     }
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
                     builtBoard[i] = lvl != null ? (float)PoolBuildRunner.SecondsOf(lvl) : 0f;
@@ -798,6 +801,22 @@ namespace QueensPuzzle
                         $"Drawn places: {marks} — purple = built from a drawing, yellow = an ordinary level stands there ({ordinary}), yellow dot = not built", unitLab);
             }
 
+            // the hard levels, a second row of marks: what the game will show with the Hard skin
+            if (hardMarks != null)
+            {
+                int hard = 0;
+                for (int i = 0; i < hardMarks.Length; i++)
+                {
+                    if (!hardMarks[i]) continue;
+                    hard++;
+                    float x = plot.xMin + i / (float)Mathf.Max(1, hardMarks.Length - 1) * plot.width;
+                    EditorGUI.DrawRect(new Rect(x - 1.5f, plot.yMin + 50f, 3f, 9f), red);
+                }
+                if (hard > 0)
+                    GUI.Label(new Rect(plot.xMin + 6, plot.yMin + 60, plot.width - 12, 16),
+                        $"Hard levels: {hard} — red = shown as hard in the game (milestones, and the curve's list)", unitLab);
+            }
+
             DrawGraphHover(plot, ink, blue, orange, red);
         }
 
@@ -852,6 +871,7 @@ namespace QueensPuzzle
             }
             if (t.dog) s += "  |  dog";
             if (t.drawn) s += "  |  drawn";
+            if (t.hard) s += "  |  hard";
             var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
             if (lvl != null)
             {

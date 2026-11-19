@@ -135,18 +135,18 @@ namespace QueensPuzzle
         {
             L(4, 4.5f), L(4, 3.5f, true), L(5, 8.0f, true), L(6, 19.5f, true), L(6, 21.5f, true), L(6, 25.0f, true), L(6, 16.0f, true), L(6, 28.0f, true), L(6, 30.0f, true), L(7, 38.5f, true),   // 1-10
             L(6, 26.0f), L(7, 41.5f), L(7, 50.0f), L(8, 58.0f), L(8, 50.0f), L(7, 46.0f), L(7, 56.0f), L(8, 66.0f), L(8, 56.0f), L(8, 57.8f),   // 11-20
-            L(8, 57.2f), L(8, 66.5f), L(9, 74.3f), L(9, 90.6f), L(8, 64.5f), L(8, 70.7f), L(8, 67.7f), L(9, 76.1f), L(9, 82.6f), L(9, 89.1f),   // 21-30
-            L(8, 67.9f), L(9, 75.4f), L(9, 87.7f), L(9, 75.0f), L(9, 75.9f), L(8, 72.7f), L(9, 81.7f), L(9, 88.7f), L(9, 109.9f), L(8, 72.7f),   // 31-40
+            L(8, 57.2f), L(8, 66.5f), L(9, 74.3f), L(9, 82.5f), L(8, 64.5f), L(8, 70.7f), L(8, 67.7f), L(9, 76.1f), L(9, 82.6f), L(9, 89.1f),   // 21-30
+            L(8, 67.9f), L(9, 75.4f), L(9, 87.7f), L(9, 75.0f), L(9, 75.9f), L(8, 72.7f), L(9, 81.7f), L(9, 88.7f), L(9, 95.6f), L(8, 72.7f),   // 31-40
             L(8, 73.6f), L(9, 81.9f), L(9, 95.5f), L(9, 81.8f), L(9, 82.9f), L(9, 79.4f), L(9, 89.5f), L(9, 97.2f), L(10, 104.9f), L(10, 131.0f),   // 41-50
             L(9, 80.2f), L(9, 87.5f), L(9, 83.5f), L(9, 93.5f), L(10, 101.1f), L(10, 108.6f), L(9, 82.3f), L(9, 89.8f), L(9, 85.6f), L(9, 96.0f),   // 51-60
             L(9, 84.0f), L(9, 93.1f), L(10, 108.1f), L(9, 92.1f), L(9, 92.9f), L(9, 88.4f), L(9, 99.7f), L(10, 108.2f), L(10, 116.9f), L(9, 87.1f),   // 61-70
-            L(9, 95.4f), L(9, 90.5f), L(10, 102.2f), L(10, 111.1f), L(10, 130.2f), L(9, 88.2f), L(9, 97.0f), L(9, 91.8f), L(10, 104.2f), L(10, 113.5f),   // 71-80
-            L(9, 91.1f), L(10, 100.7f), L(10, 116.6f), L(9, 99.2f), L(9, 99.1f), L(9, 93.3f), L(10, 106.5f), L(10, 116.4f), L(10, 139.5f), L(9, 90.3f),   // 81-90
+            L(9, 95.4f), L(9, 90.5f), L(10, 102.2f), L(10, 111.1f), L(10, 120.0f), L(9, 88.2f), L(9, 97.0f), L(9, 91.8f), L(10, 104.2f), L(10, 113.5f),   // 71-80
+            L(9, 91.1f), L(10, 100.7f), L(10, 116.6f), L(9, 99.2f), L(9, 99.1f), L(9, 93.3f), L(10, 106.5f), L(10, 116.4f), L(10, 126.2f), L(9, 90.3f),   // 81-90
             L(10, 100.1f), L(9, 94.1f), L(10, 107.9f), L(10, 118.2f), L(10, 128.5f), L(9, 90.9f), L(10, 101.1f), L(9, 94.8f), L(10, 109.2f), L(10, 155.6f),   // 91-100
             L(9, 95.2f), L(10, 115.0f), L(10, 121.6f), L(10, 103.3f), L(10, 102.5f), L(9, 95.8f), L(10, 111.0f), L(10, 122.3f), L(10, 133.7f), L(9, 92.1f),   // 101-110
-            L(10, 103.4f), L(9, 96.4f), L(10, 112.3f), L(10, 124.1f), L(10, 146.2f), L(9, 92.5f), L(10, 104.2f), L(9, 96.8f), L(10, 113.2f), L(10, 125.3f),   // 111-120
-            L(10, 137.4f), L(9, 92.5f), L(10, 104.6f), L(9, 97.0f), L(10, 113.8f), L(10, 126.5f), L(10, 148.0f), L(9, 92.6f), L(10, 105.2f), L(9, 97.4f),   // 121-130
-            L(10, 115.0f), L(10, 128.0f), L(10, 141.1f), L(9, 92.9f), L(10, 105.9f), L(9, 97.8f), L(10, 116.0f), L(10, 129.6f), L(10, 150.4f), L(9, 93.2f),   // 131-140
+            L(10, 103.4f), L(9, 96.4f), L(10, 112.3f), L(10, 124.1f), L(10, 135.9f), L(9, 92.5f), L(10, 104.2f), L(9, 96.8f), L(10, 113.2f), L(10, 125.3f),   // 111-120
+            L(10, 137.4f), L(9, 92.5f), L(10, 104.6f), L(9, 97.0f), L(10, 113.8f), L(10, 126.5f), L(10, 139.1f), L(9, 92.6f), L(10, 105.2f), L(9, 97.4f),   // 121-130
+            L(10, 115.0f), L(10, 128.0f), L(10, 141.1f), L(9, 92.9f), L(10, 105.9f), L(9, 97.8f), L(10, 116.0f), L(10, 129.6f), L(10, 143.1f), L(9, 93.2f),   // 131-140
             L(10, 106.7f), L(9, 98.3f), L(10, 117.1f), L(10, 131.1f), L(10, 145.1f), L(9, 93.4f), L(10, 107.4f), L(9, 98.7f), L(10, 118.1f), L(11, 165.5f),   // 141-150
         };
 
@@ -199,11 +199,12 @@ namespace QueensPuzzle
         // A hard level is shown as one in the game (the Hard skin on the level button and in play). It is
         // a matter of the PLACE, not of the board: the same board is hard at level 24 and plain at 200. So
         // it is decided here and written into the exported pack per place. Every milestone is hard. Before
-        // the wave the listed levels below are too — real peaks of the list, about a third above the
-        // levels around them (their seconds in learnLevels say so), one every 11-25 levels: a player there
-        // wins about 8 levels a day, so he meets one every day and a half to three days.
+        // the wave the listed levels below are too — the real peaks of the list, each the longest level
+        // around it (17-24% above its neighbours; a milestone is 40-50% above), one every 11-25 levels:
+        // a player there wins about 8 levels a day, so he meets one every day and a half to three days.
+        // Marking a level does not make it harder: its seconds are whatever the list says.
         [Header("Hard levels")]
-        [Tooltip("Levels shown as hard besides the milestones. Each must really be one: its seconds well above its neighbours'.")]
+        [Tooltip("Levels shown as hard besides the milestones. Pick real peaks: the longest level around.")]
         public int[] hardLevels = { 24, 39, 75, 89, 115, 127, 139 };
 
         /// <summary>Is this level shown as a hard one?</summary>
