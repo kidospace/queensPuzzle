@@ -5,8 +5,9 @@ namespace QueensPuzzle
 {
     /// <summary>
     /// Campaign build window: pick a <see cref="CampaignCurveConfig"/>, a level range, and see
-    /// what the curve asks of each slot and what the built levels take — both in seconds for a
-    /// regular player — for that range on one graph.
+    /// what the curve asks of each slot and what the built levels take, for that range on one graph —
+    /// both in seconds of a regular player at that level (× place factor), or, with the "Seconds of"
+    /// switch, of the board itself (no factor).
     ///
     /// Performance: targets are computed once per "Show graph" click (never in OnGUI), the
     /// polyline is decimated to two points per pixel column (max/min per column, so peaks and
@@ -45,6 +46,14 @@ namespace QueensPuzzle
         byte[] roles, lessons;   // lessons: 0 none, 1-3 the stage of a trick lesson
         int dataFrom, maxSeconds;
         [SerializeField] bool showTargets = true, showBuilt = true;
+
+        // The graph's unit. Player = the board's own seconds × the level's place factor (what a regular
+        // player at that level takes — what the curve asks for). Board = the board's own seconds, as an
+        // experienced player takes it, with the factor taken out. Switching needs no re-rating: the
+        // board seconds and the factors are kept, and only the drawn numbers change.
+        [SerializeField] bool withPlaceFactor = true;
+        static readonly string[] UnitNames = { "Player at this level (× place factor)", "Board itself (no factor)" };
+        float[] targetBoard, builtBoard, factors;   // board seconds (0 = no level) and each level's place factor
 
         // screen-space cache, rebuilt when data, checkboxes or rect changes
         Vector3[] targetLine, builtLine;
@@ -152,11 +161,18 @@ namespace QueensPuzzle
                         $"{offTolCount} existing level(s) not what their slot asks (board size, or time ±{config.timeTol * 100:0}%)", EditorStyles.miniLabel);
                 }
                 using (new EditorGUI.DisabledScope(config == null))
+                {
                     if (GUILayout.Button($"Generate levels {from}–{to}"))
                     {
                         GenerateLevels();
                         GUIUtility.ExitGUI();
                     }
+                    if (GUILayout.Button($"Generate outside Unity {from}–{to}"))
+                    {
+                        GenerateOutside();
+                        GUIUtility.ExitGUI();
+                    }
+                }
                 if (GUILayout.Button("Export levels → Resources"))
                     LevelResourcesExporter.Export(OutputFolder, SetName);
             }
@@ -178,26 +194,47 @@ namespace QueensPuzzle
             if (st != showTargets || sb != showBuilt) { showTargets = st; showBuilt = sb; cacheStale = true; }
             EditorGUILayout.EndHorizontal();
 
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Seconds of", GUILayout.Width(70));
+            int unit = GUILayout.Toolbar(withPlaceFactor ? 0 : 1, UnitNames);
+            if ((unit == 0) != withPlaceFactor) { withPlaceFactor = unit == 0; ApplyUnit(); }
+            EditorGUILayout.EndHorizontal();
+
             if (built == null) return;
             var rect = GUILayoutUtility.GetRect(120f, 8000f, 120f, 8000f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             DrawGraph(rect);
+        }
+
+        // The slots of the range that still need a level (null, with a message, when none does).
+        PoolBuildRunner.ScanResult OpenSlots()
+        {
+            from = Mathf.Max(1, from);
+            to = Mathf.Max(from, to);
+
+            var targets = new System.Collections.Generic.List<LevelTarget>(to - from + 1);
+            for (int l = from; l <= to; l++) targets.Add(config.GetTarget(l));
+            var scan = PoolBuildRunner.Scan(targets, OutputFolder, skipExisting, overrideOffTol);
+            if (scan.open.Count > 0) return scan;
+            EditorUtility.DisplayDialog("Campaign Builder", "All levels in this range already exist and are inside tolerance.", "OK");
+            return null;
+        }
+
+        // The same build, run outside the editor by Tools/LevelGen: the editor stays free and several
+        // can run at once. Watch and stop it in QueensPuzzle > Level Gen Runs.
+        void GenerateOutside()
+        {
+            var scan = OpenSlots();
+            if (scan == null) return;
+            LevelGenWindow.Start($"{SetName} {from}–{to}", OutputFolder, config.Gates, scan.open,
+                new PoolBuilder.Options { threadCount = threadCount, seedBase = seedBase, colors = Rules(PaletteLab()) });
         }
 
         // generate → rate → fit into any open slot whose TIME it matches (±timeTol, fixed) — no widening,
         // a board that fits nothing is discarded. The build core lives in PoolBuildRunner.
         void GenerateLevels()
         {
-            from = Mathf.Max(1, from);
-            to = Mathf.Max(from, to);
-
-            var targets = new System.Collections.Generic.List<CampaignCurveConfig.LevelTarget>(to - from + 1);
-            for (int l = from; l <= to; l++) targets.Add(config.GetTarget(l));
-            var scan = PoolBuildRunner.Scan(targets, OutputFolder, skipExisting, overrideOffTol);
-            if (scan.open.Count == 0)
-            {
-                EditorUtility.DisplayDialog("Campaign Builder", "All levels in this range already exist and are inside tolerance.", "OK");
-                return;
-            }
+            var scan = OpenSlots();
+            if (scan == null) return;
 
             if (!EditorUtility.DisplayDialog("Generate levels — summary",
                 $"Set:  {SetName}\n" +
@@ -217,6 +254,7 @@ namespace QueensPuzzle
                     threadCount = threadCount,
                     seedBase = seedBase,
                     title = "Generating campaign levels",
+                    colors = Rules(PaletteLab()),
                     tolLabel = $"time ±{config.timeTol * 100:0}%",
                 });
 
@@ -243,30 +281,6 @@ namespace QueensPuzzle
         System.Collections.Generic.List<(int lvl, string desc)> colorFindings;
         string colorFindingsTitle;
         Vector2 colorScroll;
-
-        // XKCD colour-survey name distance between every SORegionsColors pair: 0 = people give
-        // both colours the same name, 1 = never the same name. Computed offline from the C3
-        // dataset (Heer & Stone) — recompute whenever a palette colour changes.
-        static readonly float[,] nameDist =
-        {
-            { 0.000f, 1.000f, 1.000f, 1.000f, 0.995f, 0.946f, 1.000f, 1.000f, 0.944f, 1.000f, 1.000f, 1.000f, 0.991f, 1.000f, 1.000f, 0.011f, 0.999f },
-            { 1.000f, 0.000f, 0.984f, 0.943f, 0.995f, 0.999f, 0.941f, 0.794f, 1.000f, 0.903f, 0.976f, 0.636f, 1.000f, 0.326f, 0.893f, 1.000f, 0.991f },
-            { 1.000f, 0.984f, 0.000f, 1.000f, 0.625f, 1.000f, 1.000f, 0.128f, 0.990f, 1.000f, 0.158f, 0.158f, 0.942f, 1.000f, 0.259f, 1.000f, 0.095f },
-            { 1.000f, 0.943f, 1.000f, 0.000f, 1.000f, 0.930f, 0.029f, 1.000f, 1.000f, 0.043f, 1.000f, 1.000f, 1.000f, 0.306f, 1.000f, 1.000f, 1.000f },
-            { 0.995f, 0.995f, 0.625f, 1.000f, 0.000f, 1.000f, 1.000f, 0.847f, 0.547f, 1.000f, 0.643f, 0.834f, 0.354f, 1.000f, 0.804f, 0.989f, 0.439f },
-            { 0.946f, 0.999f, 1.000f, 0.930f, 1.000f, 0.000f, 0.947f, 1.000f, 0.996f, 0.975f, 1.000f, 1.000f, 1.000f, 0.982f, 1.000f, 0.950f, 1.000f },
-            { 1.000f, 0.941f, 1.000f, 0.029f, 1.000f, 0.947f, 0.000f, 1.000f, 1.000f, 0.015f, 1.000f, 0.999f, 1.000f, 0.290f, 1.000f, 0.999f, 1.000f },
-            { 1.000f, 0.794f, 0.128f, 1.000f, 0.847f, 1.000f, 1.000f, 0.000f, 1.000f, 0.993f, 0.379f, 0.052f, 0.997f, 0.902f, 0.423f, 1.000f, 0.242f },
-            { 0.944f, 1.000f, 0.990f, 1.000f, 0.547f, 0.996f, 1.000f, 1.000f, 0.000f, 1.000f, 0.994f, 1.000f, 0.182f, 1.000f, 1.000f, 0.918f, 0.918f },
-            { 1.000f, 0.903f, 1.000f, 0.043f, 1.000f, 0.975f, 0.015f, 0.993f, 1.000f, 0.000f, 1.000f, 0.987f, 1.000f, 0.248f, 0.997f, 1.000f, 1.000f },
-            { 1.000f, 0.976f, 0.158f, 1.000f, 0.643f, 1.000f, 1.000f, 0.379f, 0.994f, 1.000f, 0.000f, 0.307f, 0.947f, 1.000f, 0.036f, 1.000f, 0.352f },
-            { 1.000f, 0.636f, 0.158f, 1.000f, 0.834f, 1.000f, 0.999f, 0.052f, 1.000f, 0.987f, 0.307f, 0.000f, 0.996f, 0.813f, 0.309f, 1.000f, 0.291f },
-            { 0.991f, 1.000f, 0.942f, 1.000f, 0.354f, 1.000f, 1.000f, 0.997f, 0.182f, 1.000f, 0.947f, 0.996f, 0.000f, 1.000f, 0.992f, 0.978f, 0.850f },
-            { 1.000f, 0.326f, 1.000f, 0.306f, 1.000f, 0.982f, 0.290f, 0.902f, 1.000f, 0.248f, 1.000f, 0.813f, 1.000f, 0.000f, 0.949f, 1.000f, 1.000f },
-            { 1.000f, 0.893f, 0.259f, 1.000f, 0.804f, 1.000f, 1.000f, 0.423f, 1.000f, 0.997f, 0.036f, 0.309f, 0.992f, 0.949f, 0.000f, 1.000f, 0.502f },
-            { 0.011f, 1.000f, 1.000f, 1.000f, 0.989f, 0.950f, 0.999f, 1.000f, 0.918f, 1.000f, 1.000f, 1.000f, 0.978f, 1.000f, 1.000f, 0.000f, 0.998f },
-            { 0.999f, 0.991f, 0.095f, 1.000f, 0.439f, 1.000f, 1.000f, 0.242f, 0.918f, 1.000f, 0.352f, 0.291f, 0.850f, 1.000f, 0.502f, 0.998f, 0.000f },
-        };
 
         // Pairs both family tests call "far" but a human eye confirmed as confusable — the veto
         // list of last resort, edited in the window and persisted in EditorPrefs. Ships with
@@ -308,19 +322,25 @@ namespace QueensPuzzle
             EditorPrefs.SetString(ByEyePrefsKey, parts.Length == 0 ? "none" : string.Join(";", parts));
         }
 
-        // Assumes a saturated palette: a near-grey colour has no meaningful hue angle, so the
-        // hue test would need a chroma guard if a pale colour ever joins the palette.
-        bool ForbiddenNeighbor(int a, int b, Vector3[] lab)
+        /// The palette, this window's thresholds and the by-eye pairs, as the plain numbers the
+        /// shared colour code (LevelColors) works on.
+        LevelColors.Rules Rules(Vector3[] lab)
         {
-            if (a >= nameDist.GetLength(0) || b >= nameDist.GetLength(0)) return false;
-            if (nameDist[a, b] < nameMinDist) return true;
-            if (Mathf.Abs(Mathf.DeltaAngle(HueDeg(lab[a]), HueDeg(lab[b]))) < hueMinDeg) return true;
-            foreach (var p in ByEyePairs())
-                if ((p.x == a && p.y == b) || (p.x == b && p.y == a)) return true;
-            return false;
+            var r = new LevelColors.Rules { colorMinDist = colorMinDist, nameMinDist = nameMinDist, hueMinDeg = hueMinDeg, lab = new float[lab.Length * 3] };
+            for (int i = 0; i < lab.Length; i++) { r.lab[i * 3] = lab[i].x; r.lab[i * 3 + 1] = lab[i].y; r.lab[i * 3 + 2] = lab[i].z; }
+            var pairs = ByEyePairs();
+            r.byEye = new int[pairs.Count * 2];
+            for (int i = 0; i < pairs.Count; i++) { r.byEye[i * 2] = pairs[i].x; r.byEye[i * 2 + 1] = pairs[i].y; }
+            return r;
         }
 
-        static float HueDeg(Vector3 lab) => Mathf.Atan2(lab.z, lab.y) * Mathf.Rad2Deg;
+        /// The same rules at the default thresholds — for a build started from another window.
+        public static LevelColors.Rules DefaultColorRules()
+        {
+            var win = CreateInstance<CampaignBuilderWindow>();
+            try { return win.Rules(PaletteLab()); }
+            finally { DestroyImmediate(win); }
+        }
 
         void DrawColorsSection()
         {
@@ -438,27 +458,13 @@ namespace QueensPuzzle
             return lab;
         }
 
-        // region adjacency (orthogonal neighbours) as a bool matrix
-        static bool[,] Adjacency(LevelData lvl)
-        {
-            int n = lvl.size;
-            var adj = new bool[n, n];
-            for (int r = 0; r < n; r++)
-                for (int c = 0; c < n; c++)
-                {
-                    int a = lvl.regions[r * n + c];
-                    if (c + 1 < n) { int b = lvl.regions[r * n + c + 1]; if (a != b) { adj[a, b] = adj[b, a] = true; } }
-                    if (r + 1 < n) { int b = lvl.regions[(r + 1) * n + c]; if (a != b) { adj[a, b] = adj[b, a] = true; } }
-                }
-            return adj;
-        }
-
         // global: any two colours on the board closer than colorMinDist in OKLab — such a pair
         // must not share a board at all. neighbors: touching regions whose colours share a name
         // per forbiddenNeighbors (or are the same colour outright).
         void FindColorIssues(bool global, bool neighbors)
         {
             var lab = PaletteLab();
+            var rules = Rules(lab);
             var palette = qp.SORegionsColors.Instance.Colors;
             colorFindings = new System.Collections.Generic.List<(int, string)>();
             colorFindingsTitle = global && neighbors ? "color issue(s)"
@@ -473,7 +479,7 @@ namespace QueensPuzzle
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                 if (lvl == null) continue;
                 int n = lvl.size;
-                var adj = neighbors ? Adjacency(lvl) : null;
+                var adj = neighbors ? LevelColors.Adjacency(lvl.size, lvl.regions) : null;
                 for (int a = 0; a < n; a++)
                     for (int b = a + 1; b < n; b++)
                     {
@@ -487,7 +493,7 @@ namespace QueensPuzzle
                         }
                         if (neighbors && adj[a, b])
                         {
-                            if (ca == cb || ForbiddenNeighbor(ca, cb, lab))
+                            if (ca == cb || LevelColors.ForbiddenNeighbor(rules, ca, cb))
                                 colorFindings.Add((l, $"{(char)('A' + a)}~{(char)('A' + b)} {palette[ca].Name}~{palette[cb].Name}"));
                             else if (border != null && border.ContainsKey((Mathf.Min(ca, cb), Mathf.Max(ca, cb))))
                             {
@@ -528,7 +534,7 @@ namespace QueensPuzzle
                     "Re-export the level pack afterwards.", "Recolor", "Cancel"))
                 return;
 
-            var lab = PaletteLab();
+            var rules = Rules(PaletteLab());
             int done = 0, failed = 0, skipped = 0;
             try
             {
@@ -542,16 +548,14 @@ namespace QueensPuzzle
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                     if (lvl == null) continue;
 
-                    var adj = Adjacency(lvl);
-                    if (!HasColorIssues(lvl, lab, adj)) { skipped++; continue; }   // clean — keep shipped colours
+                    var adj = LevelColors.Adjacency(lvl.size, lvl.regions);
+                    if (!LevelColors.HasIssues(lvl.size, lvl.regionColors, rules, adj)) { skipped++; continue; }   // clean — keep shipped colours
 
-                    var assign = PickSpreadColors(lvl.size, l, lab, adj);
+                    var assign = LevelColors.Pick(lvl.size, l, rules, adj);
                     if (assign == null) { failed++; continue; }   // threshold too high for this size
 
-                    bool identity = true;
-                    for (int r = 0; r < lvl.size; r++) if (assign[r] != r) { identity = false; break; }
                     Undo.RecordObject(lvl, "Recolor level");
-                    lvl.regionColors = identity ? null : assign;
+                    lvl.regionColors = LevelColors.Stored(assign);
                     EditorUtility.SetDirty(lvl);
                     done++;
                 }
@@ -570,64 +574,19 @@ namespace QueensPuzzle
         System.Collections.Generic.Dictionary<(int, int), string> BorderlinePairs(Vector3[] lab)
         {
             var palette = qp.SORegionsColors.Instance.Colors;
+            var rules = Rules(lab);
             var border = new System.Collections.Generic.Dictionary<(int, int), string>();
             for (int a = 0; a < lab.Length; a++)
                 for (int b = a + 1; b < lab.Length; b++)
                 {
                     float ok = Vector3.Distance(lab[a], lab[b]);
-                    if (ok < colorMinDist || ForbiddenNeighbor(a, b, lab)) continue;   // already caught
-                    float nm = a < nameDist.GetLength(0) && b < nameDist.GetLength(0) ? nameDist[a, b] : 1f;
-                    float hd = Mathf.Abs(Mathf.DeltaAngle(HueDeg(lab[a]), HueDeg(lab[b])));
+                    if (ok < colorMinDist || LevelColors.ForbiddenNeighbor(rules, a, b)) continue;   // already caught
+                    float nm = a < LevelColors.NameDist.GetLength(0) && b < LevelColors.NameDist.GetLength(0) ? LevelColors.NameDist[a, b] : 1f;
+                    float hd = LevelColors.HueGap(rules, a, b);
                     if (ok >= colorMinDist + 0.03f && nm >= nameMinDist + 0.05f && hd >= hueMinDeg + 4f) continue;
                     border[(a, b)] = $"{a}~{b} {palette[a].Name}~{palette[b].Name}  OKLab {ok:0.00} · name {nm:0.00} · hue {hd:0}°";
                 }
             return border;
-        }
-
-        // True when the board breaks either rule — a close (or identical) pair anywhere,
-        // or a forbidden family pair touching.
-        bool HasColorIssues(LevelData lvl, Vector3[] lab, bool[,] adj)
-        {
-            int n = lvl.size;
-            for (int a = 0; a < n; a++)
-                for (int b = a + 1; b < n; b++)
-                {
-                    int ca = lvl.ColorOf(a), cb = lvl.ColorOf(b);
-                    if (ca >= lab.Length || cb >= lab.Length) continue;
-                    if (ca == cb || Vector3.Distance(lab[ca], lab[cb]) < colorMinDist) return true;
-                    if (adj[a, b] && ForbiddenNeighbor(ca, cb, lab)) return true;
-                }
-            return false;
-        }
-
-        /// <summary>
-        /// Region→colour assignment: n palette colours that are far apart AND look like a set,
-        /// arranged so no forbiddenNeighbors pair lands on touching regions. Seeded by level
-        /// number, so a level always gets the same colours while neighbours get different ones.
-        ///
-        /// Distance alone is not enough: a set can be perfectly distinguishable and still ugly —
-        /// hues bunched on one side of the wheel, or a pale cream sitting next to a dark green.
-        /// So we generate many valid sets and keep the one that also reads as balanced.
-        /// </summary>
-        int[] PickSpreadColors(int n, int seed, Vector3[] lab, bool[,] adj)
-        {
-            if (n > lab.Length) return null;
-            var rng = new System.Random(seed);
-            int[] best = null;
-            float bestScore = float.NegativeInfinity;
-
-            for (int attempt = 0; attempt < 600; attempt++)
-            {
-                var set = TrySpreadSet(n, rng, lab);
-                if (set == null) continue;
-                float s = HarmonyScore(set, lab);
-                if (s <= bestScore) continue;
-                var assign = ArrangeOnRegions(set, adj, lab);
-                if (assign == null) continue;   // no arrangement keeps forbidden pairs apart
-                bestScore = s; best = assign;
-                if (attempt > 250) break;   // enough candidates seen
-            }
-            return best;   // null => no spread set at this threshold, lower the slider
         }
 
         /// One level under the same rules and default thresholds as the campaign pass —
@@ -635,109 +594,8 @@ namespace QueensPuzzle
         public static int[] RecolorSingle(LevelData lvl, int seed)
         {
             var win = CreateInstance<CampaignBuilderWindow>();
-            try { return win.PickSpreadColors(lvl.size, seed, PaletteLab(), Adjacency(lvl)); }
+            try { return LevelColors.Pick(lvl.size, seed, win.Rules(PaletteLab()), LevelColors.Adjacency(lvl.size, lvl.regions)); }
             finally { DestroyImmediate(win); }
-        }
-
-        /// Place the picked colours on the regions so no forbidden pair touches.
-        /// Exhaustive backtracking — null only when no permutation works for this set.
-        int[] ArrangeOnRegions(int[] set, bool[,] adj, Vector3[] lab)
-        {
-            int n = set.Length;
-            var assign = new int[n];
-            var used = new bool[n];
-
-            bool Place(int region)
-            {
-                if (region == n) return true;
-                for (int i = 0; i < n; i++)
-                {
-                    if (used[i]) continue;
-                    bool ok = true;
-                    for (int r = 0; r < region && ok; r++)
-                        if (adj[region, r] && ForbiddenNeighbor(set[i], assign[r], lab)) ok = false;
-                    if (!ok) continue;
-                    used[i] = true; assign[region] = set[i];
-                    if (Place(region + 1)) return true;
-                    used[i] = false;
-                }
-                return false;
-            }
-
-            return Place(0) ? assign : null;
-        }
-
-        /// One greedy attempt: shuffle the palette, take colours that clear colorMinDist.
-        int[] TrySpreadSet(int n, System.Random rng, Vector3[] lab)
-        {
-            var order = new int[lab.Length];
-            for (int i = 0; i < order.Length; i++) order[i] = i;
-            for (int i = order.Length - 1; i > 0; i--)   // Fisher-Yates
-            {
-                int j = rng.Next(i + 1);
-                int tmp = order[i]; order[i] = order[j]; order[j] = tmp;
-            }
-
-            var picked = new int[n];
-            int count = 0;
-            foreach (int c in order)
-            {
-                bool ok = true;
-                for (int k = 0; k < count && ok; k++)
-                    if (Vector3.Distance(lab[c], lab[picked[k]]) < colorMinDist) ok = false;
-                if (!ok) continue;
-                picked[count++] = c;
-                if (count == n) return picked;
-            }
-            return null;
-        }
-
-        /// Higher is prettier. Rewards separation and even hue spacing; punishes mixing very
-        /// light with very dark, and mixing vivid with washed-out.
-        float HarmonyScore(int[] set, Vector3[] lab)
-        {
-            int n = set.Length;
-
-            float minDist = float.MaxValue;
-            for (int i = 0; i < n; i++)
-                for (int j = i + 1; j < n; j++)
-                    minDist = Mathf.Min(minDist, Vector3.Distance(lab[set[i]], lab[set[j]]));
-
-            // lightness and chroma consistency — the two that decide whether a board looks like a set
-            float lSum = 0f, cSum = 0f;
-            var chroma = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                var v = lab[set[i]];
-                chroma[i] = Mathf.Sqrt(v.y * v.y + v.z * v.z);
-                lSum += v.x; cSum += chroma[i];
-            }
-            float lMean = lSum / n, cMean = cSum / n, lVar = 0f, cVar = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float dl = lab[set[i]].x - lMean; lVar += dl * dl;
-                float dc = chroma[i] - cMean;     cVar += dc * dc;
-            }
-            float lSd = Mathf.Sqrt(lVar / n), cSd = Mathf.Sqrt(cVar / n);
-
-            // hue evenness: gaps around the wheel should be similar
-            var hues = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                var v = lab[set[i]];
-                float h = Mathf.Atan2(v.z, v.y) * Mathf.Rad2Deg;
-                hues[i] = h < 0f ? h + 360f : h;
-            }
-            System.Array.Sort(hues);
-            float ideal = 360f / n, gapVar = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float gap = (i == n - 1 ? hues[0] + 360f : hues[i + 1]) - hues[i];
-                gapVar += (gap - ideal) * (gap - ideal);
-            }
-            float gapSd = Mathf.Sqrt(gapVar / n) / ideal;
-
-            return minDist * 2.0f - gapSd * 0.20f - lSd * 0.55f - cSd * 0.55f;
         }
 
         // Existing levels in range that are not what their slot asks for (board size or time window).
@@ -753,45 +611,62 @@ namespace QueensPuzzle
                 var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{l}.asset");
                 if (lvl == null) continue;
                 var t = config.GetTarget(l);
-                if (!CampaignCurve.Fits(t, lvl)) offTolCount++;   // size and time, like the build
+                if (!PoolBuildRunner.Fits(t, lvl)) offTolCount++;   // size and time, like the build
             }
         }
 
-        // Both lines in one pass, in REAL SECONDS — the regular player who is at that level (the board's
-        // own seconds × the level's place factor): what the curve asks of each slot
-        // (needs a curve) and what the built level in the output folder takes (its board rated by
-        // TimeRater — once per asset, so the first graph of a long range takes a moment). Missing
-        // levels show as 0 (gaps on the floor).
+        // Both lines in one pass: what the curve asks of each slot (needs a curve) and what the built
+        // level in the output folder takes (its board rated by TimeRater — once per asset, so the first
+        // graph of a long range takes a moment). Kept as board seconds + the level's place factor;
+        // ApplyUnit turns them into the drawn numbers. Missing levels show as 0 (gaps on the floor).
         void BuildData()
         {
             from = Mathf.Max(1, from);
             to = Mathf.Clamp(to, from, from + MaxRange - 1);
             int n = to - from + 1;
-            targets = config != null ? new int[n] : null;
-            built = new int[n];
+            targetBoard = config != null ? new float[n] : null;
+            builtBoard = new float[n];
+            factors = new float[n];
             roles = new byte[n];
             lessons = new byte[n];
             dataFrom = from;
-            maxSeconds = 1;
             try
             {
                 for (int i = 0; i < n; i++)
                 {
                     if (n > 400 && i % 200 == 0) EditorUtility.DisplayProgressBar("Campaign graph", $"rating level {from + i} of {to}", i / (float)n);
+                    factors[i] = config != null ? config.PlaceFactorAt(from + i) : 1f;
                     if (config != null)
                     {
                         var t = config.GetTarget(from + i);
-                        targets[i] = Mathf.RoundToInt(t.targetSeconds);
+                        targetBoard[i] = t.boardSeconds;
+                        factors[i] = t.placeFactor;
                         roles[i] = (byte)t.role;
                         lessons[i] = (byte)(t.tricks.lesson ? t.tricks.stage : 0);
-                        if (targets[i] > maxSeconds) maxSeconds = targets[i];
                     }
                     var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{from + i}.asset");
-                    built[i] = lvl != null ? Mathf.RoundToInt((float)CampaignCurve.SecondsOf(lvl) * (config != null ? config.PlaceFactorAt(from + i) : 1f)) : 0;
-                    if (built[i] > maxSeconds) maxSeconds = built[i];
+                    builtBoard[i] = lvl != null ? (float)PoolBuildRunner.SecondsOf(lvl) : 0f;
                 }
             }
             finally { EditorUtility.ClearProgressBar(); }
+            ApplyUnit();
+        }
+
+        // The drawn numbers in the chosen unit (see withPlaceFactor), and the scale that fits them.
+        void ApplyUnit()
+        {
+            if (builtBoard == null) return;
+            int n = builtBoard.Length;
+            targets = targetBoard != null ? new int[n] : null;
+            built = new int[n];
+            maxSeconds = 1;
+            for (int i = 0; i < n; i++)
+            {
+                float f = withPlaceFactor ? factors[i] : 1f;
+                if (targets != null) { targets[i] = Mathf.RoundToInt(targetBoard[i] * f); maxSeconds = Mathf.Max(maxSeconds, targets[i]); }
+                built[i] = Mathf.RoundToInt(builtBoard[i] * f);
+                maxSeconds = Mathf.Max(maxSeconds, built[i]);
+            }
             cacheStale = true;   // invalidate screen cache
             Repaint();
         }
@@ -885,6 +760,13 @@ namespace QueensPuzzle
                 GUI.Label(new Rect(x - 24, plot.yMax + 2, 48, 16), lvl.ToString(), xlab);
             }
 
+            // what the y axis is in, always on the plot so a screenshot says it too
+            var unitLab = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.UpperLeft };
+            unitLab.normal.textColor = ink;
+            GUI.Label(new Rect(plot.xMin + 6, plot.yMin + 2, plot.width - 12, 16),
+                withPlaceFactor ? "Seconds: a regular player at this level (board × place factor)"
+                                : "Seconds: the board itself, experienced player (no place factor)", unitLab);
+
             DrawGraphHover(plot, ink, blue, orange, red);
         }
 
@@ -895,7 +777,7 @@ namespace QueensPuzzle
             int n = built.Length;
             int i = Mathf.Clamp(Mathf.RoundToInt((Event.current.mousePosition.x - plot.xMin) / Mathf.Max(1f, plot.width) * Mathf.Max(1, n - 1)), 0, n - 1);
             int level = dataFrom + i;
-            bool milestone = roles != null && i < roles.Length && roles[i] == (byte)CampaignCurveConfig.Role.Milestone;
+            bool milestone = roles != null && i < roles.Length && roles[i] == (byte)Role.Milestone;
             bool hasTarget = targets != null && showTargets;
 
             float x = plot.xMin + i / (float)Mathf.Max(1, n - 1) * plot.width;
@@ -907,6 +789,7 @@ namespace QueensPuzzle
             string text = $"Level {level}"
                 + (hasTarget ? $"  |  target {targets[i]} s" : "")
                 + (showBuilt ? $"  |  built {built[i]} s" : "")
+                + (factors != null && i < factors.Length ? $"  |  factor ×{factors[i]:0.00}" + (withPlaceFactor ? " (in)" : " (out)") : "")
                 + (milestone ? "  |  milestone" : "")
                 + TrickNote(level);
             var style = new GUIStyle(EditorStyles.helpBox)
@@ -940,7 +823,7 @@ namespace QueensPuzzle
             var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
             if (lvl != null)
             {
-                string bad = CampaignCurve.TrickProblem(t, CampaignCurve.ReportOf(lvl));
+                string bad = CampaignCurve.TrickProblem(t, PoolBuildRunner.ReportOf(lvl));
                 if (bad != null) s += $"  |  built: {bad}";
             }
             return s;
@@ -958,7 +841,7 @@ namespace QueensPuzzle
             var miles = new System.Collections.Generic.List<Vector3>();
             if (on != null)
                 for (int i = 0; i < on.Length; i++)
-                    if (roles[i] == (byte)CampaignCurveConfig.Role.Milestone)
+                    if (roles[i] == (byte)Role.Milestone)
                         miles.Add(ToScreen(plot, i, on.Length, on[i]));
             milestones = miles.ToArray();
 

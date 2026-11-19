@@ -150,6 +150,7 @@ namespace QueensPuzzle
             var (made, attempts) = PoolBuildRunner.Run(config.campaign.Gates, scan.open, folder,
                 new PoolBuildRunner.Options
                 {
+                    colors = CampaignBuilderWindow.DefaultColorRules(),
                     threadCount = threadCount,
                     seedBase = tierSeed,
                     title = $"Generating daily pool — {tr.name}",

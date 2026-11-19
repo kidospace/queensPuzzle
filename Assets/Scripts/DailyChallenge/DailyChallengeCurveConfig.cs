@@ -93,7 +93,7 @@ namespace QueensPuzzle
         /// produces, so PoolBuildRunner is blind to the source. level = slot + 1 (1-based assets,
         /// pack index = slot).
         /// </summary>
-        public CampaignCurveConfig.LevelTarget GetSlotTarget(int tier, int slot)
+        public LevelTarget GetSlotTarget(int tier, int slot)
         {
             var tr = tiers[tier];
             float s10 = tr.baseSeconds * weekdayFactor[slot % 7];   // as on a 10x10 board
@@ -106,10 +106,10 @@ namespace QueensPuzzle
         }
 
         /// <summary>All targets of one tier's pool — the builder's shopping list.</summary>
-        public System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> GetTierTargets(int tier)
+        public System.Collections.Generic.List<LevelTarget> GetTierTargets(int tier)
         {
             int n = tiers[tier].PoolSize;
-            var list = new System.Collections.Generic.List<CampaignCurveConfig.LevelTarget>(n);
+            var list = new System.Collections.Generic.List<LevelTarget>(n);
             for (int s = 0; s < n; s++) list.Add(GetSlotTarget(tier, s));
             return list;
         }

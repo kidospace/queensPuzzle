@@ -21,12 +21,13 @@ namespace QueensPuzzle
             public string title;      // progress-bar title
             public string tolLabel;   // display only, e.g. "time ±6%"
             public float maxSeconds;  // stop after this long and leave the rest open (0 = until done or cancelled)
+            public LevelColors.Rules colors;   // every built level is coloured by these (null = left uncoloured)
         }
 
         public sealed class ScanResult
         {
-            public readonly System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open
-                = new System.Collections.Generic.List<CampaignCurveConfig.LevelTarget>();
+            public readonly System.Collections.Generic.List<LevelTarget> open
+                = new System.Collections.Generic.List<LevelTarget>();
             public int newCount, offTol, overwrite;
         }
 
@@ -35,7 +36,7 @@ namespace QueensPuzzle
         /// level is not what the slot asks for (another board size, or outside the time window)
         /// and override is on.
         /// </summary>
-        public static ScanResult Scan(System.Collections.Generic.IList<CampaignCurveConfig.LevelTarget> targets,
+        public static ScanResult Scan(System.Collections.Generic.IList<LevelTarget> targets,
             string outputFolder, bool skipExisting, bool overrideOffTol)
         {
             var r = new ScanResult();
@@ -43,168 +44,86 @@ namespace QueensPuzzle
             {
                 var existing = AssetDatabase.LoadAssetAtPath<LevelData>($"{outputFolder}/{t.level}.asset");
                 if (existing == null) { r.open.Add(t); r.newCount++; }
-                else if (overrideOffTol && !CampaignCurve.Fits(t, existing)) { r.open.Add(t); r.offTol++; }   // size and time, like the build
+                else if (overrideOffTol && !Fits(t, existing)) { r.open.Add(t); r.offTol++; }   // size and time, like the build
                 else if (!skipExisting) { r.open.Add(t); r.overwrite++; }
             }
             return r;
         }
 
-        // shared with worker threads during generation
-        sealed class SharedState
-        {
-            public int nextSeed;
-            public long attempts;
-            public bool stop;
-            public int[] sizes;
-        }
-
         /// <summary>
         /// Fills the open slots until done or the user cancels the progress bar. Mutates
         /// <paramref name="open"/> (filled slots are removed). Returns (levels filled, boards generated).
+        /// The build itself is <see cref="PoolBuilder.Run"/>; this adds what only the editor can do.
         /// </summary>
         public static (int made, long attempts) Run(GenerationGates gates,
-            System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open,
+            System.Collections.Generic.List<LevelTarget> open,
             string outputFolder, Options opt)
         {
             EnsureFolder(outputFolder);
-            var queue = new System.Collections.Concurrent.ConcurrentQueue<(int[] region, int[] cols, int seed, WeightRater.Report rep, double seconds, int size)>();
-            int made = 0;
-
-            // workers: generate + rate off the main thread (TryGenerateRaw, Rate and TimeRater are thread-safe)
-            var st = new SharedState { nextSeed = opt.seedBase - 1, sizes = SizesOf(open) };
-            var workers = new System.Threading.Thread[opt.threadCount];
-            for (int w = 0; w < workers.Length; w++)
-            {
-                workers[w] = new System.Threading.Thread(() =>
-                {
-                    while (!System.Threading.Volatile.Read(ref st.stop))
-                    {
-                        if (queue.Count > 256) { System.Threading.Thread.Sleep(5); continue; }   // backpressure
-                        int[] sizes = System.Threading.Volatile.Read(ref st.sizes);
-                        if (sizes.Length == 0) break;
-                        int s = System.Threading.Interlocked.Increment(ref st.nextSeed);
-                        int size = sizes[(s - opt.seedBase) % sizes.Length];
-                        bool ok = LevelGenerator.TryGenerateRaw(size, s, 250, out int[] region, out int[] cols, out _);
-                        System.Threading.Interlocked.Increment(ref st.attempts);
-                        if (!ok) continue;
-                        var rep = WeightRater.Rate(size, region, cols);
-                        if (rep.trials > 0) continue;   // guess wall — discarded on the worker
-                        queue.Enqueue((region, cols, s, rep, TimeRater.SecondsExact(size, region, cols, rep), size));
-                    }
-                }) { IsBackground = true, Name = $"PoolGen{w}" };
-                workers[w].Start();
-            }
-
             try
             {
                 AssetDatabase.StartAssetEditing();   // files are still written per level; Unity imports them once at the end
-                var clock = System.Diagnostics.Stopwatch.StartNew();
-                while (open.Count > 0)
-                {
-                    if (opt.maxSeconds > 0 && clock.Elapsed.TotalSeconds >= opt.maxSeconds) break;
-                    long attempts = System.Threading.Interlocked.Read(ref st.attempts);
-                    if (EditorUtility.DisplayCancelableProgressBar(opt.title,
-                        $"filled {made} · open {open.Count} · boards {attempts} · threads {opt.threadCount} · {opt.tolLabel}",
-                        made / (float)(made + open.Count))) break;
-
-                    bool filled = false;
-                    while (open.Count > 0 && queue.TryDequeue(out var c))
-                    {
-                        int slot = FindSlot(gates, open, c.size, c.region, c.cols, c.rep, c.seconds, out int[] revealed, out int weight);
-                        if (slot >= 0)
-                        {
-                            SaveLevel(outputFolder, open[slot], c.region, c.cols, weight, c.seed, revealed);
-                            open.RemoveAt(slot);
-                            made++;
-                            filled = true;
-                        }
-                        // no fit at the fixed window → the board is discarded; the window never widens
-                    }
-
-                    if (filled) System.Threading.Volatile.Write(ref st.sizes, SizesOf(open));   // workers switch to the sizes still needed
-
-                    System.Threading.Thread.Sleep(10);   // let workers produce; keep the editor responsive
-                }
+                var (made, attempts, uncolourable) = PoolBuilder.Run(gates, open,
+                    new PoolBuilder.Options { threadCount = opt.threadCount, seedBase = opt.seedBase, maxSeconds = opt.maxSeconds, colors = opt.colors },
+                    f => SaveLevel(outputFolder, f),
+                    (done, left, boards) => !EditorUtility.DisplayCancelableProgressBar(opt.title,
+                        $"filled {done} · open {left} · boards {boards} · threads {opt.threadCount} · {opt.tolLabel}",
+                        done / (float)(done + left)));
+                if (uncolourable > 0) Debug.LogWarning($"[PoolBuild] {uncolourable} board(s) fitted a slot but no colour set fits them — discarded.");
+                return (made, attempts);
             }
             finally
             {
-                System.Threading.Volatile.Write(ref st.stop, true);
-                foreach (var t in workers) t.Join(2000);
                 AssetDatabase.StopAssetEditing();
                 EditorUtility.ClearProgressBar();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
             }
-            return (made, System.Threading.Interlocked.Read(ref st.attempts));
         }
 
-        static int[] SizesOf(System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open)
+        // A built level stores its board, not its seconds, so the seconds need the board rated again.
+        // Kept per asset (and dropped when the board changes) so a count or a graph over a range
+        // costs the rating once, not on every repaint.
+        static readonly System.Collections.Generic.Dictionary<int, (int weight, int size, int revealed, double secs, WeightRater.Report rep)> _secs
+            = new System.Collections.Generic.Dictionary<int, (int, int, int, double, WeightRater.Report)>();
+
+        /// <summary>Calibrated seconds of a built level — the board's own, for an experienced player
+        /// (rates the board; cached per asset).</summary>
+        public static double SecondsOf(LevelData lvl) => Rated(lvl).secs;
+
+        /// <summary>The rater's report of a built level, with its revealed queens (cached per asset).</summary>
+        public static WeightRater.Report ReportOf(LevelData lvl) => Rated(lvl).rep;
+
+        static (double secs, WeightRater.Report rep) Rated(LevelData lvl)
         {
-            var sizes = new int[open.Count];
-            for (int i = 0; i < open.Count; i++) sizes[i] = open[i].boardSize;
-            return sizes;
+            int id = lvl.GetInstanceID();
+            int revealed = lvl.revealedRows == null ? 0 : lvl.revealedRows.Length;
+            if (_secs.TryGetValue(id, out var c) && c.weight == lvl.weight && c.size == lvl.size && c.revealed == revealed) return (c.secs, c.rep);
+            var rep = WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows);
+            double s = TimeRater.SecondsExact(lvl.size, lvl.regions, lvl.solutionColumns, rep, lvl.revealedRows);
+            _secs[id] = (lvl.weight, lvl.size, revealed, s, rep);
+            return (s, rep);
         }
 
-        // Rarest fit wins (milestone > peak > build > normal > breather) so easy slots
-        // don't eat the rare heavy boards. A slot that opens with a queen on the board (dog) is
-        // tried with each row's queen revealed, and takes the one that lands closest to its seconds.
-        static int FindSlot(in GenerationGates gates,
-            System.Collections.Generic.List<CampaignCurveConfig.LevelTarget> open, int size,
-            int[] region, int[] cols, in WeightRater.Report rep, double seconds, out int[] revealed, out int weight)
-        {
-            int best = -1, bestPrio = -1;
-            revealed = null;
-            weight = rep.weight;
-            for (int i = 0; i < open.Count; i++)
-            {
-                var t = open[i];
-                if (t.boardSize != size) continue;
-                int prio = (int)t.role;
-                if (prio <= bestPrio) continue;
-                if (!t.dog)
-                {
-                    if (!CampaignCurve.PassesGates(gates, t, rep, seconds)) continue;
-                    bestPrio = prio; best = i; revealed = null; weight = rep.weight;
-                    continue;
-                }
-                int row = BestDog(gates, t, size, region, cols, out int w);
-                if (row < 0) continue;
-                bestPrio = prio; best = i; revealed = new[] { row }; weight = w;
-            }
-            return best;
-        }
+        /// <summary>Is a built level what its slot asks for — the board size, the time AND the tricks?
+        /// A dog slot holds a board with exactly one revealed queen; any other slot, a board with none.</summary>
+        public static bool Fits(in LevelTarget t, LevelData lvl) =>
+            lvl.size == t.boardSize
+            && (lvl.revealedRows == null ? 0 : lvl.revealedRows.Length) == (t.dog ? 1 : 0)
+            && CampaignCurve.InTimeWindow(t, SecondsOf(lvl))
+            && CampaignCurve.TricksOk(t, ReportOf(lvl));
 
-        // The row whose queen, revealed, makes the board pass the slot's gates closest to its seconds (-1 = none).
-        static int BestDog(in GenerationGates gates, in CampaignCurveConfig.LevelTarget t, int size, int[] region, int[] cols, out int weight)
-        {
-            int best = -1;
-            double bestGap = double.MaxValue;
-            weight = 0;
-            var rows = new int[1];
-            for (int row = 0; row < size; row++)
-            {
-                rows[0] = row;
-                var rep = WeightRater.Rate(size, region, cols, rows);
-                if (rep.trials > 0) continue;
-                double secs = TimeRater.SecondsExact(size, region, cols, rep, rows);
-                if (!CampaignCurve.PassesGates(gates, t, rep, secs)) continue;
-                double gap = System.Math.Abs(secs - t.boardSeconds);
-                if (gap < bestGap) { bestGap = gap; best = row; weight = rep.weight; }
-            }
-            return best;
-        }
-
-        static void SaveLevel(string outputFolder, in CampaignCurveConfig.LevelTarget t,
-            int[] region, int[] cols, int weight, int seed, int[] revealedRows)
+        static void SaveLevel(string outputFolder, in PoolBuilder.Filled f)
         {
             var data = ScriptableObject.CreateInstance<LevelData>();
-            data.size = t.boardSize;
-            data.regions = region;
-            data.solutionColumns = cols;
-            data.weight = weight;
-            data.seed = seed;
-            data.revealedRows = revealedRows ?? new int[0];
-            AssetDatabase.CreateAsset(data, $"{outputFolder}/{t.level}.asset");
+            data.size = f.slot.boardSize;
+            data.regions = f.region;
+            data.solutionColumns = f.cols;
+            data.weight = f.weight;
+            data.seed = f.seed;
+            data.revealedRows = f.revealedRows ?? new int[0];
+            data.regionColors = f.regionColors;
+            AssetDatabase.CreateAsset(data, $"{outputFolder}/{f.slot.level}.asset");
         }
 
         static void EnsureFolder(string path)
