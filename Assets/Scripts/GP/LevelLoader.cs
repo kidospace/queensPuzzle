@@ -32,6 +32,10 @@ namespace qp {
         /// <summary>How many levels shipped - read from the pack header (0 when no pack).</summary>
         public static int LevelCount => EnsurePack() ? _packCount : 0;
 
+        /// <summary>Which campaign level set shipped ("Puzzby_V3") - read from the pack header.
+        /// Unlike <see cref="CurrentLevelSetId"/> it does not follow the level being played.</summary>
+        public static string CampaignLevelSetId => EnsurePack() ? _levelSetId : UnknownLevelSetId;
+
         /// <summary>Is this level (0-based, as AppData.LevelIdx) a hard one? The pack says, per place;
         /// past the pack's end the answer follows the board the level maps to.</summary>
         public static bool IsHard(int levelIdx) =>
