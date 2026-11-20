@@ -290,7 +290,7 @@ PlayerSettings:
   AndroidMinifyRelease: 1
   AndroidMinifyDebug: 0
   AndroidValidateAppBundleSize: 1
-  AndroidAppBundleSizeToValidate: 150
+  AndroidAppBundleSizeToValidate: 195
   AndroidReportGooglePlayAppDependencies: 1
   androidSymbolsSizeThreshold: 800
   m_BuildTargetIcons:
