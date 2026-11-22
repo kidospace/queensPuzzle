@@ -17,6 +17,7 @@ namespace qp {
         public override void OnInspectorGUI() {
             serializedObject.Update();
 
+            _LoadStyle();
             _Popup<Material>("preset", "Preset", Root + "/Presets", "t:Material");
             _Popup<TMP_ColorGradient>("color", "Color", Root + "/Colors", "t:TMP_ColorGradient");
             EditorGUILayout.PropertyField(serializedObject.FindProperty("place"));
@@ -41,6 +42,28 @@ namespace qp {
             int current = System.Array.IndexOf(assets, property.objectReferenceValue) + 1;
             int picked = EditorGUILayout.Popup(label, current, names);
             if (picked != current) property.objectReferenceValue = picked == 0 ? null : assets[picked - 1];
+        }
+
+        // Picking a saved style puts its preset and color on the row. The list shows the style
+        // the row currently matches, or a dash when the pair on it was never saved as one.
+        void _LoadStyle() {
+            var preset = serializedObject.FindProperty("preset");
+            var color = serializedObject.FindProperty("color");
+            var styles = AssetDatabase.FindAssets("t:ProfileNameStyle", new[] { Root + "/Styles" })
+                .Select(guid => AssetDatabase.LoadAssetAtPath<ProfileNameStyle>(AssetDatabase.GUIDToAssetPath(guid)))
+                .Where(s => s != null)
+                .OrderBy(s => s.name)
+                .ToArray();
+
+            var names = new[] { "-" }.Concat(styles.Select(s => s.name)).ToArray();
+            int current = System.Array.FindIndex(styles, s =>
+                s.preset == preset.objectReferenceValue && s.color == color.objectReferenceValue) + 1;
+            int picked = EditorGUILayout.Popup("Style", current, names);
+            if (picked != current && picked > 0) {
+                preset.objectReferenceValue = styles[picked - 1].preset;
+                color.objectReferenceValue = styles[picked - 1].color;
+            }
+            EditorGUILayout.Space();
         }
 
         void _SaveStyle() {

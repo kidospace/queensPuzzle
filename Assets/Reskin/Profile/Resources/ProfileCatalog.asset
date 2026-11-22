@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38bcf2bedb7cbbc4595dc450587264f9, type: 3}
+  m_Name: ProfileCatalog
+  m_EditorClassIdentifier: 
+  slots:
+  - key: avatar
+    defaultItem: avatar1
+    items:
+    - key: avatar1
+      asset: {fileID: 5247300169413169334, guid: dbe725eed31b67e4594e69b9bd56ad6b, type: 3}
+    - key: avatar2
+      asset: {fileID: 3421356481841149665, guid: 5ccf2400bd53b314c9f2da62d18f9fde, type: 3}
+    - key: avatar3
+      asset: {fileID: 3282366398705371404, guid: 8d64bf708347a1342b2be247e1b24e45, type: 3}
+    - key: avatar4
+      asset: {fileID: -2603039936926291763, guid: ffd0db93de60cf44995ff87482131b07, type: 3}
+    - key: avatar5
+      asset: {fileID: -3383036250669735961, guid: 9e9bfe8d182678c4b86c1f540c22f674, type: 3}
+    - key: avatar6
+      asset: {fileID: -230783803289377025, guid: d943cdc7b25bdc44f8905eb260c0691c, type: 3}
+    - key: avatar7
+      asset: {fileID: 1087600594336302680, guid: 592bb3ffa1f643844a4c6c387ae9102f, type: 3}
+    - key: avatar8
+      asset: {fileID: -8375629437247561813, guid: 47db74812cd0cd54db2f9712f1cabae0, type: 3}
+    - key: avatar9
+      asset: {fileID: -4778816215075740415, guid: 3743a3d6ff78a6a4293a6847d25f5e07, type: 3}
+    - key: avatar10
+      asset: {fileID: 7648913320450408586, guid: 058dfa41f3aefa6438e186f4231c170b, type: 3}
+    - key: avatar11
+      asset: {fileID: 191764496385665171, guid: 7984920e585afbc44966c38a10377cb3, type: 3}
+    - key: avatar12
+      asset: {fileID: 8833283800160295290, guid: b0751b2e8eb0d904c9400b6e5aec3d61, type: 3}
+  - key: frame
+    defaultItem: basicframe1
+    items:
+    - key: basicframe1
+      asset: {fileID: 5356609334500355804, guid: ccecb25eeb6bff343b8a026d1632fd2e, type: 3}
+    - key: basicframe2
+      asset: {fileID: 772566015558683520, guid: 38ffe0c0244e4d54ea8da3353cd52b24, type: 3}
+    - key: basicframe3
+      asset: {fileID: -4644748580248332812, guid: dc598d5cc24f68a43973cdb77c295315, type: 3}
+    - key: basicframe4
+      asset: {fileID: -8950740687031134264, guid: f91dd759e289ef74d9a714fc411b1df4, type: 3}
+    - key: basicframe5
+      asset: {fileID: -5171951744921733059, guid: 36f250af72e919f4fa78f4e4fcbb7bd1, type: 3}
+    - key: basicframe6
+      asset: {fileID: 2206531306531535404, guid: 2927a01ee2f6cd64eb4c2931aa36c40e, type: 3}
+    - key: basicframe7
+      asset: {fileID: -3316680792298343540, guid: db5ab02829a2d0044bea272a3e1cdcd2, type: 3}
+    - key: basicframe8
+      asset: {fileID: -4295565608523467787, guid: a58b4c2ff0c6e984797f6e43192ef955, type: 3}
+    - key: basicframe9
+      asset: {fileID: 2228979891408928682, guid: b8f159cac0edcee4f9c7f2b79df667ed, type: 3}
+    - key: premiumframe1
+      asset: {fileID: 5629092181018522470, guid: fa6374c7aabea7845a88dfb1c19a7edc, type: 3}
+    - key: premiumframe2
+      asset: {fileID: -7542383750395900024, guid: 7153418188bdb7f4b92fbed78a86f63c, type: 3}
+    - key: premiumframe3
+      asset: {fileID: -2967190825850540674, guid: 78cb69bdc0a9ce44c9962cdc70e9105b, type: 3}
+    - key: premiumframe4
+      asset: {fileID: -1955832162313001420, guid: b60fdb1e9aff65549b6621d4f1d8c753, type: 3}
+    - key: premiumframe5
+      asset: {fileID: 398287732810527013, guid: 2296c00e689263d45ade3fefeb7c47d9, type: 3}
+    - key: premiumframe6
+      asset: {fileID: 2121665927917613253, guid: a85ce5240e6b2b24d9b839f052d1e313, type: 3}
+  - key: nameStyle
+    defaultItem: 
+    items:
+    - key: blue
+      asset: {fileID: 11400000, guid: 4bc188e8ca8a94ca185519de7c49e008, type: 2}
+    - key: bronze
+      asset: {fileID: 11400000, guid: d597ede760e044614ad7eb3ab79e5a4a, type: 2}
+    - key: geometry
+      asset: {fileID: 11400000, guid: 53cbfef3d750b4e9092ef6602e276884, type: 2}
+    - key: gold
+      asset: {fileID: 11400000, guid: 93ab3a6dac03f4340943a23f738b1866, type: 2}
+    - key: green
+      asset: {fileID: 11400000, guid: 09336d68bfbea4e988b379a2f2171cbf, type: 2}
+    - key: jelly
+      asset: {fileID: 11400000, guid: 178ef9ac6372a40cfb82684bdc139432, type: 2}
+    - key: purple
+      asset: {fileID: 11400000, guid: f3e0540027c6e4d948ba2a41981cc9f7, type: 2}
+    - key: silver
+      asset: {fileID: 11400000, guid: 05e0f74bb8a284e54ad76141d35f6464, type: 2}
+    - key: space
+      asset: {fileID: 11400000, guid: a60ddbf6d1d914830b631589cdd77eb8, type: 2}
+    - key: summer
+      asset: {fileID: 11400000, guid: 4127a60b0f88344c59eb8a89b68e882f, type: 2}
+    - key: water
+      asset: {fileID: 11400000, guid: 6f59eb6eb1ba41a8ad06a50e948893d3, type: 2}
+    - key: yellow
+      asset: {fileID: 11400000, guid: 469cb767776c149bc9c20a89045066c5, type: 2}
+  - key: badge
+    defaultItem: 
+    items:
+    - key: badge1
+      asset: {fileID: -6068111195240717344, guid: 4f5e64f7439691047852d7a7a3c019fa, type: 3}
+    - key: badge2
+      asset: {fileID: 8363218401348734291, guid: b82fe9ae239eaa448851845bd9d1cd62, type: 3}
+    - key: badge3
+      asset: {fileID: 3086856186067627404, guid: a21c83a79604fd44ba0fce7eeac633d8, type: 3}
+    - key: badge5
+      asset: {fileID: 2760119186300239932, guid: 355aa9d42f831ee40ade5ede407d12bd, type: 3}
+    - key: badge6
+      asset: {fileID: 6335058600886290310, guid: ea17e42bcfd35f640a86edd25aed9af4, type: 3}
+    - key: badge7
+      asset: {fileID: -8587424353195499643, guid: 168666831dcce1546a0077a696ac6895, type: 3}
+    - key: badge8
+      asset: {fileID: 320610377659076149, guid: f5ab1cd164eee2f4a8c73d20a08d7399, type: 3}
+    - key: badge9
+      asset: {fileID: -826896130504643651, guid: 316a977fe5b78084f91e90cf18b400a3, type: 3}
