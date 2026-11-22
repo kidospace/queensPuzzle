@@ -10,7 +10,7 @@ namespace qp {
     [CustomEditor(typeof(MBRowStatePreview))]
     public sealed class MBRowStatePreviewEditor : Editor {
 
-        const string Root = "Assets/Reskin/Fonts/SourceSans3/ProfileTextStyles";
+        const string Root = "Assets/Reskin/Skins/NameStyles";
 
         string _styleName = "";
 
@@ -49,8 +49,8 @@ namespace qp {
         void _LoadStyle() {
             var preset = serializedObject.FindProperty("preset");
             var color = serializedObject.FindProperty("color");
-            var styles = AssetDatabase.FindAssets("t:ProfileNameStyle", new[] { Root + "/Styles" })
-                .Select(guid => AssetDatabase.LoadAssetAtPath<ProfileNameStyle>(AssetDatabase.GUIDToAssetPath(guid)))
+            var styles = AssetDatabase.FindAssets("t:SkinNameStyle", new[] { Root + "/Styles" })
+                .Select(guid => AssetDatabase.LoadAssetAtPath<SkinNameStyle>(AssetDatabase.GUIDToAssetPath(guid)))
                 .Where(s => s != null)
                 .OrderBy(s => s.name)
                 .ToArray();
@@ -68,7 +68,7 @@ namespace qp {
 
         void _SaveStyle() {
             var preview = (MBRowStatePreview)target;
-            var style = CreateInstance<ProfileNameStyle>();
+            var style = CreateInstance<SkinNameStyle>();
             style.preset = preview.preset;
             style.color = preview.color;
 

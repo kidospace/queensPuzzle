@@ -4,17 +4,17 @@ using UnityEngine;
 
 namespace qp {
 
-    // Packs what the designer needs to make profile name styles: the styles folder, the name font,
+    // Packs what the designer needs to make name styles: the styles folder, the name font,
     // and whatever those use (the row backgrounds, the TMP shader). The game's other presets stay
     // out because nothing in the package points at them.
-    public static class ExportProfileTextStyles {
+    public static class ExportNameStyles {
 
-        const string Folder = "Assets/Reskin/Fonts/SourceSans3/ProfileTextStyles";
+        const string Folder = "Assets/Reskin/Skins/NameStyles";
         const string Font = "Assets/Reskin/Fonts/SourceSans3/SourceSans3-Black SDF.asset";
 
-        [MenuItem("QueensPuzzle/Export Profile Text Styles")]
+        [MenuItem("QueensPuzzle/Export Name Styles")]
         public static void Run() {
-            string path = EditorUtility.SaveFilePanel("Export Profile Text Styles", "", "ProfileTextStyles", "unitypackage");
+            string path = EditorUtility.SaveFilePanel("Export Name Styles", "", "NameStyles", "unitypackage");
             if (string.IsNullOrEmpty(path)) return;
 
             // Dependencies are listed by hand: ExportPackageOptions.IncludeDependencies can drag in
@@ -26,7 +26,7 @@ namespace qp {
 
             AssetDatabase.ExportPackage(paths, path, ExportPackageOptions.Recurse);
 
-            Debug.Log($"[ExportProfileTextStyles] {path}\n{string.Join("\n", paths)}");
+            Debug.Log($"[ExportNameStyles] {path}\n{string.Join("\n", paths)}");
             EditorUtility.RevealInFinder(path);
         }
     }

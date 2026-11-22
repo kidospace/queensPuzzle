@@ -131,25 +131,17 @@ namespace qp {
         public long wonAtTicks;   // UTC
     }
 
-    /// <summary>One cosmetic a player has equipped: which slot, and which item in it —
-    /// e.g. ("avatar", "husky"), ("frame", "gold"). The server only carries the pair; what it
-    /// looks like is the client's local catalog, so new skins need no server change.</summary>
-    [Serializable]
-    public class TournamentSkin {
-        public string skinKey;       // slot: "avatar", "frame", …
-        public string skinItemKey;   // the item inside that slot
-    }
-
     /// <summary>One row of a group table, ordered by the server. No player ids — the client finds
     /// its own row by <see cref="TournamentStandings.myIndex"/>.</summary>
     [Serializable]
     public class TournamentEntry {
         public string name;
         public int score;
-        public List<TournamentSkin> skins = new List<TournamentSkin>();
+        /// <summary>What the player wears, as ids into the <see cref="SkinCatalog"/>.</summary>
+        public List<SkinRef> skins = new List<SkinRef>();
 
-        /// <summary>The item equipped in a slot, or null — an unknown slot/item just falls back.</summary>
-        public string Skin(string skinKey) => skins.Find(s => s.skinKey == skinKey)?.skinItemKey;
+        /// <summary>The item worn in a slot, or null — the catalog turns that into its default.</summary>
+        public string Skin(string slot) => skins?.Find(s => s != null && s.slot == slot)?.item;
     }
 
     /// <summary>A group table exactly as the server sent it: rows in rank order, plus where the

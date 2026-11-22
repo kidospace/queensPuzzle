@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -88,6 +89,58 @@ namespace qp {
             _state.Save();
             _ = Sync();
             return ENameError.Ok;
+        }
+
+        // ---- skins -------------------------------------------------------------------------
+        // Ids only: which slot, which item (see SkinCatalog). Nothing here decides how an item
+        // is earned - for now the debug window hands them out, later the game and the server do.
+
+        /// <summary>The player has this item.</summary>
+        public static bool Owns(string slot, string item) =>
+            _state != null && _find(_state.owned, slot, item) >= 0;
+
+        /// <summary>The item worn in a slot, or "" - which draws as the catalog's default.</summary>
+        public static string Equipped(string slot) {
+            if (_state == null) return "";
+            int i = _find(_state.equipped, slot, null);
+            return i < 0 ? "" : _state.equipped[i].item;
+        }
+
+        /// <summary>Wear an item the player has; "" empties the slot. False = not theirs.</summary>
+        public static bool Equip(string slot, string item) {
+            if (_state == null) return false;
+            item = item ?? "";
+            if (item != "" && !Owns(slot, item)) return false;
+            if (Equipped(slot) == item) return true;      // nothing changed, nothing to send
+
+            int i = _find(_state.equipped, slot, null);
+            if (i >= 0) _state.equipped.RemoveAt(i);
+            if (item != "") _state.equipped.Add(new SkinRef { slot = slot, item = item });
+            _state.rev++;
+            _state.Save();
+            _ = Sync();
+            return true;
+        }
+
+        /// <summary>Give or take an item. Taking one that is worn takes it off too.</summary>
+        public static void SetOwned(string slot, string item, bool owned) {
+            if (_state == null || string.IsNullOrEmpty(slot) || string.IsNullOrEmpty(item)) return;
+            int i = _find(_state.owned, slot, item);
+            if (owned == (i >= 0)) return;
+
+            if (owned) _state.owned.Add(new SkinRef { slot = slot, item = item });
+            else _state.owned.RemoveAt(i);
+            _state.Save();
+            if (!owned && Equipped(slot) == item) Equip(slot, "");
+        }
+
+        // item null = any item in the slot.
+        static int _find(List<SkinRef> list, string slot, string item) {
+            if (list == null) return -1;
+            for (int i = 0; i < list.Count; i++)
+                if (list[i] != null && list[i].slot == slot && (item == null || list[i].item == item))
+                    return i;
+            return -1;
         }
 
         /// <summary>Check a name without saving it — for live feedback while typing.</summary>

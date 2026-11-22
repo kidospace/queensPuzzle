@@ -6,11 +6,11 @@ namespace qp {
     // importing the result into the game cannot overwrite the font or the shaders.
     public static class ExportStylesBack {
 
-        const string Root = "Assets/Reskin/Fonts/SourceSans3/ProfileTextStyles";
+        const string Root = "Assets/Reskin/Skins/NameStyles";
 
-        [MenuItem("Profile Styles/Export Back")]
+        [MenuItem("Name Styles/Export Back")]
         public static void Run() {
-            string path = EditorUtility.SaveFilePanel("Export Back", "", "ProfileTextStyles_Back", "unitypackage");
+            string path = EditorUtility.SaveFilePanel("Export Back", "", "NameStyles_Back", "unitypackage");
             if (string.IsNullOrEmpty(path)) return;
 
             AssetDatabase.SaveAssets();

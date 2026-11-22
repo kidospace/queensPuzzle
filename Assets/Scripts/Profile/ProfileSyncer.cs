@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Common;
 using UnityEngine;
@@ -44,7 +45,10 @@ namespace qp {
             _running = true;
             try {
                 int sentRev = _state.rev;
-                await _backend.Push(new PlayerProfile { name = _state.name });
+                await _backend.Push(new PlayerProfile {
+                    name = _state.name,
+                    skins = new List<SkinRef>(_state.equipped),
+                });
 
                 // Confirm exactly what went out. An edit made while this was in flight moved rev
                 // past it, so the profile stays unsent and the next call takes it.

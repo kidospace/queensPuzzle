@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Common;
 
 namespace qp {
@@ -34,7 +35,13 @@ namespace qp {
         /// the moment a skin bumps the revision too.</summary>
         public bool named;
 
-        // Equipped skins arrive with the avatars.
+        /// <summary>Everything the player has, as (slot, item) ids from <see cref="SkinCatalog"/>.
+        /// Ids this build does not know stay in the list untouched - a later build may know them.</summary>
+        public List<SkinRef> owned = new List<SkinRef>();
+
+        /// <summary>What the player is wearing: at most one item per slot. A slot that is not here
+        /// shows the catalog's default.</summary>
+        public List<SkinRef> equipped = new List<SkinRef>();
 
         public static ProfileState Load() => _holder.Value ?? new ProfileState();
 
