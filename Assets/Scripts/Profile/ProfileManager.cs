@@ -95,6 +95,12 @@ namespace qp {
         // Ids only: which slot, which item (see SkinCatalog). Nothing here decides how an item
         // is earned - for now the debug window hands them out, later the game and the server do.
 
+        /// <summary>Goes up whenever what the player has or wears changes — an item equipped, an
+        /// item given or taken. Whatever draws the player keeps the number it last drew and
+        /// redraws when this one is different: one int compared a frame, and nothing to subscribe
+        /// to, unsubscribe from, or miss.</summary>
+        public static int SkinsVersion { get; private set; }
+
         /// <summary>The player has this item.</summary>
         public static bool Owns(string slot, string item) =>
             _state != null && _find(_state.owned, slot, item) >= 0;
@@ -119,6 +125,7 @@ namespace qp {
             _state.rev++;
             _state.Save();
             _ = Sync();
+            SkinsVersion++;
             return true;
         }
 
@@ -131,6 +138,7 @@ namespace qp {
             if (owned) _state.owned.Add(new SkinRef { slot = slot, item = item });
             else _state.owned.RemoveAt(i);
             _state.Save();
+            SkinsVersion++;
             if (!owned && Equipped(slot) == item) Equip(slot, "");
         }
 
