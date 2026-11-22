@@ -55,7 +55,35 @@ namespace qp {
                 _state.Save();
             }
 
+            _wearStarters();
+
             _ = Sync();
+        }
+
+        /// <summary>A slot the player wears nothing in gets one of its free items, picked at
+        /// random — so a new player has a face of their own instead of everyone starting as the
+        /// same dog in the same frame. Picked once: it is saved like any other choice, and it is
+        /// what other players see. Slots with nothing free (name, badge) stay empty.</summary>
+        static void _wearStarters() {
+            var catalog = SkinCatalog.Instance;
+            if (catalog == null || catalog.slots == null) return;
+
+            System.Random rnd = null;
+            foreach (var slot in catalog.slots) {
+                if (slot == null || slot.items == null || _find(_state.equipped, slot.id, null) >= 0) continue;
+
+                var free = new List<SkinItem>();
+                foreach (var item in slot.items) if (item != null && item.free) free.Add(item);
+                if (free.Count == 0) continue;
+
+                if (rnd == null) rnd = new System.Random(Guid.NewGuid().GetHashCode());
+                _state.equipped.Add(new SkinRef { slot = slot.id, item = free[rnd.Next(free.Count)].id });
+            }
+            if (rnd == null) return;        // nothing was picked
+
+            _state.rev++;
+            _state.Save();
+            SkinsVersion++;
         }
 
         /// <summary>Send the profile to the server — one line over <see cref="ProfileSyncer"/>,
@@ -101,11 +129,14 @@ namespace qp {
         /// to, unsubscribe from, or miss.</summary>
         public static int SkinsVersion { get; private set; }
 
-        /// <summary>The player has this item.</summary>
-        public static bool Owns(string slot, string item) =>
-            _state != null && _find(_state.owned, slot, item) >= 0;
+        /// <summary>The player has this item: it is free for everyone, or it was given to them.</summary>
+        public static bool Owns(string slot, string item) {
+            var known = SkinCatalog.Instance != null ? SkinCatalog.Instance.Find(slot, item) : null;
+            if (known != null && known.free) return true;
+            return _state != null && _find(_state.owned, slot, item) >= 0;
+        }
 
-        /// <summary>The item worn in a slot, or "" - which draws as the catalog's default.</summary>
+        /// <summary>The item worn in a slot, or "" - which draws as the slot's first free item.</summary>
         public static string Equipped(string slot) {
             if (_state == null) return "";
             int i = _find(_state.equipped, slot, null);

@@ -35,12 +35,12 @@ namespace qp {
         /// the moment a skin bumps the revision too.</summary>
         public bool named;
 
-        /// <summary>Everything the player has, as (slot, item) ids from <see cref="SkinCatalog"/>.
+        /// <summary>Everything the player was given, on top of what is free for everyone, as (slot, item) ids from <see cref="SkinCatalog"/>.
         /// Ids this build does not know stay in the list untouched - a later build may know them.</summary>
         public List<SkinRef> owned = new List<SkinRef>();
 
         /// <summary>What the player is wearing: at most one item per slot. A slot that is not here
-        /// shows the catalog's default.</summary>
+        /// shows the slot's first free item, if it has one.</summary>
         public List<SkinRef> equipped = new List<SkinRef>();
 
         public static ProfileState Load() => _holder.Value ?? new ProfileState();

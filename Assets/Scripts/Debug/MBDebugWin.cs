@@ -132,7 +132,7 @@ namespace qp {
                 bool open = _skinSlotOpen == slot.id;
 
                 GUILayout.BeginHorizontal();
-                if (Button($"{(open ? "v" : ">")} {slot.id}: has {have}/{slot.items.Length}, wears {(worn == "" ? "default" : worn)}"))
+                if (Button($"{(open ? "v" : ">")} {slot.id}: has {have}/{slot.items.Length}, wears {(worn == "" ? "nothing" : worn)}"))
                     _skinSlotOpen = open ? "" : slot.id;
                 if (GUILayout.Button("All", GUILayout.Height(44), GUILayout.Width(70)))
                     foreach (var item in slot.items) ProfileManager.SetOwned(slot.id, item.id, true);
@@ -145,7 +145,8 @@ namespace qp {
                     bool owns = ProfileManager.Owns(slot.id, item.id);
                     bool wears = worn == item.id;
                     GUILayout.BeginHorizontal();
-                    if (Button($"{(owns ? "[x]" : "[  ]")} {item.id}")) ProfileManager.SetOwned(slot.id, item.id, !owns);
+                    if (item.free) GUILayout.Label($"free  {item.id}", GUILayout.Height(44));
+                    else if (Button($"{(owns ? "[x]" : "[  ]")} {item.id}")) ProfileManager.SetOwned(slot.id, item.id, !owns);
                     bool was = GUI.enabled;
                     GUI.enabled = was && owns;
                     if (GUILayout.Button(wears ? "WEARING" : "Wear", GUILayout.Height(44), GUILayout.Width(140)))

@@ -23,6 +23,8 @@ namespace qp {
         public string id;
         [Tooltip("What the id stands for: a Sprite, a SkinNameStyle, …")]
         public UnityEngine.Object asset;
+        [Tooltip("Everyone has it from the start. A new player wears one of these, picked at random.")]
+        public bool free;
     }
 
     /// <summary>One place on the player where an item is worn — avatar, frame, name, badge — and
@@ -31,15 +33,22 @@ namespace qp {
     public class SkinSlot {
         [Tooltip("The id that is saved and sent. Never rename one that has shipped.")]
         public string id;
-        [Tooltip("What a player who wears nothing here (or something this build does not know) " +
-                 "gets. Empty = nothing is drawn.")]
-        public string defaultItem = "";
         public SkinItem[] items = new SkinItem[0];
 
         public SkinItem Find(string item) {
             if (string.IsNullOrEmpty(item) || items == null) return null;
             for (int i = 0; i < items.Length; i++)
                 if (items[i] != null && items[i].id == item) return items[i];
+            return null;
+        }
+
+        /// <summary>The first item everyone has, or null when the slot has none. This is what is
+        /// drawn for a player who wears nothing here, or something this build does not know — so
+        /// a slot whose items all have to be earned (a badge) draws nothing.</summary>
+        public SkinItem FirstFree() {
+            if (items == null) return null;
+            for (int i = 0; i < items.Length; i++)
+                if (items[i] != null && items[i].free) return items[i];
             return null;
         }
     }
@@ -50,7 +59,7 @@ namespace qp {
     /// this is where a pair of ids turns into something to draw.
     ///
     /// Asking never fails. A slot this build does not know gives null; an item it does not know
-    /// gives the slot's default. A newer server, an older client, a profile saved by a build that
+    /// gives the slot's first free item. A newer server, an older client, a profile saved by a build that
     /// had more items: all of them just fall back.
     ///
     /// Singleton, loaded once at boot — same reasons as <see cref="ProfileConfig"/>.
@@ -78,12 +87,12 @@ namespace qp {
         /// <summary>The item exactly as asked, or null — for "does this exist", not for drawing.</summary>
         public SkinItem Find(string slot, string item) => Slot(slot)?.Find(item);
 
-        /// <summary>The item to draw: the one asked for, else the slot's default, else null
-        /// (draw nothing).</summary>
+        /// <summary>The item to draw: the one asked for, else the slot's first free item, else
+        /// null (draw nothing).</summary>
         public SkinItem Resolve(string slot, string item) {
             var found = Slot(slot);
             if (found == null) return null;
-            return found.Find(item) ?? found.Find(found.defaultItem);
+            return found.Find(item) ?? found.FirstFree();
         }
 
         // ---- what the UI asks ----------------------------------------------------------------
