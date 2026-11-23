@@ -18,4 +18,6 @@ MonoBehaviour:
     amount: 3
   - type: 2
     amount: 2
+  skins:
+  - slot: badge
   repairMinStreak: 3

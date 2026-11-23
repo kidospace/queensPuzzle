@@ -1,15 +1,17 @@
 using System;
+using Common;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace qp {
 
     /// <summary>
-    /// A boost reward — plain data configured inline in a feature's config (DailyStreakConfig,
-    /// TournamentConfig); each feature keeps its own list. Granting goes through
-    /// <see cref="GiftsManager"/>; the sprite comes from <see cref="GiftsManagerConfig"/>.
+    /// So many of one boost — plain data configured inline in a feature's config
+    /// (DailyStreakConfig, TournamentConfig). Its card shows the boost's picture and "+N".
     /// </summary>
     [Serializable]
-    public class BoostReward {
+    public class BoostReward : IReward {
 
         public EBoostType type;
         [Min(1)] public int amount = 1;
@@ -19,5 +21,23 @@ namespace qp {
 
         /// <summary>This boost's sprite for the reward UI, or null if none is configured.</summary>
         public Sprite Sprite => GiftsManagerConfig.Instance?.SpriteFor(type);
+
+        public IReward Grant() {
+            AppData.Boosts[type].Value += amount;
+            return this;
+        }
+
+        public GameObject Card => GiftsManagerConfig.Instance?.boostCard;
+
+        // $Icon gets the boost's sprite, $Amount the "+N" label
+        public void Dress(GameObject card) {
+            var icon = card.transform.RecursiveFindChild("$Icon")?.GetComponent<Image>();
+            if (icon != null && Sprite != null) icon.sprite = Sprite;
+            var label = card.transform.RecursiveFindChild("$Amount")?.GetComponent<TMP_Text>();
+            if (label != null) label.text = Label;
+        }
+
+        public bool IsUsable => false;
+        public void Use() { }
     }
 }

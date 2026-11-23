@@ -1187,7 +1187,7 @@ namespace qp {
                     _streakRewardPopup.Show(streak.previous, streak.streak);
                     yield return new WaitUntil(() => _streakRewardPopup.IsClaimed || !_streakRewardPopup.IsShowing);
                     if (_giftPopup != null)
-                        GiftsManager.ShowGift(_giftPopup, EGiftBox.DailyStreak, new[] { streak.reward }, _streakRewardPopup.GiftBox);
+                        GiftsManager.ShowGift(_giftPopup, EGiftBox.DailyStreak, streak.gift, _streakRewardPopup.GiftBox);
                     _streakRewardPopup.HandOff();
                     if (_giftPopup != null) yield return new WaitWhile(() => _giftPopup.IsShowing);
                 } else if (streak.advanced) {

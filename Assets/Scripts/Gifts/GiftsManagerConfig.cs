@@ -34,6 +34,12 @@ namespace qp {
         [Tooltip("Card a boost reward shows on in the gift popup; its $Icon and $Amount are filled from the reward.")]
         public GameObject boostCard;
 
+        [Tooltip("Card a skin that is a picture shows on in the gift popup - avatar, frame, badge; its $Icon is the item, at the size it was drawn.")]
+        public GameObject skinCard;
+
+        [Tooltip("Card a name skin shows on in the gift popup; its $Label (with MBSkinName) is a short sample of text in the skin.")]
+        public GameObject nameSkinCard;
+
         /// <summary>The box prefab configured for a gift, or null if none is set.</summary>
         public GameObject BoxFor(EGiftBox type) {
             if (boxes != null)

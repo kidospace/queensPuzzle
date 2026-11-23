@@ -133,7 +133,7 @@ namespace qp {
             var place = Rank >= 1 && Rank <= _boxes.Length ? _boxes[Rank - 1] : null;
             var art = place != null && place.transform.childCount > 0 ? place.transform.GetChild(0) as RectTransform : null;
             if (_gift != null) {
-                GiftsManager.ShowGift(_gift, box, TournamentConfig.Instance?.PrizeFor(Rank)?.rewards, art);
+                GiftsManager.ShowGift(_gift, box, TournamentManager.PrizeGiven, art);
                 if (place != null) place.SetActive(false);   // Fill turns it back on next time
             }
             else Debug.LogError("[EndClaim] MBGiftPopup missing in the scene - the prize is granted but not shown");

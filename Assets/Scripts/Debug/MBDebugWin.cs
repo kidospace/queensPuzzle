@@ -113,6 +113,108 @@ namespace qp {
             GUILayout.EndHorizontal();
         }
 
+        // What the next debug gift holds: its box, how many of each boost, and which skins.
+        EGiftBox _giftBox = EGiftBox.Tournament1;
+        readonly int[] _giftBoosts = new int[Enum.GetValues(typeof(EBoostType)).Length];
+        readonly System.Collections.Generic.HashSet<string> _giftSkins = new System.Collections.Generic.HashSet<string>();
+        string _giftSlotOpen = "";
+
+        /// <summary>
+        /// Build a gift by hand out of everything a gift can hold, and open it. Places and streak
+        /// weeks have their own debug where they belong; this is the list itself: every boost with
+        /// an amount, and every skin that has to be earned, one by one.
+        ///
+        /// What is picked is GIVEN for real (boosts added, skins put in the collection and marked
+        /// new) and shown in the gift popup. The window closes first - it blocks every tap under
+        /// it, and a gift needs one.
+        /// </summary>
+        void _giftsPanel() {
+            GUILayout.Label("Gift - pick what is in it");
+
+            if (Button($"Box: {_giftBox}  (tap to change)")) {
+                var all = (EGiftBox[])Enum.GetValues(typeof(EGiftBox));
+                _giftBox = all[(Array.IndexOf(all, _giftBox) + 1) % all.Length];
+            }
+
+            foreach (EBoostType type in Enum.GetValues(typeof(EBoostType))) {
+                int i = (int)type;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{type}: {_giftBoosts[i]}", GUILayout.Width(160), GUILayout.Height(44));
+                if (Button("-") && _giftBoosts[i] > 0) _giftBoosts[i]--;
+                if (Button("+")) _giftBoosts[i]++;
+                GUILayout.EndHorizontal();
+            }
+
+            // Skins: the slots that have something to earn, each opening to its items.
+            var catalog = SkinCatalog.Instance;
+            if (catalog != null) foreach (var slot in catalog.slots) {
+                int earnable = 0, picked = 0;
+                foreach (var item in slot.items) if (!item.free) { earnable++; if (_giftSkins.Contains(slot.id + "/" + item.id)) picked++; }
+                if (earnable == 0) continue;
+
+                bool open = _giftSlotOpen == slot.id;
+                if (Button($"{(open ? "v" : ">")} {slot.id}: {picked} of {earnable} picked")) _giftSlotOpen = open ? "" : slot.id;
+                if (!open) continue;
+                foreach (var item in slot.items) {
+                    if (item.free) continue;
+                    string key = slot.id + "/" + item.id;
+                    bool on = _giftSkins.Contains(key);
+                    string has = ProfileManager.Owns(slot.id, item.id) ? "  (has it)" : "";
+                    if (Button($"   {(on ? "[x]" : "[  ]")} {item.id}{has}")) { if (on) _giftSkins.Remove(key); else _giftSkins.Add(key); }
+                }
+            }
+
+            int count = _giftSkins.Count;
+            foreach (int n in _giftBoosts) if (n > 0) count++;
+            GUILayout.BeginHorizontal();
+            if (Button($"OPEN GIFT ({count})") && count > 0) _openGift(_giftBox, _giveDebugGift());
+            if (Button("Clear")) { Array.Clear(_giftBoosts, 0, _giftBoosts.Length); _giftSkins.Clear(); }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (Button("Skins: give ALL")) _ownAllSkins(true);
+            if (Button("Skins: take all back")) _ownAllSkins(false);
+            GUILayout.EndHorizontal();
+        }
+
+        // Give what was picked and return it as the gift popup wants it.
+        System.Collections.Generic.List<IReward> _giveDebugGift() {
+            var given = new System.Collections.Generic.List<IReward>();
+            for (int i = 0; i < _giftBoosts.Length; i++)
+                if (_giftBoosts[i] > 0) given.Add(GiftsManager.Grant(new BoostReward { type = (EBoostType)i, amount = _giftBoosts[i] }));
+            foreach (string key in _giftSkins) {
+                int cut = key.IndexOf('/');
+                var skin = ProfileManager.Give(key.Substring(0, cut), key.Substring(cut + 1));
+                if (skin != null) given.Add(new SkinReward { slot = skin.slot, item = skin.item });
+            }
+            return given;
+        }
+
+        void _openGift(EGiftBox box, System.Collections.Generic.List<IReward> given) {
+            var popup = FindAnyObjectByType<MBGiftPopup>(FindObjectsInactive.Include);
+            if (popup == null) { Debug.LogError("[Debug] no MBGiftPopup in this scene"); return; }
+            Debug.Log($"[Debug] gift {box}: {given.Count} reward(s) given");
+            Close();
+            // The popup is shown on the next frame: this window is still holding the EventSystem
+            // off until it is gone, and the gift would open deaf.
+            popup.gameObject.SetActive(true);
+            popup.StartCoroutine(_showNextFrame(popup, box, given));
+        }
+
+        static System.Collections.IEnumerator _showNextFrame(MBGiftPopup popup, EGiftBox box, System.Collections.Generic.List<IReward> given) {
+            yield return null;
+            GiftsManager.ShowGift(popup, box, given);
+        }
+
+        // Every item that has to be earned: all given, or all taken back (free ones are everyone's).
+        static void _ownAllSkins(bool own) {
+            var catalog = SkinCatalog.Instance;
+            if (catalog == null) return;
+            foreach (var slot in catalog.slots)
+                foreach (var item in slot.items)
+                    if (!item.free) ProfileManager.SetOwned(slot.id, item.id, own);
+        }
+
         string _skipHours = "", _skipMinutes = "", _skipSeconds = "";
 
         /// <summary>A saved offset comes back on every run, until debug mode is exited.</summary>
@@ -268,6 +370,9 @@ namespace qp {
             GUILayout.Label($"Daily Challenge ({DailyChallengeManager.Status}, day {dc.dayIndex}, tier {dc.tier}, solved {dc.solved}, boards {DailyChallengeManager.BoardsSolved})");
             if (Button("DC: reset today (playable)")) DailyChallengeManager.DebugResetToday();
             if (Button("DC: mark solved today")) DailyChallengeManager.DebugMarkSolvedToday();
+
+            GUILayout.Space(16);
+            _giftsPanel();
 
             GUILayout.Space(16);
             TournamentPanel();

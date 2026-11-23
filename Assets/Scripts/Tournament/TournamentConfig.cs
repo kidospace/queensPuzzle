@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Common;
 using UnityEngine;
 
@@ -103,6 +104,17 @@ namespace qp {
         [Serializable]
         public class Prize {
             public BoostReward[] rewards;
+
+            [Tooltip("Skins this place also wins - one entry per item.")]
+            public SkinReward[] skins;
+
+            /// <summary>Everything this place wins, boosts first: the list to grant.</summary>
+            public IEnumerable<IReward> All {
+                get {
+                    if (rewards != null) foreach (var r in rewards) yield return r;
+                    if (skins != null) foreach (var s in skins) yield return s;
+                }
+            }
         }
 
         // ---- singleton ------------------------------------------------------------------

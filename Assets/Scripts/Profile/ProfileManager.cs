@@ -176,6 +176,62 @@ namespace qp {
             if (!owned && Equipped(slot) == item) Equip(slot, "");
         }
 
+        // ---- getting new items ---------------------------------------------------------------
+
+        /// <summary>
+        /// Give the player one more item of a slot: picked at random from the ones they do not
+        /// have, so no two collections grow the same way. Null when there is nothing left to give
+        /// — a finished collection is simply not added to.
+        ///
+        /// The item is theirs from this moment and marked new; it is not worn. Who earned it and
+        /// why is the caller's business (a tournament place, a streak week).
+        /// </summary>
+        public static SkinRef GrantRandom(string slot) {
+            var known = SkinCatalog.Instance != null ? SkinCatalog.Instance.Slot(slot) : null;
+            if (_state == null || known == null || known.items == null) return null;
+
+            var left = new List<SkinItem>();
+            foreach (var item in known.items)
+                if (item != null && !item.free && _find(_state.owned, slot, item.id) < 0) left.Add(item);
+            if (left.Count == 0) return null;
+
+            return Give(slot, left[new System.Random(Guid.NewGuid().GetHashCode()).Next(left.Count)].id);
+        }
+
+        /// <summary>Give the player this very item and mark it new. Null when the catalog has no
+        /// such item. One they already have is marked new again and handed back - there is nothing
+        /// to add, but whoever asked still gets to show it.</summary>
+        public static SkinRef Give(string slot, string item) {
+            if (_state == null || SkinCatalog.Instance == null || SkinCatalog.Instance.Find(slot, item) == null) return null;
+            if (_find(_state.owned, slot, item) < 0) _state.owned.Add(new SkinRef { slot = slot, item = item });
+            if (_find(_state.fresh, slot, item) < 0) _state.fresh.Add(new SkinRef { slot = slot, item = item });
+            _state.Save();
+            SkinsVersion++;
+            return new SkinRef { slot = slot, item = item };
+        }
+
+        /// <summary>There is something new the player has not looked at — anywhere, or in one slot.
+        /// This is the red dot on the profile button and on a tab: it stays even when the new item
+        /// is already worn, because its job is to say "something happened, come and look".</summary>
+        public static bool HasNew(string slot = null) {
+            if (_state == null || _state.fresh == null) return false;
+            foreach (var f in _state.fresh) if (f != null && (slot == null || f.slot == slot)) return true;
+            return false;
+        }
+
+        /// <summary>The red dot on one item: new, and not the one being worn — a worn item already
+        /// carries the tick.</summary>
+        public static bool IsNew(string slot, string item) =>
+            _state != null && _find(_state.fresh, slot, item) >= 0 && Equipped(slot) != item;
+
+        /// <summary>The player has opened a slot's tab and seen what is in it.</summary>
+        public static void MarkSeen(string slot) {
+            if (_state == null || _state.fresh == null) return;
+            if (_state.fresh.RemoveAll(f => f == null || f.slot == slot) == 0) return;
+            _state.Save();
+            SkinsVersion++;
+        }
+
         // Where an item sits in the list of what was given, or -1.
         static int _find(List<SkinRef> list, string slot, string item) {
             if (list == null) return -1;

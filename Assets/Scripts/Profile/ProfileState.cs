@@ -39,6 +39,11 @@ namespace qp {
         /// Ids this build does not know stay in the list untouched - a later build may know them.</summary>
         public List<SkinRef> owned = new List<SkinRef>();
 
+        /// <summary>Items the player was given and has not looked at yet — what the red dots on
+        /// the profile button, its tabs and its items are drawn from. Emptied tab by tab as the
+        /// player opens them.</summary>
+        public List<SkinRef> fresh = new List<SkinRef>();
+
         /// <summary>What the player is wearing: at most one item per slot. A slot that is not here
         /// shows the slot's first free item, if it has one.</summary>
         public List<SkinRef> equipped = new List<SkinRef>();

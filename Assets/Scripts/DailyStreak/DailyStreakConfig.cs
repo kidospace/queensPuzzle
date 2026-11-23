@@ -17,6 +17,10 @@ namespace qp {
         [Tooltip("Possible gifts — one is chosen at random when the streak completes.")]
         public BoostReward[] rewards;
 
+        [Tooltip("Skins that come with every gift, on top of the random reward above - one entry per item. " +
+                 "This is where the badge is.")]
+        public SkinReward[] skins;
+
         [Tooltip("A streak lost to ONE missed day can be saved with a rewarded video if it was at least this long — the whole streak, not the day on the bar. Losing a 1–2 day streak costs nothing worth a video. One save per cycleLength stretch of the streak (days 1–7, 8–14, …).")]
         public int repairMinStreak = 3;
 

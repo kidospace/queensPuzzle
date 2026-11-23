@@ -30,13 +30,20 @@ MonoBehaviour:
       amount: 3
     - type: 1
       amount: 5
+    skins:
+    - slot: frame
+    - slot: name
   - rewards:
     - type: 2
       amount: 2
     - type: 1
       amount: 3
+    skins:
+    - slot: name
   - rewards:
     - type: 1
       amount: 3
     - type: 2
       amount: 2
+    skins:
+    - slot: name

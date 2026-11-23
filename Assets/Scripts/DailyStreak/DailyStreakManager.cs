@@ -32,6 +32,9 @@ namespace qp {
         public int previous;     // the streak value before this win (for the old→new reveal)
         public int streak;       // the streak value after this win
         public BoostReward reward;    // null = no milestone; non-null = milestone reached, show reward UI
+        /// <summary>Everything the milestone gift held, as it was given: <see cref="reward"/> first,
+        /// then the config's skins. This is the list the gift popup shows. Null = no milestone.</summary>
+        public System.Collections.Generic.List<IReward> gift;
         /// <summary>&gt; 0: this win is the first since a streak of that length broke to one
         /// missed day, and nothing has happened to the streak YET. The win flow offers the repair
         /// and calls <see cref="DailyStreakManager.ResolveRepair"/>, which returns the real result.</summary>
@@ -294,10 +297,17 @@ namespace qp {
             _lastWinDay.Value = Today;
 
             BoostReward reward = _milestoneRewardFor(s);   // null unless s is a milestone day
-            GiftsManager.Grant(reward);
+            // The whole gift, as the config lists it: the random reward and the skins. Weeks do
+            // not have to follow each other - a run that broke and came back to its 7th day gets
+            // the gift, skins and all, again.
+            System.Collections.Generic.List<IReward> gift = null;
+            if (reward != null) {
+                gift = GiftsManager.Grant(new IReward[] { reward });
+                if (Config != null) gift.AddRange(GiftsManager.Grant(Config.skins));
+            }
 
             Analytics.StreakAdvance(s, reward != null, saved);
-            return new StreakResult { advanced = true, previous = prev, streak = s, reward = reward };
+            return new StreakResult { advanced = true, previous = prev, streak = s, reward = reward, gift = gift };
         }
 
         // The gift for a given streak day: a random reward every Nth day (7, 14, 21, …), null otherwise.

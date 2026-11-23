@@ -27,6 +27,11 @@ namespace qp {
         public float Stagger = 0.06f;    // max random delay between cards, seconds
         public int Seed = 7;
 
+        // After the reveal: 0 = every card where it landed, 1 = only the kept cards, side by side
+        // in the middle, the rest gone. Driven by the popup when it has something to ask about.
+        public float Gather;
+        public float GatherY = 247f;     // height of that row above the gift's center
+
         // row of each added card, serialized so it survives a domain reload in the editor
         [SerializeField, HideInInspector] List<Transform> _rowCards = new List<Transform>();
         [SerializeField, HideInInspector] List<int> _rows = new List<int>();
@@ -35,6 +40,7 @@ namespace qp {
         readonly List<Vector2> _place = new List<Vector2>();
         readonly List<float> _delay = new List<float>();
         readonly List<float> _spin = new List<float>();
+        readonly List<Transform> _kept = new List<Transform>();   // the cards Gather brings together
 
         /// <summary>Instantiate a reward into the given row and return it for the caller to fill.</summary>
         public GameObject Add(GameObject prefab, int row = 0) {
@@ -54,6 +60,13 @@ namespace qp {
             _rowCards.Clear();
             _rows.Clear();
             _cards.Clear();
+            _kept.Clear();
+            Gather = 0f;
+        }
+
+        /// <summary>Mark a card as one <see cref="Gather"/> keeps on screen.</summary>
+        public void Keep(Transform card) {
+            if (card != null && !_kept.Contains(card)) _kept.Add(card);
         }
 
         /// <summary>Re-place every card for the current Burst (editor preview calls this after sampling).</summary>
@@ -108,7 +121,11 @@ namespace qp {
             for (int i = 0; i < _cards.Count; i++) {
                 var rt = (RectTransform)_cards[i];
                 if (rt == null) continue;
-                if (Burst >= 1f) { _rest(rt, _place[i]); continue; }
+                if (Burst >= 1f) {
+                    _rest(rt, _place[i]);
+                    if (Gather > 0f) _gather(rt, _place[i]);
+                    continue;
+                }
                 float t = s - _delay[i];
                 if (t <= 0f) { rt.localScale = Vector3.zero; continue; }
                 float go = 1f - Mathf.Exp(-Snap * t);                                  // thrown: full speed, then slowing
@@ -117,6 +134,15 @@ namespace qp {
                 rt.localScale = Vector3.one * (0.3f + 0.7f * (1f - Mathf.Exp(-Snap * 1.2f * t)));
                 rt.localRotation = Quaternion.Euler(0f, 0f, _spin[i] * Mathf.Exp(-3.5f * t) * Mathf.Cos(4f * t));
             }
+        }
+
+        // A kept card slides to its place in the middle row; any other shrinks away where it is.
+        void _gather(RectTransform rt, Vector2 place) {
+            float g = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Gather));
+            int k = _kept.IndexOf(rt);
+            if (k < 0) { rt.localScale = Vector3.one * (1f - g); return; }
+            float x = (k - (_kept.Count - 1) / 2f) * Spacing;
+            rt.anchoredPosition = Vector2.Lerp(place, new Vector2(x, GatherY), g);
         }
 
         static void _rest(RectTransform rt, Vector2 place) {

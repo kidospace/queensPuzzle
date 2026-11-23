@@ -29,3 +29,5 @@ MonoBehaviour:
   - type: 3
     prefab: {fileID: 3996301772112904913, guid: 2b3ae16fba0d0854c9242f1c57483ec1, type: 3}
   boostCard: {fileID: 2998594606784704414, guid: d382bc5ee4cdbe9418dbc358e4baa1f5, type: 3}
+  skinCard: {fileID: 5261968259316711192, guid: 0184af6b2605aa945ba0707fc7efc38e, type: 3}
+  nameSkinCard: {fileID: 1558876660758822166, guid: 15195e0106ad52747b7f3ed95e9ff7dd, type: 3}

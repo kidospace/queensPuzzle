@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Common;
 using UnityEngine;
@@ -287,6 +288,12 @@ namespace qp {
         /// also pushes the next scheduled sync away.</summary>
         public static Task Sync() => MBTournamentSyncRunner.RunNow();
 
+        /// <summary>What the last <see cref="CompleteEnded"/> handed over, as it was given — the list
+        /// for the gift that is shown right after. Not the same as the place's prize in the config:
+        /// a skin there is "a new frame", here it is the frame the player got, and one they had
+        /// nothing left to get of is not here at all.</summary>
+        public static readonly List<IReward> PrizeGiven = new List<IReward>();
+
         /// <summary>The Tournament Ended popup's button (Claim / Continue). The rank was already
         /// confirmed during sync, so the prize is granted here and nothing is sent. Marks the result
         /// as shown, so it never pops again — the server keeps returning that closed tournament.
@@ -299,7 +306,8 @@ namespace qp {
             if (_state == null || !_state.lastSyncClosed.Exists || _state.closedShown) return;
 
             var prize = TournamentConfig.Instance?.PrizeFor(ClosedPlace);
-            GiftsManager.Grant(prize?.rewards);
+            PrizeGiven.Clear();
+            PrizeGiven.AddRange(GiftsManager.Grant(prize?.All));
 
             _state.closedShown = true;
             _state.Save();
