@@ -56,12 +56,13 @@ namespace qp {
         TMP_Text _name;
         MBSkinName _nameSkin;        // on $Name: dresses it in the drafted name skin
 
-        GameObject[] _tabOn, _tabOff;
+        GameObject[] _tabOn, _tabOff, _tabNew;   // _tabNew: the red dot on a tab with something new in it
         ScrollRect _scroll;
         RectTransform _grid;
         GridLayoutGroup _gridLayout;
         MBSkinCell _template;        // $Cell — hidden, cloned once per item
         readonly List<MBSkinCell> _cells = new List<MBSkinCell>();
+        readonly List<int> _order = new List<int>();     // the open tab's items, in the order they are shown
 
         int _tab;
         readonly List<SkinRef> _draft = new List<SkinRef>();   // what is picked, not yet saved
@@ -89,11 +90,13 @@ namespace qp {
 
             _tabOn = new GameObject[Slots.Length];
             _tabOff = new GameObject[Slots.Length];
+            _tabNew = new GameObject[Slots.Length];
             for (int i = 0; i < Slots.Length; i++) {
                 var tab = transform.RecursiveFindChild("$Tab" + i);
                 if (tab == null) { CDebug.LogError($"[ProfilePopup] $Tab{i} is missing from the prefab"); continue; }
                 _tabOn[i] = _child(tab, "$On");
                 _tabOff[i] = _child(tab, "$Off");
+                _tabNew[i] = _child(tab, "$New");
                 int index = i;
                 var button = tab.GetComponent<Button>();
                 if (button != null) button.onClick.AddListener(() => _openTab(index));
@@ -132,7 +135,11 @@ namespace qp {
             if (_nameInput != null) _nameInput.SetTextWithoutNotify(ProfileManager.Name);
             else if (_name != null) _name.text = ProfileManager.Name;
             _showNameError(ENameError.Ok);
-            _openTab(0);
+            // Open where the news is: a red dot on the lobby button promised something, and the
+            // first tab that has it is where the player is looking for it. Nothing new = the first tab.
+            int first = 0;
+            for (int i = 0; i < Slots.Length; i++) if (ProfileManager.HasNew(Slots[i])) { first = i; break; }
+            _openTab(first);
             _preview();
 
             GetComponent<IPopupAnim>()?.PlayIn();
@@ -169,11 +176,18 @@ namespace qp {
             }
             _fill();
             _scrollToPicked();
+
+            // The items were just drawn with their dots, so the player is looking at them: that is
+            // seen. The dots stay on the cells for this visit; the tab's own goes now, and the
+            // lobby button's once no tab has one left.
+            ProfileManager.MarkSeen(Slots[index]);
+            for (int i = 0; i < Slots.Length; i++) _show(_tabNew[i], ProfileManager.HasNew(Slots[i]));
         }
 
-        // Open a tab on the item that is picked in it, not on the top of the list: with a long
-        // list the tick may be rows below, and the player should see what they have on without
-        // looking for it. The row is brought to the middle; nothing picked = the top.
+        // Open a tab on what the player came for, not on the top of the list. If something in it
+        // is new, that: the red dot brought them here, and it may be rows below. Otherwise the
+        // item that is picked, so they see what they have on without looking for it. The row is
+        // brought to the middle; neither = the top.
         void _scrollToPicked() {
             if (_scroll == null || _grid == null || _gridLayout == null) return;
             _scroll.StopMovement();
@@ -181,8 +195,10 @@ namespace qp {
 
             string picked = SkinRef.Worn(_draft, Slots[_tab]);
             int index = -1;
-            for (int i = 0; i < _cells.Count; i++)
-                if (_cells[i].gameObject.activeSelf && _cells[i].Item == picked && picked != "") { index = i; break; }
+            for (int i = 0; i < _cells.Count && index < 0; i++)
+                if (_cells[i].gameObject.activeSelf && _cells[i].IsNew) index = i;
+            for (int i = 0; i < _cells.Count && index < 0; i++)
+                if (_cells[i].gameObject.activeSelf && _cells[i].Item == picked && picked != "") index = i;
 
             float view = ((RectTransform)_scroll.transform).rect.height;
             float room = Mathf.Max(0f, _grid.rect.height - view);   // how far the list can scroll
@@ -208,6 +224,12 @@ namespace qp {
                 if (_tab < _cellSize.Length) _gridLayout.cellSize = _cellSize[_tab];
             }
 
+            // What the player has comes first, then what is locked - items open in no fixed order,
+            // and theirs should not be scattered between locks. Within each group, catalog order.
+            _order.Clear();
+            for (int i = 0; i < count; i++) if (ProfileManager.Owns(slotId, slot.items[i].id)) _order.Add(i);
+            for (int i = 0; i < count; i++) if (!ProfileManager.Owns(slotId, slot.items[i].id)) _order.Add(i);
+
             for (int i = 0; i < count; i++) {
                 if (i == _cells.Count) {
                     var cell = Instantiate(_template, _grid);
@@ -215,9 +237,10 @@ namespace qp {
                     cell.Tapped += _onCell;
                     _cells.Add(cell);
                 }
-                var item = slot.items[i];
+                var item = slot.items[_order[i]];
                 _cells[i].gameObject.SetActive(true);
-                _cells[i].Set(slotId, item, ProfileManager.Owns(slotId, item.id), SkinRef.Worn(_draft, slotId) == item.id, scale);
+                _cells[i].Set(slotId, item, ProfileManager.Owns(slotId, item.id), SkinRef.Worn(_draft, slotId) == item.id, scale,
+                              ProfileManager.IsNew(slotId, item.id));
             }
             for (int i = count; i < _cells.Count; i++) _cells[i].gameObject.SetActive(false);
         }

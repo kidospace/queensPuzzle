@@ -15,7 +15,8 @@ namespace qp {
     /// $Icon (a picture, at the size it was drawn), $Label (a name skin, shown on a sample of
     /// the player's name), $Inside (what sits in an empty frame), $Back (the tile behind a
     /// label or a badge), $Selected (the tick), and the lock — $Lock in the middle of a picture,
-    /// $LockCorner small in the corner of a tile, where the middle is the thing to look at.
+    /// $LockCorner small in the corner of a tile, where the middle is the thing to look at — and
+    /// $New, the red dot on an item the player was just given.
     /// </summary>
     public sealed class MBSkinCell : MonoBehaviour {
 
@@ -26,7 +27,7 @@ namespace qp {
         Image _icon;
         TMP_Text _label;
         MBSkinName _labelSkin;      // on $Label: dresses it in the item's style
-        GameObject _inside, _back, _selected, _lock, _lockCorner;
+        GameObject _inside, _back, _selected, _lock, _lockCorner, _new;
         CanvasGroup _content;       // everything that dims when locked
 
         /// <summary>The item this cell shows.</summary>
@@ -34,6 +35,9 @@ namespace qp {
 
         /// <summary>The player can pick it.</summary>
         public bool Owned { get; private set; }
+
+        /// <summary>It carries the red dot: just given, not looked at yet.</summary>
+        public bool IsNew { get; private set; }
 
         public event Action<MBSkinCell> Tapped;
 
@@ -48,6 +52,7 @@ namespace qp {
             _selected = _child("$Selected");
             _lock = _child("$Lock");
             _lockCorner = _child("$LockCorner");
+            _new = _child("$New");
 
             var content = transform.RecursiveFindChild("$Content");
             if (content != null) {
@@ -72,7 +77,7 @@ namespace qp {
         /// <summary>Draw an item. <paramref name="iconScale"/> is how big pictures of this slot
         /// sit in a cell — one number for the whole slot, so every frame's ring is the same size
         /// whatever its ornaments add around it.</summary>
-        public void Set(string slot, SkinItem item, bool owned, bool selected, float iconScale) {
+        public void Set(string slot, SkinItem item, bool owned, bool selected, float iconScale, bool isNew = false) {
             if (_icon == null && _label == null) _find();   // filled before it was ever enabled
             Item = item.id;
             Owned = owned;
@@ -105,6 +110,8 @@ namespace qp {
             _show(_lock, !owned && !tile);
             _show(_lockCorner, !owned && tile);
             if (_content != null) _content.alpha = owned ? 1f : LockedAlpha;
+            IsNew = isNew;
+            _show(_new, isNew);     // the red dot: just given, not looked at yet
             SetSelected(selected);
         }
 

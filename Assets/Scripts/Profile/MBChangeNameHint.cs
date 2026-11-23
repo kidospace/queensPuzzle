@@ -27,11 +27,13 @@ namespace qp {
         [SerializeField] float _fadeOut = 0.35f;
 
         CanvasGroup _group;
-        Vector3 _home;
+        RectTransform _rt;
+        Vector2 _home;      // anchored, not local: local moves when the layout sizes the parent
         bool _leaving;
 
         void Awake() {
-            _home = transform.localPosition;
+            _rt = (RectTransform)transform;
+            _home = _rt.anchoredPosition;
             _group = GetComponent<CanvasGroup>();
             if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
         }
@@ -44,7 +46,7 @@ namespace qp {
 
             _leaving = false;
             _group.alpha = 1f;
-            transform.localPosition = _home;
+            _rt.anchoredPosition = _home;
         }
 
         void Update() {
@@ -55,23 +57,23 @@ namespace qp {
             // Unscaled: the lobby may be paused behind a popup, and the hint going still would
             // read as the game having frozen.
             float phase = Mathf.Sin(Time.unscaledTime * (2f * Mathf.PI / _period));
-            transform.localPosition = _home + Vector3.up * (phase * _rise);
+            _rt.anchoredPosition = _home + Vector2.up * (phase * _rise);
         }
 
         /// <summary>Settle back to where it started while fading — drifting away mid-bob looks
         /// like something went wrong rather than something being finished.</summary>
         IEnumerator _leave() {
             _leaving = true;
-            Vector3 from = transform.localPosition;
+            Vector2 from = _rt.anchoredPosition;
 
             for (float e = 0f; e < _fadeOut; e += Time.unscaledDeltaTime) {
                 float k = e / _fadeOut;
-                transform.localPosition = Vector3.Lerp(from, _home, k);
+                _rt.anchoredPosition = Vector2.Lerp(from, _home, k);
                 _group.alpha = 1f - k;
                 yield return null;
             }
 
-            transform.localPosition = _home;
+            _rt.anchoredPosition = _home;
             _group.alpha = 1f;          // reset, in case something activates it again
             gameObject.SetActive(false);
         }
