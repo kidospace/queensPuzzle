@@ -4,7 +4,10 @@ using UnityEngine;
 namespace qp {
 
     /// <summary>
-    /// Name rules, shipped as a single asset in Resources ("ProfileConfig"). Latin letters and
+    /// The profile's config, shipped as a single asset in Resources ("ProfileConfig"): the name
+    /// rules, and the catalog of skins a player can wear.
+    ///
+    /// Names: Latin letters and
     /// digits only: our font atlas has nothing else, and a name the game can't draw is worse than
     /// one the player didn't pick. The banned list is the first line of moderation — the same check
     /// belongs on the server too, since a client can always lie.
@@ -41,6 +44,9 @@ namespace qp {
                  "(ass in Cassandra, cum in document, rape in grape, tit in title). Also refused " +
                  "when the whole name is just that word repeated, which is how SexSex sneaks past.")]
         public string[] bannedWholeWord;
+
+        [Tooltip("Everything a player can wear: the slots (avatar, frame, name, badge) and the items in each.")]
+        public SkinCatalog skins = new SkinCatalog();
 
         // ---- singleton ------------------------------------------------------------------
 

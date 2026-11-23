@@ -113,50 +113,6 @@ namespace qp {
             GUILayout.EndHorizontal();
         }
 
-        string _skinSlotOpen = "";
-
-        /// <summary>
-        /// What the player has and wears, by hand. Until the game hands items out, this is the only
-        /// place they come from. One row per slot; opening a slot lists its items - the left
-        /// button gives or takes the item, the right one wears it.
-        /// </summary>
-        void _skinsPanel() {
-            var catalog = SkinCatalog.Instance;
-            if (catalog == null) { GUILayout.Label("Skins - no catalog"); return; }
-            GUILayout.Label("Skins");
-
-            foreach (var slot in catalog.slots) {
-                int have = 0;
-                foreach (var item in slot.items) if (ProfileManager.Owns(slot.id, item.id)) have++;
-                string worn = ProfileManager.Equipped(slot.id);
-                bool open = _skinSlotOpen == slot.id;
-
-                GUILayout.BeginHorizontal();
-                if (Button($"{(open ? "v" : ">")} {slot.id}: has {have}/{slot.items.Length}, wears {(worn == "" ? "nothing" : worn)}"))
-                    _skinSlotOpen = open ? "" : slot.id;
-                if (GUILayout.Button("All", GUILayout.Height(44), GUILayout.Width(70)))
-                    foreach (var item in slot.items) ProfileManager.SetOwned(slot.id, item.id, true);
-                if (GUILayout.Button("None", GUILayout.Height(44), GUILayout.Width(70)))
-                    foreach (var item in slot.items) ProfileManager.SetOwned(slot.id, item.id, false);
-                GUILayout.EndHorizontal();
-                if (!open) continue;
-
-                foreach (var item in slot.items) {
-                    bool owns = ProfileManager.Owns(slot.id, item.id);
-                    bool wears = worn == item.id;
-                    GUILayout.BeginHorizontal();
-                    if (item.free) GUILayout.Label($"free  {item.id}", GUILayout.Height(44));
-                    else if (Button($"{(owns ? "[x]" : "[  ]")} {item.id}")) ProfileManager.SetOwned(slot.id, item.id, !owns);
-                    bool was = GUI.enabled;
-                    GUI.enabled = was && owns;
-                    if (GUILayout.Button(wears ? "WEARING" : "Wear", GUILayout.Height(44), GUILayout.Width(140)))
-                        ProfileManager.Equip(slot.id, wears ? "" : item.id);
-                    GUI.enabled = was;
-                    GUILayout.EndHorizontal();
-                }
-            }
-        }
-
         string _skipHours = "", _skipMinutes = "", _skipSeconds = "";
 
         /// <summary>A saved offset comes back on every run, until debug mode is exited.</summary>
@@ -312,9 +268,6 @@ namespace qp {
             GUILayout.Label($"Daily Challenge ({DailyChallengeManager.Status}, day {dc.dayIndex}, tier {dc.tier}, solved {dc.solved}, boards {DailyChallengeManager.BoardsSolved})");
             if (Button("DC: reset today (playable)")) DailyChallengeManager.DebugResetToday();
             if (Button("DC: mark solved today")) DailyChallengeManager.DebugMarkSolvedToday();
-
-            GUILayout.Space(16);
-            _skinsPanel();
 
             GUILayout.Space(16);
             TournamentPanel();

@@ -18,12 +18,21 @@ namespace qp {
         MBTournamentEndClaim _claimScreen;
         MBTournamentCard _card;
         MBGiftPopup _giftPopup;      // opens a gift box and hands out its rewards
+        MBProfilePopup _profile;     // the player's skins; opened by $ProfileBtn
 
         private void Awake() {
             var lvlBtn = transform.RecursiveFindChild<MBLevelButton>("$LvlButton");
             if (lvlBtn != null) lvlBtn.GetButton().onClick.AddListener(PlayCurrentLevel);
 
             transform.RecursiveFindChild<Button>("$SettingsBtn").onClick.AddListener(OpenSettings);
+
+            // Woken like the other popups, so it lays out at real size before the first tap.
+            _profile = FindAnyObjectByType<MBProfilePopup>(FindObjectsInactive.Include);
+            if (_profile != null) _profile.gameObject.SetActive(true);
+            else Debug.LogError("[MBLobby] MBProfilePopup missing in the scene");
+            var profileBtn = transform.RecursiveFindChild<Button>("$ProfileBtn");
+            if (profileBtn != null) profileBtn.onClick.AddListener(() => { if (_profile != null) _profile.Show(); });
+            else Debug.LogError("[MBLobby] $ProfileBtn missing in the scene");
 
             var streakProgressPopup = FindAnyObjectByType<MBDailyStreakInfoPopup>(FindObjectsInactive.Include);
             if (streakProgressPopup != null) streakProgressPopup.gameObject.SetActive(true);

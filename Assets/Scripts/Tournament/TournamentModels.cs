@@ -140,8 +140,8 @@ namespace qp {
         /// <summary>What the player wears, as ids into the <see cref="SkinCatalog"/>.</summary>
         public List<SkinRef> skins = new List<SkinRef>();
 
-        /// <summary>The item worn in a slot, or null — the catalog turns that into its default.</summary>
-        public string Skin(string slot) => skins?.Find(s => s != null && s.slot == slot)?.item;
+        /// <summary>The item worn in a slot, or "" — which draws as the slot's first free item.</summary>
+        public string Skin(string slot) => SkinRef.Worn(skins, slot);
     }
 
     /// <summary>A group table exactly as the server sent it: rows in rank order, plus where the

@@ -70,14 +70,14 @@ namespace qp {
 
             System.Random rnd = null;
             foreach (var slot in catalog.slots) {
-                if (slot == null || slot.items == null || _find(_state.equipped, slot.id, null) >= 0) continue;
+                if (slot == null || slot.items == null || Equipped(slot.id) != "") continue;
 
                 var free = new List<SkinItem>();
                 foreach (var item in slot.items) if (item != null && item.free) free.Add(item);
                 if (free.Count == 0) continue;
 
                 if (rnd == null) rnd = new System.Random(Guid.NewGuid().GetHashCode());
-                _state.equipped.Add(new SkinRef { slot = slot.id, item = free[rnd.Next(free.Count)].id });
+                SkinRef.Wear(_state.equipped, slot.id, free[rnd.Next(free.Count)].id);
             }
             if (rnd == null) return;        // nothing was picked
 
@@ -136,12 +136,12 @@ namespace qp {
             return _state != null && _find(_state.owned, slot, item) >= 0;
         }
 
+        /// <summary>What the player wears, to read: hand it to whatever draws them. Null before
+        /// <see cref="Init"/>. Changing it is <see cref="Equip"/>'s job.</summary>
+        public static List<SkinRef> Skins => _state?.equipped;
+
         /// <summary>The item worn in a slot, or "" - which draws as the slot's first free item.</summary>
-        public static string Equipped(string slot) {
-            if (_state == null) return "";
-            int i = _find(_state.equipped, slot, null);
-            return i < 0 ? "" : _state.equipped[i].item;
-        }
+        public static string Equipped(string slot) => SkinRef.Worn(Skins, slot);
 
         /// <summary>Wear an item the player has; "" empties the slot. False = not theirs.</summary>
         public static bool Equip(string slot, string item) {
@@ -150,9 +150,7 @@ namespace qp {
             if (item != "" && !Owns(slot, item)) return false;
             if (Equipped(slot) == item) return true;      // nothing changed, nothing to send
 
-            int i = _find(_state.equipped, slot, null);
-            if (i >= 0) _state.equipped.RemoveAt(i);
-            if (item != "") _state.equipped.Add(new SkinRef { slot = slot, item = item });
+            SkinRef.Wear(_state.equipped, slot, item);
             _state.rev++;
             _state.Save();
             _ = Sync();
@@ -173,12 +171,11 @@ namespace qp {
             if (!owned && Equipped(slot) == item) Equip(slot, "");
         }
 
-        // item null = any item in the slot.
+        // Where an item sits in the list of what was given, or -1.
         static int _find(List<SkinRef> list, string slot, string item) {
             if (list == null) return -1;
             for (int i = 0; i < list.Count; i++)
-                if (list[i] != null && list[i].slot == slot && (item == null || list[i].item == item))
-                    return i;
+                if (list[i] != null && list[i].slot == slot && list[i].item == item) return i;
             return -1;
         }
 
