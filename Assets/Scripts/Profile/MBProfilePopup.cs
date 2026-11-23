@@ -18,7 +18,9 @@ namespace qp {
     /// The name is checked while it is typed, and Save will not go through with one that is
     /// refused — the line under the field has been saying why the whole time.
     ///
-    /// An item the player does not have is shown dimmed under a lock and cannot be picked.
+    /// An item the player does not have is shown under a lock and cannot be picked; tapping it
+    /// says, in a small bubble by the item, how it is won. The bubbles are ready-made in the
+    /// prefab, one per tab ($LockedHint1..3) — this class only moves the right one into place.
     /// A slot nobody has to wear (name, badge) is emptied by tapping the picked item again.
     ///
     /// Woken by the lobby and hidden after the first layout pass, like the other popups.
@@ -46,6 +48,10 @@ namespace qp {
         /// <summary>How long the way out takes: a short fade, nothing more.</summary>
         const float CloseSeconds = 0.15f;
 
+        /// <summary>A locked item's bubble: how long it stays, and its fade in and out.</summary>
+        const float HintSeconds = 2f;
+        const float HintFade = 0.15f;
+
         CanvasGroup _group;
         bool _showing;
         Coroutine _closing;          // the fade out, while it runs
@@ -64,6 +70,10 @@ namespace qp {
         MBSkinCell _template;        // $Cell — hidden, cloned once per item
         readonly List<MBSkinCell> _cells = new List<MBSkinCell>();
         readonly List<int> _order = new List<int>();     // the open tab's items, in the order they are shown
+
+        CanvasGroup[] _hints;        // $LockedHint0..3, by tab; a tab with nothing locked has none
+        Coroutine _hinting;          // the bubble that is up, while it is
+        float _hintGridY;            // where the list stood when it came up
 
         int _tab;
         readonly List<SkinRef> _draft = new List<SkinRef>();   // what is picked, not yet saved
@@ -99,6 +109,7 @@ namespace qp {
             _tabOn = new GameObject[Slots.Length];
             _tabOff = new GameObject[Slots.Length];
             _tabNew = new GameObject[Slots.Length];
+            _hints = new CanvasGroup[Slots.Length];
             for (int i = 0; i < Slots.Length; i++) {
                 var tab = transform.RecursiveFindChild("$Tab" + i);
                 if (tab == null) { CDebug.LogError($"[ProfilePopup] $Tab{i} is missing from the prefab"); continue; }
@@ -109,8 +120,17 @@ namespace qp {
                 var button = tab.GetComponent<Button>();
                 if (button != null) button.onClick.AddListener(() => _openTab(index));
             }
+            for (int i = 0; i < Slots.Length; i++) {
+                var hint = transform.RecursiveFindChild("$LockedHint" + i);
+                if (hint == null) continue;
+                _hints[i] = hint.GetComponent<CanvasGroup>();
+                if (_hints[i] == null) _hints[i] = hint.gameObject.AddComponent<CanvasGroup>();
+                _hints[i].blocksRaycasts = false;       // it is read, never tapped
+                hint.gameObject.SetActive(false);
+            }
 
             _scroll = GetComponentInChildren<ScrollRect>(true);
+            if (_scroll != null) _scroll.onValueChanged.AddListener(_ => _hideHintIfScrolled());
             _grid = transform.RecursiveFindChild<RectTransform>("$Grid");
             if (_grid != null) _gridLayout = _grid.GetComponent<GridLayoutGroup>();
             _template = transform.RecursiveFindChild<MBSkinCell>("$Cell");
@@ -179,6 +199,7 @@ namespace qp {
         // ---- tabs and grid -------------------------------------------------------------------
 
         void _openTab(int index) {
+            _hideHint();
             _tab = index;
             for (int i = 0; i < Slots.Length; i++) {
                 _show(_tabOn[i], i == index);
@@ -256,7 +277,8 @@ namespace qp {
         }
 
         void _onCell(MBSkinCell cell) {
-            if (!cell.Owned) return;                     // locked: nothing to pick
+            if (!cell.Owned) { _showHint(cell); return; }    // locked: nothing to pick, but say how it is won
+            _hideHint();
 
             string slotId = Slots[_tab];
             bool again = SkinRef.Worn(_draft, slotId) == cell.Item;
@@ -268,6 +290,57 @@ namespace qp {
             string picked = SkinRef.Worn(_draft, slotId);
             foreach (var c in _cells) if (c.gameObject.activeSelf) c.SetSelected(c.Item == picked);
             _preview();
+        }
+
+        // ---- the bubble on a locked item ------------------------------------------------------
+
+        // The open tab's bubble, centred on the top edge of the tapped cell and kept inside the
+        // card. It goes by itself; a tap on another item, a scroll or another tab takes it sooner.
+        void _showHint(MBSkinCell cell) {
+            _hideHint();
+            var hint = _hints[_tab];
+            if (hint == null) return;
+
+            var bubble = (RectTransform)hint.transform;
+            var card = (RectTransform)bubble.parent;
+            hint.alpha = 0f;
+            hint.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(bubble);    // its width follows its text
+
+            var cellRect = (RectTransform)cell.transform;
+            Vector3 at = card.InverseTransformPoint(cellRect.TransformPoint(new Vector3(cellRect.rect.center.x, cellRect.rect.yMax)));
+            float half = bubble.rect.width * 0.5f;
+            at.x = Mathf.Clamp(at.x, card.rect.xMin + half, card.rect.xMax - half);
+            bubble.localPosition = new Vector3(at.x, at.y, 0f);
+
+            _hintGridY = _grid.anchoredPosition.y;
+            _hinting = StartCoroutine(_hint(hint));
+        }
+
+        // The item the bubble points at has moved away. A real move only: the list also reports
+        // a "change" while it settles by a hair, and that must not take the bubble with it.
+        void _hideHintIfScrolled() {
+            if (_hinting != null && Mathf.Abs(_grid.anchoredPosition.y - _hintGridY) > 10f) _hideHint();
+        }
+
+        IEnumerator _hint(CanvasGroup hint) {
+            for (float e = 0f; e < HintFade; e += Time.unscaledDeltaTime) {
+                hint.alpha = Mathf.SmoothStep(0f, 1f, e / HintFade);
+                yield return null;
+            }
+            hint.alpha = 1f;
+            yield return new WaitForSecondsRealtime(HintSeconds);
+            for (float e = 0f; e < HintFade; e += Time.unscaledDeltaTime) {
+                hint.alpha = 1f - Mathf.SmoothStep(0f, 1f, e / HintFade);
+                yield return null;
+            }
+            hint.gameObject.SetActive(false);
+            _hinting = null;
+        }
+
+        void _hideHint() {
+            if (_hinting != null) { StopCoroutine(_hinting); _hinting = null; }
+            foreach (var hint in _hints) if (hint != null && hint.gameObject.activeSelf) hint.gameObject.SetActive(false);
         }
 
         static bool _hasFree(string slotId) {
