@@ -198,7 +198,7 @@ namespace qp {
                 if (_podium[i] == null) continue;
                 bool has = i < entries.Length;
                 _podium[i].gameObject.SetActive(has);
-                if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine);
+                if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine, entries[i].skins);
             }
 
             // Only this player's box (the Gifts/Boxes art) — it opens in the gift popup.

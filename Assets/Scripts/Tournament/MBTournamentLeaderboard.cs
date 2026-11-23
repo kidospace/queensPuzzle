@@ -220,7 +220,7 @@ namespace qp {
             for (int i = 0; i < _rows.Length; i++) {
                 bool used = i < count;
                 _rows[i].gameObject.SetActive(used);
-                if (used) _rows[i].Set(i + 1, entries[i].name, entries[i].score, standings.IsMe(i));
+                if (used) _rows[i].Set(i + 1, entries[i].name, entries[i].score, standings.IsMe(i), entries[i].skins);
             }
 
             if (count > _rows.Length)
@@ -244,7 +244,11 @@ namespace qp {
             // height NOW.
             LayoutRebuilder.ForceRebuildLayoutImmediate(_content);
 
-            float view = ((RectTransform)_scroll.viewport).rect.height;
+            // The list is scaled to fit the rows across the screen, so the window is measured in
+            // the list's own units: everything below is, and mixing the two lands the row off-centre
+            // by more the smaller the scale.
+            float scale = _content.localScale.y > 0f ? _content.localScale.y : 1f;
+            float view = ((RectTransform)_scroll.viewport).rect.height / scale;
             float scrollable = _content.rect.height - view;
             if (scrollable <= 0f) { _scroll.verticalNormalizedPosition = 1f; return; }   // it all fits
 

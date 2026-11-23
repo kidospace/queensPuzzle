@@ -129,7 +129,7 @@ namespace qp {
                 bool has = i < entries.Length;
                 if (_podium[i] == null) continue;
                 _podium[i].gameObject.SetActive(has);
-                if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine);
+                if (has) _podium[i].Set(i + 1, entries[i].name, entries[i].score, i == mine, entries[i].skins);
             }
 
             // Their own row, always: this screen only opens for a finish outside the paying
@@ -137,7 +137,7 @@ namespace qp {
             bool show = mine >= 0 && mine < entries.Length;
             if (_myRow != null) {
                 _myRow.gameObject.SetActive(show);
-                if (show) _myRow.Set(mine + 1, entries[mine].name, entries[mine].score, true);
+                if (show) _myRow.Set(mine + 1, entries[mine].name, entries[mine].score, true, entries[mine].skins);
             }
         }
 

@@ -459,7 +459,10 @@ namespace qp {
                 if (ui != null) ui.Play(); else _arrows.GetComponent<ParticleSystem>()?.Play();
             }
 
-            yield return Scale(me, 1f, LiftScale, LiftSeconds);
+            // Lifted from the size it has on screen, not from 1: the list it came out of may be
+            // scaled, and outside it the row's own scale is what keeps it that size.
+            float shown = me.localScale.x;
+            yield return Scale(me, shown, shown * LiftScale, LiftSeconds);
 
             // Where the list can actually end up: the slot the player is heading for, put where
             // ScrollToMe would put it, and then clamped to the ends of the list.
@@ -729,7 +732,7 @@ namespace qp {
                 if (i == mine) { _rows[i].Set(finalMine + 1, ProfileManager.Name, myScore, true); continue; }
 
                 int rival = i < mine ? i : i - 1;
-                if (rival < _rivals.Count) _rows[i].Set(Badge(i, mine, finalMine), _rivals[rival].name, _rivals[rival].score, false);
+                if (rival < _rivals.Count) _rows[i].Set(Badge(i, mine, finalMine), _rivals[rival].name, _rivals[rival].score, false, _rivals[rival].skins);
                 else _rows[i].gameObject.SetActive(false);
             }
         }

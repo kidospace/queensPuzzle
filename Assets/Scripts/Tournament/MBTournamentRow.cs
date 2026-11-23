@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Common;
 using TMPro;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace qp {
 
     /// <summary>
     /// One row of the leaderboard. Its whole API is <see cref="Set"/> — tell it a rank, a name and
-    /// a score, and whether it is the player's own row, and it looks right.
+    /// a score, what the player wears, and whether it is the player's own row, and it looks right.
     ///
     /// It knows nothing about tournaments. It does not read the manager, it does not decide who is
     /// on the list or in what order, and it has no idea how many rows there are. That keeps the
@@ -28,10 +29,16 @@ namespace qp {
         GameObject _pill;
         TMP_Text _place, _name, _nameMe, _score;
 
+        // Who is in the row: the same portrait the lobby and the profile popup show, and the two
+        // name labels dressed in the player's name skin. All three only draw what they are handed.
+        MBSkinPortrait _portrait;
+        MBSkinName _nameSkin, _nameMeSkin;
+
         // What is on screen, so setting a row to what it already shows costs nothing. A TMP label
         // assigned the string it already holds still dirties its mesh and rebuilds the layout.
         int _rankShown = -1, _scoreShown = -1;
         string _nameShown;
+        string _avatarShown, _frameShown, _badgeShown, _nameSkinShown;
         bool _meShown, _everSet;
 
         void Awake() {
@@ -47,16 +54,26 @@ namespace qp {
             _name    = Label("$Name");
             _nameMe  = Label("$NameSelected");
             _score   = Label("$Score");
+
+            _portrait = transform.RecursiveFindChild<MBSkinPortrait>("$Portrait");
+            if (_name != null) _nameSkin = _name.GetComponent<MBSkinName>();
+            if (_nameMe != null) _nameMeSkin = _nameMe.GetComponent<MBSkinName>();
         }
 
         /// <summary>
         /// Draw this row. <paramref name="rank"/> is 1-based — 1 to <see cref="MedalRanks"/> get a
         /// medal and a prize, everyone else gets the number. <paramref name="isMe"/> switches the
-        /// row to the player's own colours.
+        /// row to the player's own colours. <paramref name="skins"/> is what the player in the row
+        /// wears; none draws what a player who wears nothing gets.
         /// </summary>
-        public void Set(int rank, string name, int score, bool isMe) {
+        public void Set(int rank, string name, int score, bool isMe, List<SkinRef> skins = null) {
             bool first = !_everSet;
             _everSet = true;
+
+            // Like the name below: the player's own skins come from the profile, never from the
+            // table, so a change made in the profile popup shows on their row at once.
+            if (isMe && ProfileManager.Skins != null) skins = ProfileManager.Skins;
+            _drawSkins(skins, first);
 
             // The player's own name comes from the profile, never from the table. The name in a
             // snapshot is as old as the sync that brought it, so a rename would stay invisible on
@@ -98,6 +115,26 @@ namespace qp {
             if (score != _scoreShown) {
                 SetText(_score, score.ToString());
                 _scoreShown = score;
+            }
+        }
+
+        // Only what changed is redrawn: four ids compared, and nothing touched when they are the
+        // ones already on screen.
+        void _drawSkins(List<SkinRef> skins, bool force) {
+            string avatar = SkinRef.Worn(skins, SkinCatalog.Avatar);
+            string frame = SkinRef.Worn(skins, SkinCatalog.Frame);
+            string badge = SkinRef.Worn(skins, SkinCatalog.Badge);
+            if (force || avatar != _avatarShown || frame != _frameShown || badge != _badgeShown) {
+                if (_portrait != null) _portrait.Show(skins);
+                _avatarShown = avatar; _frameShown = frame; _badgeShown = badge;
+            }
+
+            string nameSkin = SkinRef.Worn(skins, SkinCatalog.Name);
+            if (force || nameSkin != _nameSkinShown) {
+                var style = SkinCatalog.Asset<SkinNameStyle>(SkinCatalog.Name, nameSkin);
+                if (_nameSkin != null) _nameSkin.Show(style);
+                if (_nameMeSkin != null) _nameMeSkin.Show(style);
+                _nameSkinShown = nameSkin;
             }
         }
 
