@@ -308,6 +308,7 @@ namespace qp {
             var prize = TournamentConfig.Instance?.PrizeFor(ClosedPlace);
             PrizeGiven.Clear();
             PrizeGiven.AddRange(GiftsManager.Grant(prize?.All));
+            Analytics.GiftEarned(PrizeGiven, "tournament");
 
             _state.closedShown = true;
             _state.Save();

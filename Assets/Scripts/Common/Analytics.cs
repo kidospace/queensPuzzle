@@ -367,25 +367,82 @@ namespace qp {
 #endif
         }
 
+        // ---- profile and skins --------------------------------------------------------------
+        // Do players open the profile, do they change anything, and do they put on what they
+        // won. What they won is in gift_earned. The p_ events carry p_level (the campaign level,
+        // 1-based).
+
+        /// <summary>The profile popup was opened.</summary>
+        public static void ProfileOpen() => _profileEvent("profile_open");
+
+        /// <summary>Save in the profile popup went through: what the player now wears in each
+        /// slot ("" = nothing), and whether the name changed with it.</summary>
+        public static void ProfileSave(System.Collections.Generic.List<SkinRef> worn, bool renamed) =>
+            _profileEvent("profile_save",
+                ("p_avatar", SkinRef.Worn(worn, SkinCatalog.Avatar)), ("p_frame", SkinRef.Worn(worn, SkinCatalog.Frame)),
+                ("p_name", SkinRef.Worn(worn, SkinCatalog.Name)), ("p_badge", SkinRef.Worn(worn, SkinCatalog.Badge)),
+                ("p_renamed", renamed ? 1 : 0));
+
         /// <summary>
-        /// A prize actually collected, one count per boost.
-        ///
-        /// Counts and not a written-out list: "how much did this feature put into the economy
-        /// last month" has to be SUM(t_queen), not a string every query has to take apart first.
-        /// Sent rather than derived from the place, because the prize table will change and an
-        /// event that can only be read against today's config stops being readable.
+        /// A gift was given — one event for the whole gift, whoever gave it. <paramref name="source"/>
+        /// is where it came from: "tournament" or "streak". <paramref name="given"/> is what the
+        /// player actually got, so the event stays readable when the configs change: a count per
+        /// boost, and the item of each skin slot ("" = none came).
         /// </summary>
-        public static void TournamentClaim(int day, int place, int undo, int hint, int queen) {
-            CrashLog($"[tournament] claim day {day} place {place} undo {undo} hint {hint} queen {queen}");
+        public static void GiftEarned(System.Collections.Generic.IEnumerable<IReward> given, string source) {
+            if (given == null) return;
+            int undo = 0, hint = 0, queen = 0;
+            string frame = "", name = "", badge = "";
+            bool any = false;
+            foreach (var reward in given) {
+                if (reward == null) continue;
+                any = true;
+                if (reward is BoostReward boost) {
+                    if (boost.type == EBoostType.UNDO) undo += boost.amount;
+                    else if (boost.type == EBoostType.HINT) hint += boost.amount;
+                    else if (boost.type == EBoostType.QUEEN) queen += boost.amount;
+                } else if (reward is SkinReward skin) {
+                    if (skin.slot == SkinCatalog.Frame) frame = skin.item;
+                    else if (skin.slot == SkinCatalog.Name) name = skin.item;
+                    else if (skin.slot == SkinCatalog.Badge) badge = skin.item;
+                }
+            }
+            if (!any) return;       // nothing was given: there was no gift
+
+            int level = AppData.LevelIdx.Value + 1;
+            CrashLog($"[gift] earned source {source} undo {undo} hint {hint} queen {queen} frame '{frame}' name '{name}' badge '{badge}' level {level}");
 #if !IGNORE_FIREBASE
-            Send("tournament_claim",
-                new Firebase.Analytics.Parameter("t_day", day),
-                new Firebase.Analytics.Parameter("t_place", place),
-                new Firebase.Analytics.Parameter("t_undo", undo),
-                new Firebase.Analytics.Parameter("t_hint", hint),
-                new Firebase.Analytics.Parameter("t_queen", queen));
+            Send("gift_earned",
+                new Firebase.Analytics.Parameter("g_source", source),
+                new Firebase.Analytics.Parameter("g_undo", undo),
+                new Firebase.Analytics.Parameter("g_hint", hint),
+                new Firebase.Analytics.Parameter("g_queen", queen),
+                new Firebase.Analytics.Parameter("g_frame", frame),
+                new Firebase.Analytics.Parameter("g_name", name),
+                new Firebase.Analytics.Parameter("g_badge", badge),
+                new Firebase.Analytics.Parameter("g_level", level));
 #else
-            Send("tournament_claim");
+            Send("gift_earned");
+#endif
+        }
+
+        /// <summary>The answer to "Use / Not now" on a gift that held skins: p_used 1 or 0, and
+        /// how many skins the question was about. Which ones is in the gift_earned just before.</summary>
+        public static void SkinOffer(bool used, int count) =>
+            _profileEvent("skin_offer", ("p_used", used ? 1 : 0), ("p_count", count));
+
+        static void _profileEvent(string name, params (string key, object value)[] values) {
+            int level = AppData.LevelIdx.Value + 1;
+            CrashLog($"[profile] {name} " + string.Join(" ", System.Linq.Enumerable.Select(values, v => $"{v.key}={v.value}")) + $" level {level}");
+#if !IGNORE_FIREBASE
+            var ps = new System.Collections.Generic.List<Firebase.Analytics.Parameter>();
+            foreach (var (key, value) in values)
+                ps.Add(value is int i ? new Firebase.Analytics.Parameter(key, i)
+                                      : new Firebase.Analytics.Parameter(key, value?.ToString() ?? ""));
+            ps.Add(new Firebase.Analytics.Parameter("p_level", level));
+            Send(name, ps.ToArray());
+#else
+            Send(name);
 #endif
         }
 

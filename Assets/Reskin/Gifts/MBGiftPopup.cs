@@ -152,6 +152,7 @@ namespace qp {
         void _answer(bool use) {
             if (!_showing || !_asking) return;
             if (use) foreach (var put in _uses) put?.Invoke();
+            Analytics.SkinOffer(use, _uses.Count);
             Close();
             Claimed?.Invoke();
         }

@@ -173,6 +173,7 @@ namespace qp {
             _preview();
 
             GetComponent<IPopupAnim>()?.PlayIn();
+            Analytics.ProfileOpen();
         }
 
         /// <summary>Close without saving: the draft is simply forgotten. The popup fades out
@@ -361,15 +362,18 @@ namespace qp {
             // The name first: if it is refused nothing is saved and the popup stays, with the
             // reason under the field. ProfileManager re-checks it — this side of the glass can
             // always be lied to.
+            bool renamed = false;
             if (_nameInput != null) {
                 string typed = (_nameInput.text ?? "").Trim();
                 if (typed != ProfileManager.Name) {
                     var error = ProfileManager.SetName(typed);
                     if (error != ENameError.Ok) { _showNameError(error); return; }
+                    renamed = true;
                 }
             }
 
             foreach (string slot in Slots) ProfileManager.Equip(slot, SkinRef.Worn(_draft, slot));
+            Analytics.ProfileSave(_draft, renamed);
             Close();
         }
 

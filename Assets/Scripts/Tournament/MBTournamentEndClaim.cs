@@ -122,8 +122,6 @@ namespace qp {
             // Granted and marked in one call, before a single frame of animation. A player who
             // closes the app mid-effect has still been paid, and it cannot be claimed twice.
             TournamentManager.CompleteEnded();
-            Analytics.TournamentClaim(TournamentManager.ClosedDay, Rank,
-                                      Granted(EBoostType.UNDO), Granted(EBoostType.HINT), Granted(EBoostType.QUEEN));
 
             // Our box flies on into the gift popup (its box starts right over ours, so ours goes
             // on the same frame) while we fade out; whoever waits on Show() is held until the
@@ -139,19 +137,6 @@ namespace qp {
             else Debug.LogError("[EndClaim] MBGiftPopup missing in the scene - the prize is granted but not shown");
 
             yield return Close(() => _gift == null || !_gift.IsShowing);
-        }
-
-        /// <summary>How much of one boost this place just handed over. Read off the prize that
-        /// was granted, so the event says what the player actually got rather than what the place
-        /// happens to be worth whenever the numbers are read back.</summary>
-        static int Granted(EBoostType type) {
-            var rewards = TournamentConfig.Instance?.PrizeFor(Rank)?.rewards;
-            if (rewards == null) return 0;
-
-            int total = 0;
-            foreach (var reward in rewards)
-                if (reward != null && reward.type == type) total += reward.amount;
-            return total;
         }
 
         /// <summary>Fade out (letting taps through to what is on top), hold until

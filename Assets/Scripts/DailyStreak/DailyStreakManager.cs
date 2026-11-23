@@ -307,6 +307,7 @@ namespace qp {
             }
 
             Analytics.StreakAdvance(s, reward != null, saved);
+            Analytics.GiftEarned(gift, "streak");
             return new StreakResult { advanced = true, previous = prev, streak = s, reward = reward, gift = gift };
         }
 
