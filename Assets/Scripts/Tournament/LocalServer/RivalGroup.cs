@@ -87,6 +87,17 @@ namespace qp {
         /// </summary>
         const int JoinWithinMinutes = 5;
 
+        // ---- what they wear ---------------------------------------------------------------
+        // Every rival has an avatar and a plain frame, like any new player. On top of that, this
+        // many of the group wear something that has to be won — in step with how it is won: a
+        // premium frame takes a first place, a name skin a podium, a badge a week's streak.
+        // Counts, not chances, for the reason the renamed ones are a count: a table where nobody
+        // happens to wear anything says there is nothing to win.
+
+        const int PremiumFrames = 1;
+        const int NameSkins = 3;
+        const int Badges = 5;
+
         /// <summary>What a group was built from — reported with its result.</summary>
         public struct Built {
             public Kind kind;
@@ -161,6 +172,10 @@ namespace qp {
             // reads as nothing at all — and that is the first table a player ever sees.
             string country = Country.Code;
             var renamed = _whoRenamed(myLevel, slots, rnd);
+            // Who wears what was won. Not the last slot: the dead account opened the game once.
+            var premiumFrame = _some(PremiumFrames, slots - 1, rnd);
+            var nameSkin = _some(NameSkins, slots - 1, rnd);
+            var badge = _some(Badges, slots - 1, rnd);
 
             for (int i = 0; i < slots; i++) {
                 bool isLast = i == slots - 1;
@@ -175,6 +190,7 @@ namespace qp {
                 var rival = new LocalRival {
                     name = _pickName(usedNames, usedWords, country, renamed[i]),
                     total = RivalsBlob.TotalAt(pick),
+                    skins = _dress(rnd, !isLast && premiumFrame[i], !isLast && nameSkin[i], !isLast && badge[i]),
                 };
                 _unpack(RivalsBlob.PlaysAt(pick), rnd, rival);
                 rivals.Add(rival);
@@ -270,6 +286,39 @@ namespace qp {
                 (flags[i], flags[j]) = (flags[j], flags[i]);
             }
             return flags;
+        }
+
+        /// <summary><paramref name="count"/> flags out of <paramref name="size"/>, shuffled — so
+        /// what they mark is spread over the table and not stacked at its top.</summary>
+        static bool[] _some(int count, int size, System.Random rnd) {
+            var flags = new bool[Mathf.Max(0, size)];
+            for (int i = 0; i < flags.Length && i < count; i++) flags[i] = true;
+            for (int i = flags.Length - 1; i > 0; i--) {
+                int j = rnd.Next(i + 1);
+                (flags[i], flags[j]) = (flags[j], flags[i]);
+            }
+            return flags;
+        }
+
+        /// <summary>What one rival wears: a free avatar and frame at random, as a new player
+        /// gets, and whichever of the won things this rival was marked for.</summary>
+        static List<SkinRef> _dress(System.Random rnd, bool premiumFrame, bool nameSkin, bool badge) {
+            var skins = new List<SkinRef>();
+            _wear(skins, SkinCatalog.Avatar, true, rnd);
+            _wear(skins, SkinCatalog.Frame, !premiumFrame, rnd);
+            if (nameSkin) _wear(skins, SkinCatalog.Name, false, rnd);
+            if (badge) _wear(skins, SkinCatalog.Badge, false, rnd);
+            return skins;
+        }
+
+        // One item of the slot at random, among the free ones or among the ones that are won.
+        // A slot with none of that kind adds nothing, and the row draws its default.
+        static void _wear(List<SkinRef> skins, string slotId, bool free, System.Random rnd) {
+            var slot = SkinCatalog.Instance != null ? SkinCatalog.Instance.Slot(slotId) : null;
+            if (slot == null || slot.items == null) return;
+            var items = new List<SkinItem>();
+            foreach (var item in slot.items) if (item != null && item.free == free) items.Add(item);
+            if (items.Count > 0) skins.Add(new SkinRef { slot = slotId, item = items[rnd.Next(items.Count)].id });
         }
 
         /// <summary>

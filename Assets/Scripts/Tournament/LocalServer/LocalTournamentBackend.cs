@@ -326,7 +326,7 @@ namespace qp {
             foreach (var rival in _state.rivals) {
                 int score = rival.ScoreAt(minutes);
                 if (score <= 0) continue;   // hasn't played yet — not in the table
-                rows.Add(new LocalEntry { name = rival.name, score = score });
+                rows.Add(new LocalEntry { name = rival.name, score = score, skins = rival.skins });
             }
 
             if (myScore > 0)
@@ -374,6 +374,7 @@ namespace qp {
             int myIndex = -1;
             for (int i = 0; i < rows.Count; i++) {
                 entries[i] = new TournamentEntry { name = rows[i].name, score = rows[i].score };
+                if (rows[i].skins != null) entries[i].skins = rows[i].skins;
                 if (rows[i].isMe) myIndex = i;
             }
 

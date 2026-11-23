@@ -156,6 +156,10 @@ namespace qp {
 
         public string name;
 
+        /// <summary>What they wear, drawn once when the group is made (see RivalGroup). Empty in
+        /// a group saved before rivals wore anything: the row then draws the default look.</summary>
+        public System.Collections.Generic.List<SkinRef> skins = new System.Collections.Generic.List<SkinRef>();
+
         /// <summary>What they end the window on — the number the group was built around.</summary>
         public int total;
 
@@ -188,5 +192,7 @@ namespace qp {
         public string name;
         public int score;
         public bool isMe;
+        /// <summary>A rival's skins. Empty for the player: their row is drawn from the profile.</summary>
+        public System.Collections.Generic.List<SkinRef> skins = new System.Collections.Generic.List<SkinRef>();
     }
 }
