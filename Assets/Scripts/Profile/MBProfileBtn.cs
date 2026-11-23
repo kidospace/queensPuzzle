@@ -34,7 +34,9 @@ namespace qp {
         void _draw() {
             _drawnVersion = ProfileManager.SkinsVersion;
             if (_portrait != null) _portrait.Show(ProfileManager.Skins);
-            if (_new != null && _new.activeSelf != ProfileManager.HasNew()) _new.SetActive(ProfileManager.HasNew());
+            // The dot: something new to wear, or a name still waiting to be chosen.
+            bool dot = ProfileManager.HasNew() || !ProfileManager.Named;
+            if (_new != null && _new.activeSelf != dot) _new.SetActive(dot);
         }
     }
 }

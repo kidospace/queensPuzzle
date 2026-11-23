@@ -55,6 +55,7 @@ namespace qp {
         TMP_Text _nameError;         // one line under it, or nothing
         TMP_Text _name;
         MBSkinName _nameSkin;        // on $Name: dresses it in the drafted name skin
+        GameObject _nameNew;         // the red dot on the pencil, until the player has named themselves
 
         GameObject[] _tabOn, _tabOff, _tabNew;   // _tabNew: the red dot on a tab with something new in it
         ScrollRect _scroll;
@@ -81,10 +82,17 @@ namespace qp {
             if (_nameInput != null) {
                 var cfg = ProfileConfig.Instance;
                 if (cfg != null) _nameInput.characterLimit = cfg.maxNameLength;   // a limit is better kept than explained
-                _nameInput.onValueChanged.AddListener(_ => _showNameError(ProfileManager.Validate(_nameInput.text)));
+                _nameInput.onValueChanged.AddListener(_ => {
+                    _showNameError(ProfileManager.Validate(_nameInput.text));
+                    ProfileManager.MarkNamed();          // typed in it: they know where it is
+                    _show(_nameNew, false);
+                });
                 // The pencil is the way in for anyone who does not guess the field itself is one.
                 var pencil = transform.RecursiveFindChild<Button>("$EditName");
-                if (pencil != null) pencil.onClick.AddListener(() => _nameInput.ActivateInputField());
+                if (pencil != null) {
+                    pencil.onClick.AddListener(() => _nameInput.ActivateInputField());
+                    _nameNew = _child(pencil.transform, "$New");
+                }
             }
             if (_name != null) _nameSkin = _name.GetComponent<MBSkinName>();
 
@@ -135,6 +143,8 @@ namespace qp {
             if (_nameInput != null) _nameInput.SetTextWithoutNotify(ProfileManager.Name);
             else if (_name != null) _name.text = ProfileManager.Name;
             _showNameError(ENameError.Ok);
+            // The dot on the lobby button sent them here; this one says where the name is.
+            _show(_nameNew, !ProfileManager.Named);
             // Open where the news is: a red dot on the lobby button promised something, and the
             // first tab that has it is where the player is looking for it. Nothing new = the first tab.
             int first = 0;

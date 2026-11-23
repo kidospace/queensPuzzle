@@ -106,6 +106,15 @@ namespace qp {
         /// they were given. Once true, true for good.</summary>
         public static bool Named => _state != null && _state.named;
 
+        /// <summary>The player has found where the name is changed — they typed in the field.
+        /// Saved or not, the red dots that point at it have done their job and go for good.</summary>
+        public static void MarkNamed() {
+            if (_state == null || _state.named) return;
+            _state.named = true;
+            _state.Save();
+            SkinsVersion++;      // the lobby button redraws without its dot
+        }
+
         /// <summary>Change the name. Returns why it was refused; <see cref="ENameError.Ok"/> means
         /// it was saved and is on its way to the server.</summary>
         public static ENameError SetName(string name) {
@@ -118,8 +127,8 @@ namespace qp {
 
             _state.name = name;
             _state.rev++;
-            _state.named = true;     // they have found the field; stop pointing at it
             _state.Save();
+            MarkNamed();
             _ = Sync();
             return ENameError.Ok;
         }
