@@ -14,17 +14,19 @@ namespace qp {
     /// Every look is already in the prefab and this only turns the right parts on:
     /// $Icon (a picture, at the size it was drawn), $Label (a name skin, shown on a sample of
     /// the player's name), $Inside (what sits in an empty frame), $Back (the tile behind a
-    /// label or a badge), $Selected (the tick) and $Lock.
+    /// label or a badge), $Selected (the tick), and the lock — $Lock in the middle of a picture,
+    /// $LockCorner small in the corner of a tile, where the middle is the thing to look at.
     /// </summary>
     public sealed class MBSkinCell : MonoBehaviour {
 
-        /// <summary>How much of a locked item shows through.</summary>
-        const float LockedAlpha = 0.3f;
+        /// <summary>How much of a locked item shows through. 1 = not dimmed at all: the lock in
+        /// the corner is what says it is locked, and the item itself is seen as it really looks.</summary>
+        const float LockedAlpha = 1f;
 
         Image _icon;
         TMP_Text _label;
         MBSkinName _labelSkin;      // on $Label: dresses it in the item's style
-        GameObject _inside, _back, _selected, _lock;
+        GameObject _inside, _back, _selected, _lock, _lockCorner;
         CanvasGroup _content;       // everything that dims when locked
 
         /// <summary>The item this cell shows.</summary>
@@ -45,6 +47,7 @@ namespace qp {
             _back = _child("$Back");
             _selected = _child("$Selected");
             _lock = _child("$Lock");
+            _lockCorner = _child("$LockCorner");
 
             var content = transform.RecursiveFindChild("$Content");
             if (content != null) {
@@ -95,9 +98,12 @@ namespace qp {
                 }
             }
 
-            _show(_inside, slot == SkinCatalog.Frame);
-            _show(_back, slot == SkinCatalog.Name || slot == SkinCatalog.Badge);
-            _show(_lock, !owned);
+            bool tile = slot == SkinCatalog.Name || slot == SkinCatalog.Badge;
+            // A locked frame is empty: the lock sits where the paw would.
+            _show(_inside, slot == SkinCatalog.Frame && owned);
+            _show(_back, tile);
+            _show(_lock, !owned && !tile);
+            _show(_lockCorner, !owned && tile);
             if (_content != null) _content.alpha = owned ? 1f : LockedAlpha;
             SetSelected(selected);
         }

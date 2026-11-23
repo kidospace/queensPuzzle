@@ -161,9 +161,9 @@ namespace qp {
         // Armed on the first Close, released on the next open (OnEnable).
         bool _closing;
 
-        /// <summary>Play the out animation, then deactivate the popup. Virtual because a subclass
-        /// may have something to settle first — the lobby saves the edited name here, and it must
-        /// happen whichever way the popup was dismissed, X or the background.</summary>
+        /// <summary>Play the out animation, then deactivate the popup. Virtual so a subclass with
+        /// something to settle first can do it here — whichever way the popup was dismissed, X or
+        /// the background.</summary>
         public virtual void Close() {
             if (_closing) return;
             if (!gameObject.activeInHierarchy) return;   // never opened / parent off — no coroutine on an inactive object

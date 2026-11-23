@@ -57,6 +57,11 @@ namespace qp {
 
             _wearStarters();
 
+            // Whatever drew the player before this point drew nobody: a scene that is up before
+            // boot finishes (playing the lobby straight from the editor) asks too early and gets
+            // the fallback. Moving the number makes it ask again, now that there is an answer.
+            SkinsVersion++;
+
             _ = Sync();
         }
 
@@ -190,6 +195,20 @@ namespace qp {
             if (!Shape.IsMatch(name)) return ENameError.BadCharacters;
 
             return _isClean(name) ? ENameError.Ok : ENameError.NotAllowed;
+        }
+
+        /// <summary>Why a name was refused, as one short line for under the field — or "" when it
+        /// is fine. Short because it should read as a correction rather than announce itself; the
+        /// lengths come from the config so the text cannot drift from the rule it describes.</summary>
+        public static string NameErrorText(ENameError error) {
+            var cfg = ProfileConfig.Instance;
+            switch (error) {
+                case ENameError.TooShort:      return $"At least {cfg?.minNameLength ?? 4} characters";
+                case ENameError.TooLong:       return $"Up to {cfg?.maxNameLength ?? 14} characters";
+                case ENameError.BadCharacters: return "Letters and numbers only";
+                case ENameError.NotAllowed:    return "Pick another name";
+                default:                       return "";
+            }
         }
 
         /// <summary>Two words and a space — "Lucky Paw". Warm and readable instead of a handle, and
