@@ -35,9 +35,9 @@ RectTransform:
   - {fileID: 3466515013469817231}
   m_Father: {fileID: 2416837260817467553}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 261}
+  m_AnchorMin: {x: 0.5, y: 0.85}
+  m_AnchorMax: {x: 0.5, y: 0.85}
+  m_AnchoredPosition: {x: 0, y: -154.03}
   m_SizeDelta: {x: 1231.77, y: 611.1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &1544642868370300588
@@ -106,7 +106,7 @@ MonoBehaviour:
   Listeners:
   - {fileID: 5339507564838605911}
   ListneresMethod: 0
-  DesignSize: {x: 1000, y: 2160}
+  DesignSize: {x: 1000, y: 1780}
 --- !u!1 &983903666137244675
 GameObject:
   m_ObjectHideFlags: 0
@@ -298,6 +298,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 546434035461653723}
+  - component: {fileID: 1461032627357419505}
   m_Layer: 0
   m_Name: '%RewordsPannel'
   m_TagString: Untagged
@@ -314,17 +315,35 @@ RectTransform:
   m_GameObject: {fileID: 2664813440018805079}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7341646913566935588}
   m_Father: {fileID: 2416837260817467553}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -310}
-  m_SizeDelta: {x: 300, y: 300}
+  m_AnchorMin: {x: 0.5, y: 0.425}
+  m_AnchorMax: {x: 0.5, y: 0.425}
+  m_AnchoredPosition: {x: 0, y: -214.2}
+  m_SizeDelta: {x: 962, y: 1300}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1461032627357419505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2664813440018805079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1acec41090f36b4e8eb2c98b6b9ecca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  RT: {fileID: 546434035461653723}
+  Listeners: []
+  ListneresMethod: 0
+  KeepRationMin: 1
+  KeepRationMax: 0
+  RTLikeChild: 0
 --- !u!1 &3463217444679786051
 GameObject:
   m_ObjectHideFlags: 0
@@ -1000,6 +1019,7 @@ GameObject:
   - component: {fileID: 2416837260817467553}
   - component: {fileID: 2474763429108972997}
   - component: {fileID: 3267345637973423409}
+  - component: {fileID: 9145720589115646922}
   m_Layer: 0
   m_Name: Mid
   m_TagString: Untagged
@@ -1048,6 +1068,22 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &9145720589115646922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6336544233867365930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f33eff62a6042ef964c71a16d371051, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  RT: {fileID: 2416837260817467553}
+  Listeners:
+  - {fileID: 1461032627357419505}
+  ListneresMethod: 0
 --- !u!1 &6425933228971324391
 GameObject:
   m_ObjectHideFlags: 0
