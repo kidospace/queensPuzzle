@@ -16,7 +16,17 @@ namespace QueensPuzzle
     ///      positions players are likely to stand in and the share of players in each.
     ///   2. In every such position the solver is asked what it takes to place the next queen from
     ///      THERE, and that is priced in seconds (<see cref="QueenSeconds"/>) with prices measured
-    ///      on the recordings — 2.5 million queens, each player's gap divided by his own pace.
+    ///      on the recordings — 650,000 queens in 16,000 positions (Android 1.5.4 and 1.5.6,
+    ///      16–24 Nov 2026), each player's gap with his own pace and the level's place taken out.
+    ///      A queen's price is two things: FINDING it, and the X MARKS the player makes first. The
+    ///      game marks nothing by itself, so after a queen the player crosses out its row, column,
+    ///      colour and neighbours — and that time lands before the NEXT queen. So every position
+    ///      carries how many cells the queen placed just before newly closed. The first queen of an
+    ///      empty board has none, which is the whole reason it is quick; a board that opens with a
+    ///      queen on it has that queen's cells to cross out before the first move.
+    ///      The same holds for a TRICK: the cells it crosses out stay crossed out. So a position also
+    ///      carries what the tricks before it left on the board, the solver starts from the queens AND
+    ///      those, and a trick is paid for once — at the queen it leads to — not again at the queens after.
     ///   3. The seconds are summed over the positions by their share, and set to the players' real
     ///      level times with the board size and how often each trick is needed (<see cref="Ln"/>).
     ///
@@ -26,12 +36,14 @@ namespace QueensPuzzle
     /// <see cref="Ln"/> is fitted on 843 campaign boards, 8x8 to 11x11, played 1 Sep – 9 Nov 2026:
     /// first-try wins, each player's time divided by his own pace, the level's place in the game
     /// taken out — so this is the BOARD ALONE, whichever slot it lands in. Boards under 8x8 (the
-    /// first twelve levels) have no clean player data; there the fit is held to the seconds those
-    /// tutorial boards were given before. On boards kept out of the fit: typically 7.4% off,
-    /// 8 of 100 off by 20%+, 1 of 100 by 30%+.
+    /// first twelve levels) are held to what the first twelve levels of the 1.5.4 set really took,
+    /// with the curve's place factor out. On boards kept out of the fit: typically 7.7% off,
+    /// 8 of 100 off by 20%+.
     ///
-    /// The numbers in <see cref="Ln"/> are a fit, not prices — do not read them one by one, and
-    /// refit them together when the solver, the trick list or the level set changes.
+    /// The numbers in <see cref="QueenSeconds"/> and <see cref="Ln"/> are a fit, not prices — do
+    /// not read them one by one, and refit them together when the solver, the trick list or the
+    /// level set changes. The whole fit, start to end, is kept in the reports repo:
+    /// pawdoku-reports/research/rater-fit (README there; this is its model "N_carry").
     ///
     /// Pure C# (no Unity types): thread-safe, runs on the pool-build workers. It costs a few dozen
     /// short solves per board.
@@ -78,15 +90,15 @@ namespace QueensPuzzle
             => Rate(n, region, sol, r, revealedRows).seconds;
 
         static double Ln(in WeightRater.Report r, double roads) =>
-            - 0.24225
-            + 0.87682 * Math.Log(roads)
-            + 0.06584 * r.size
-            + 0.01891 * r.lineSingles
-            + 0.01037 * r.lineToRegionUses
-            - 0.00585 * r.regionToLineUses
-            + 0.00374 * r.squeezeUses
-            + 0.02841 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
-            + 0.02888 * (r.regionChokeUses + r.lineChokeUses);
+            - 0.05746
+            + 0.95369 * Math.Log(roads)
+            + 0.04121 * r.size
+            + 0.01178 * r.lineSingles
+            + 0.01337 * r.lineToRegionUses
+            - 0.00959 * r.regionToLineUses
+            + 0.00036 * r.squeezeUses
+            + 0.02505 * (r.subsetLineToRegionUses + r.subsetRegionToLineUses + r.fishUses)
+            + 0.06058 * (r.regionChokeUses + r.lineChokeUses);
 
         /// <summary>
         /// A cheap estimate from one solve alone, no roads walked (typically 6% from the rating). For a
@@ -108,7 +120,13 @@ namespace QueensPuzzle
         const int MaxPositions = 25;       // per queen: the likeliest positions kept
         const double MinShare = 0.01;      // a position fewer than 1 player in 100 reaches is dropped
 
-        sealed class Position { public int[] placed; public double share; }
+        // marks: the cells the queen placed just before newly closed — the X marks waiting before the
+        // next queen — summed by share over the ways players reach this position
+        // known: the cells tricks crossed out on the way here. A player's X marks stay on his board, so
+        // a trick is paid for once — at the queen it led to — and the queens after it start from what
+        // it left. Positions reached by several ways keep what the commonest way knows (knownShare).
+        sealed class Position { public int[] placed; public double share; public double marks; public int[] known; public double knownShare; }
+        static readonly int[] NothingKnown = new int[0];
 
         /// <summary>
         /// Seconds summed over the positions players are likely to stand in, by their share.
@@ -123,7 +141,9 @@ namespace QueensPuzzle
             var start = new int[given];
             for (int i = 0; i < given; i++) start[i] = revealedRows[i] * n + sol[revealedRows[i]];
             Array.Sort(start);
-            var here = new List<Position> { new Position { placed = start, share = 1 } };
+            // a board that opens with a queen: its cells are there to cross out before the first move
+            double startMarks = given == 0 ? 0 : n * n - Count(n, region, start, open, row, col, reg) - given;
+            var here = new List<Position> { new Position { placed = start, share = 1, marks = startMarks, known = NothingKnown, knownShare = 1 } };
             double total = 0;
 
             for (int queen = given; queen < n; queen++)
@@ -139,7 +159,7 @@ namespace QueensPuzzle
                 foreach (var p in here)
                 {
                     double share = p.share / kept;
-                    Count(n, region, p.placed, open, row, col, reg);
+                    int openHere = Count(n, region, p.placed, open, row, col, reg);
 
                     // the unplaced queens, each with the fewest places left in its row, column or region
                     int best = int.MaxValue;
@@ -153,9 +173,13 @@ namespace QueensPuzzle
                         if (places < best) best = places;
                     }
 
-                    double q = share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best, queen == given));
+                    var learnt = new List<int>();
+                    double q = share * Math.Max(1.0, QueenSeconds(n, region, sol, p.placed, best, p.marks / p.share, p.known, learnt, out int led));
                     total += q;
                     perQueen[queen - given] += q;
+                    // Only the player who places the queen the tricks LED to has made them: he goes on with
+                    // their X marks on his board. A player who places another queen keeps what he knew.
+                    int[] afterTricks = learnt.Count == 0 ? p.known : p.known.Concat(learnt).Distinct().ToArray();
 
                     // who goes where: mostly the tightest queen, a colour read before a line
                     double sum = 0;
@@ -174,8 +198,16 @@ namespace QueensPuzzle
                         Array.Sort(placed);
                         string key = string.Join(",", placed);
                         double s = p.share * w[i] / sum;
-                        if (index.TryGetValue(key, out int at)) next[at].share += s;
-                        else { index[key] = next.Count; next.Add(new Position { placed = placed, share = s }); }
+                        // what this queen closes (itself aside): the X marks before the queen after it
+                        double marks = s * (openHere - Count(n, region, placed, open, row, col, reg) - 1);
+                        int[] known = cand[i].cell == led ? afterTricks : p.known;
+                        if (index.TryGetValue(key, out int at))
+                        {
+                            var t = next[at];
+                            t.share += s; t.marks += marks;
+                            if (s > t.knownShare) { t.known = known; t.knownShare = s; }
+                        }
+                        else { index[key] = next.Count; next.Add(new Position { placed = placed, share = s, marks = marks, known = known, knownShare = s }); }
                     }
                 }
                 here = next;
@@ -184,8 +216,9 @@ namespace QueensPuzzle
         }
 
         // What a player sees: a cell is open while no placed queen rules it out (same row, column
-        // or colour, or touching). Counts the open cells of every row, column and region.
-        static void Count(int n, int[] region, int[] placed, bool[] open, int[] row, int[] col, int[] reg)
+        // or colour, or touching). Counts the open cells of every row, column and region, and returns
+        // how many are open on the whole board.
+        static int Count(int n, int[] region, int[] placed, bool[] open, int[] row, int[] col, int[] reg)
         {
             for (int i = 0; i < n * n; i++) open[i] = true;
             foreach (int q in placed)
@@ -198,20 +231,30 @@ namespace QueensPuzzle
                 }
             }
             Array.Clear(row, 0, n); Array.Clear(col, 0, n); Array.Clear(reg, 0, n);
+            int all = 0;
             for (int i = 0; i < n * n; i++)
-                if (open[i]) { row[i / n]++; col[i % n]++; reg[region[i]]++; }
+                if (open[i]) { row[i / n]++; col[i % n]++; reg[region[i]]++; all++; }
+            return all;
         }
 
         /// <summary>
         /// Seconds the next queen costs from a position: the solver is run from there until it can
         /// place a queen, and what it needed on the way is priced. <paramref name="easiest"/> is
         /// the fewest places any unplaced queen has left — 1 means a queen is plainly forced.
-        /// <paramref name="first"/>: the first queen the player places himself.
+        /// <paramref name="marks"/>: the X marks waiting before this queen — the cells the queen
+        /// placed just before newly closed (0 on an empty board; a given queen's cells at the start).
+        /// <paramref name="known"/>: the cells tricks crossed out earlier on the way to this position —
+        /// they are still crossed out on the player's board, so the solver starts with them and only what
+        /// it STILL needs is priced. <paramref name="learnt"/> gets the cells the tricks of this position
+        /// cross out, <paramref name="led"/> the queen they lead to (-1 = none).
         /// </summary>
-        static double QueenSeconds(int n, int[] region, int[] sol, int[] placed, int easiest, bool first)
+        static double QueenSeconds(int n, int[] region, int[] sol, int[] placed, int easiest, double marks,
+                                   int[] known, List<int> learnt, out int led)
         {
             var s = new SolveTracer.Board(n, region);
             foreach (int c in placed) s.SeedQueen(c);
+            foreach (int c in known) s.KnownX(c);
+            led = -1;
 
             int paid = 0, open = 0;
             int lineToRegion = 0, regionToLine = 0, squeeze = 0, subsets = 0, chokes = 0;
@@ -225,9 +268,15 @@ namespace QueensPuzzle
                 if (s.NextStep(out var st))
                 {
                     if (st.tech == SolveTechnique.QueenScope) continue;
-                    if (st.kind == NodeKind.Placement) { byLine = st.tech == SolveTechnique.LineSingle; open = openNow; break; }
+                    if (st.kind == NodeKind.Placement)
+                    {
+                        byLine = st.tech == SolveTechnique.LineSingle; open = openNow;
+                        if (st.cells != null && st.cells.Length > 0) led = st.cells[0];
+                        break;
+                    }
                     paid++;
                     cleared += Math.Log(1 + (st.cells == null ? 0 : st.cells.Length));
+                    if (st.cells != null) learnt.AddRange(st.cells);
                     switch (st.tech)
                     {
                         case SolveTechnique.LineToRegion: lineToRegion++; break;
@@ -248,29 +297,30 @@ namespace QueensPuzzle
                 foreach (int c in unit) if (sol[c / n] != c % n) { wrong = c; break; }
                 if (wrong < 0) break;
                 paid++;
+                learnt.Add(wrong);
                 s.KnownX(wrong);
             }
             if (byLine) paid++;   // reading a line costs like a trick
 
-            return -10.60713
-                + (first ? -8.10833 : 0)                       // the first queen: the board is still being read
-                + (open < 6 ? -0.65191 : 0)
-                + (open < 12 ? -1.74372 : 0)
-                + 5.68797 * Math.Log(1 + open)
-                + (paid > 0 ? -0.82367 : 0)
-                + 1.63883 * Math.Min(paid, 6)
-                + 6.18022 * Math.Log(1 + paid)
-                + (byLine ? 1.41840 : 0)
-                - 3.81141 * lineToRegion
-                - 3.99086 * regionToLine
-                - 0.34381 * squeeze
-                - 2.02558 * subsets
-                + 0.89525 * chokes
-                + 2.00458 * cleared
-                + 17.90616 * placed.Length / n
-                + (n == 10 ? -0.70828 : 0)
-                + (n == 9 ? -1.13882 : 0)
-                + (easiest == 1 ? -2.50242 : easiest == 2 ? 1.16930 : easiest == 3 ? 5.97434 : 7.97545);
+            return -1.49426
+                + 2.21303 * Math.Log(1 + marks)                // the X marks made before looking for this queen
+                + (open < 6 ? -0.16611 : 0)
+                + (open < 12 ? -0.75666 : 0)
+                + 2.70162 * Math.Log(1 + open)
+                + (paid > 0 ? -1.89857 : 0)
+                + 0.93751 * Math.Min(paid, 6)
+                + 9.05210 * Math.Log(1 + paid)
+                + (byLine ? 0.24915 : 0)
+                - 3.26160 * lineToRegion
+                - 2.75330 * regionToLine
+                - 0.69712 * squeeze
+                - 1.29730 * subsets
+                - 0.79043 * chokes
+                + 1.10688 * cleared
+                + 11.96861 * placed.Length / n
+                + (n == 10 ? 0.65671 : 0)
+                + (n == 9 ? -0.12458 : 0)
+                + (easiest == 1 ? -9.64024 : easiest == 2 ? -7.23712 : easiest == 3 ? -4.19196 : 0);
         }
     }
 }

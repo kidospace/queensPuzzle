@@ -47,6 +47,7 @@ namespace QueensPuzzle
             public int subsetRegionToLine3Uses;
             public int fishUses;
             public int lineChokeUses;
+            public int colourClosedUses; // of the line singles, those whose row / column has cells closed by a queen's colour only
             public int trials;           // guesses the solve needed (a board with any is never built)
             public int[] techUses;       // uses per SolveTechnique
         }
@@ -57,8 +58,9 @@ namespace QueensPuzzle
             var m = new Metrics();
             var ctx = new Ctx();
             var s = new SolveTracer.Board(n, region);
+            var queens = new System.Collections.Generic.List<int>(n);   // the queens on the board, as the solve goes
             if (revealedRows != null)
-                foreach (int row in revealedRows) s.SeedQueen(row * n + solution[row]);
+                foreach (int row in revealedRows) { s.SeedQueen(row * n + solution[row]); queens.Add(row * n + solution[row]); }
             int weight = 0;
             bool solved = true;
             var prevTech = SolveTechnique.None; // last paid trick — a repeat halves the think cost
@@ -77,6 +79,11 @@ namespace QueensPuzzle
                     bool streak = step.tech == prevTech && TrickWeights.Streakable(step.tech);
                     if (TrickWeights.Streakable(step.tech)) prevTech = step.tech;
                     weight += Tally(step, open, streak, m);
+                    if (step.kind == NodeKind.Placement && step.cells != null && step.cells.Length > 0)
+                    {
+                        if (step.tech == SolveTechnique.LineSingle && ColourOnlyInLine(n, region, queens, step.cells[0]) > 0) m.colourClosedUses++;
+                        queens.Add(step.cells[0]);
+                    }
                     prevWasGuess = false;   // a deduction resumed — the guess run (if any) is over
                     continue;
                 }
@@ -127,11 +134,43 @@ namespace QueensPuzzle
                 subsetRegionToLine3Uses = m.subsetRegionToLine3Uses,
                 fishUses = m.fishUses,
                 lineChokeUses = m.lineChokeUses,
+                colourClosedUses = m.colourClosedUses,
                 trials = m.trials,
                 techUses = m.techUses,
             };
             rep.technique = TechniqueName(m, rep.solved);
             return rep;
+        }
+
+        /// <summary>
+        /// The trick "the whole colour is closed" (<see cref="Trick.ColourClosed"/>): how many cells of the
+        /// next queen's row or column are closed by a queen's COLOUR ONLY — same colour, not its row or
+        /// column, not touching it. Of the queen's two lines, the one that is down to one open cell as the
+        /// player sees the board (the fewer such cells when both are, or when a trick cleared the line).
+        /// Above 0, the line-single cannot be seen until a colour is read as closed.
+        /// </summary>
+        public static int ColourOnlyInLine(int n, int[] region, System.Collections.Generic.List<int> queens, int cell)
+        {
+            int qr = cell / n, qc = cell % n, rowOpen = 0, colOpen = 0, rowC = 0, colC = 0;
+            for (int i = 0; i < n * n; i++)
+            {
+                int r = i / n, c = i % n;
+                if (r != qr && c != qc) continue;
+                bool geo = false, colour = false;
+                foreach (int q in queens)
+                {
+                    int pr = q / n, pc = q % n;
+                    if (r == pr || c == pc || (Math.Abs(r - pr) <= 1 && Math.Abs(c - pc) <= 1)) geo = true;
+                    if (region[i] == region[q]) colour = true;
+                }
+                bool open = !geo && !colour, only = colour && !geo;
+                if (r == qr) { if (open) rowOpen++; if (only) rowC++; }
+                if (c == qc) { if (open) colOpen++; if (only) colC++; }
+            }
+            if (rowOpen == 1 && colOpen == 1) return Math.Min(rowC, colC);
+            if (rowOpen == 1) return rowC;
+            if (colOpen == 1) return colC;
+            return Math.Min(rowC, colC);
         }
 
         static string TechniqueName(Metrics m, bool solved)
@@ -216,7 +255,7 @@ namespace QueensPuzzle
             public int cycles, placements, regionSingles, lineSingles, eliminations,
                 lineToRegionUses, regionToLineUses, squeezeUses, regionChokeUses,
                 subsetLineToRegionUses, subsetRegionToLineUses, subsetLineToRegion3Uses, subsetRegionToLine3Uses,
-                fishUses, lineChokeUses, trials, maxTrialDepth;
+                fishUses, lineChokeUses, colourClosedUses, trials, maxTrialDepth;
             public int[] techUses = new int[16];
         }
     }
