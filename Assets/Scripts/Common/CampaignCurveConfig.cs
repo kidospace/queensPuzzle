@@ -42,6 +42,15 @@ namespace QueensPuzzle
             [Tooltip("How many times the third lesson level must need the trick. 0 = the general number (lessonMinUses). " +
                      "For a trick too rare to come twice on one board.")]
             public int proveUses;
+            [Tooltip("REAL seconds the first lesson level takes on top of its board, because the trick is new to the player. " +
+                     "The board asked for is lighter by this much, so the level as a whole still takes what the list says. " +
+                     "From the second meeting the time is back to the board's own.")]
+            public float firstSeconds;
+            [Tooltip("REAL seconds every queen that needs the trick still costs on top, on the player's NEXT meetings with it " +
+                     "(a meeting = a level whose board needs the trick). How many meetings: earlyLevels.")]
+            public float earlySeconds;
+            [Tooltip("How many levels after the first one still carry earlySeconds. After them the trick costs what the rater says.")]
+            public int earlyLevels;
         }
 
         [Serializable]
@@ -62,19 +71,26 @@ namespace QueensPuzzle
                  "Read between the points on a log scale of the level; before the first and after the last point the value holds.")]
         public PlacePoint[] placeFactor =
         {
-            new PlacePoint { level = 1,   factor = 4.89f },
-            new PlacePoint { level = 2,   factor = 4.00f },
-            new PlacePoint { level = 3,   factor = 2.60f },
-            new PlacePoint { level = 4,   factor = 2.30f },
-            new PlacePoint { level = 5,   factor = 2.10f },
-            new PlacePoint { level = 6,   factor = 1.95f },
-            new PlacePoint { level = 7,   factor = 1.85f },
-            new PlacePoint { level = 8,   factor = 1.75f },
-            new PlacePoint { level = 9,   factor = 1.65f },
+            // 1-9 lowered 24 Nov 2026 (1-7 by 8%, 8 by 5%, 9 by 2%): the rater now prices X marks openly and gives the small
+            // boards more seconds than the one these points were measured with, so the forecast of levels 1-8 read 6-10%
+            // long on both shipped sets (V2, V3). The listed boards were left as they are - nothing is asked to be harder.
+            new PlacePoint { level = 1,   factor = 4.50f },
+            new PlacePoint { level = 2,   factor = 3.68f },
+            new PlacePoint { level = 3,   factor = 2.39f },
+            new PlacePoint { level = 4,   factor = 2.12f },
+            new PlacePoint { level = 5,   factor = 1.93f },
+            new PlacePoint { level = 6,   factor = 1.79f },
+            new PlacePoint { level = 7,   factor = 1.70f },
+            new PlacePoint { level = 8,   factor = 1.66f },
+            new PlacePoint { level = 9,   factor = 1.62f },
             new PlacePoint { level = 10,  factor = 1.58f },
             new PlacePoint { level = 11,  factor = 1.50f },
             new PlacePoint { level = 12,  factor = 1.42f },
-            new PlacePoint { level = 13,   factor = 1.32f },
+            // 13-26: 1.32 was too low (24 Nov 2026) - on three level sets with different boards (V1, V2, V3) the forecast
+            // there was 6-10% short against the levels before and after, and queens that need no trick (the new player
+            // alone) read +10% there. The drop from 1.42 came too early: held to level 26, back on the old line by 40.
+            new PlacePoint { level = 13,   factor = 1.43f },
+            new PlacePoint { level = 26,   factor = 1.43f },
             new PlacePoint { level = 40,   factor = 1.32f },
             new PlacePoint { level = 60,   factor = 1.28f },
             new PlacePoint { level = 85,   factor = 1.21f },
@@ -93,16 +109,35 @@ namespace QueensPuzzle
         // recently opened trick beside it), practise, prove — the seconds of those three levels in
         // learnLevels are what make them easy → harder → hard. A trick missing from the list is never restricted.
         // The first interstitial shows when level 10 is won (GameConfig.StartShowInterAtLevel = 11), and that is where
-        // most players of every speed stop. So level 10 closes a lesson (a win worth having) and level 11 is a
-        // short easy board with nothing new in it. Move the openings together with that number.
+        // most players of every speed stop. So level 10 closes a lesson (a win worth having) and levels 11-13 are
+        // easy boards with nothing new in them: a player who gets an interstitial after a win there stops 6 times
+        // in 100, against 1 without it (recordings, Nov 2026), so no lesson stands on those levels. Move the
+        // openings together with that number.
+        // The order (24 Nov 2026): 4-6 a line with one place left · 7 a rest · 8-10 line→region · 11-13 easy ·
+        // 14-16 region→line · 17 easy · 18-20 squeeze · 21-24 nothing new (three lessons in ten levels
+        // was too dense) · 25-27 "the whole colour is closed" · 28-30 nothing new · 31-33 the first subset.
+        //
+        // What a NEW trick adds to a level's time — firstSeconds on the first meeting, earlySeconds a use on the
+        // next earlyLevels meetings (a meeting = a level whose board needs the trick) — is one rule for every
+        // trick (NewTrickSeconds). MEASURED, it is 0 for all of them (1,247 players recorded from level 1,
+        // Nov 2026, by the player's 1st, 2nd, 3rd … level that needs the trick, 90% ranges, with and without
+        // the time of wrong queens): against the forecast this curve makes — the board × the place factor —
+        // no trick's queen takes longer on the first meetings. The place factor of the early levels was itself
+        // measured on levels where those tricks were new, so that time is already in it; adding seconds here
+        // counts it twice. (In raw seconds a first meeting does look slower — line→region +2, region→line +7,
+        // the colour read +8, a subset +10 — but that is the early levels' place factor, not the trick.)
+        // What does stay up is the share who misplace a queen first, 6–14 points for about three meetings in
+        // every trick, which is why a lesson level limits what stands beside its trick (lessonMaxOthers).
+        // Keep the fields at 0 unless a new measurement, made against the forecast, says otherwise.
         [Header("Tricks")]
         [Tooltip("The level each trick opens at. Its lesson is that level and the two after it.")]
         public TrickOpening[] trickOpenings =
         {
             new TrickOpening { trick = Trick.LineSingle,            level = 4 },
-            new TrickOpening { trick = Trick.LineToRegion,          level = 8 },    // its third level (10) is the one before the first ad
-            new TrickOpening { trick = Trick.RegionToLine,          level = 12 },
-            new TrickOpening { trick = Trick.Squeeze,               level = 16 },
+            new TrickOpening { trick = Trick.LineToRegion,          level = 8 },   // its third level (10) is the one before the first ad
+            new TrickOpening { trick = Trick.RegionToLine,          level = 14 },   // not before: 11-13 are the levels of the first ads
+            new TrickOpening { trick = Trick.Squeeze,               level = 18 },
+            new TrickOpening { trick = Trick.ColourClosed,          level = 25 },   // until then a line single shows without reading a colour
             new TrickOpening { trick = Trick.Subset2LinesToRegions, level = 31 },
             new TrickOpening { trick = Trick.Subset2RegionsToLines, level = 41 },
             new TrickOpening { trick = Trick.Subset3,               level = 61, proveUses = 1 },   // twice on one board made it far longer than the level asks
@@ -116,6 +151,13 @@ namespace QueensPuzzle
         [Tooltip("On the first lesson level the new trick stands alone: a trick that opened fewer than this many " +
                  "levels earlier is not allowed beside it (a line with one place left always is).")]
         public int lessonAloneFor = 8;
+        [Tooltip("On lesson level 1, 2, 3: at most this many uses of other YOUNG tricks beside the lesson's own (-1 = no limit). " +
+                 "While a trick is new, players err 8-10 points more on it for about three meetings, so it should not come " +
+                 "piled under other tricks they are still learning.")]
+        public int[] lessonMaxOthers = { 1, 1, 2 };
+        [Tooltip("A trick is YOUNG at a level while it opened fewer than this many levels earlier. Tricks the player has had " +
+                 "for longer stand beside a lesson freely (a long board cannot do without them); a plain line with one place left always does.")]
+        public int lessonYoungFor = 12;
 
         [Serializable]
         public struct LearnLevel
@@ -134,9 +176,10 @@ namespace QueensPuzzle
         public LearnLevel[] learnLevels =
         {
             L(4, 4.5f), L(4, 3.5f, true), L(5, 8.0f, true), L(6, 19.5f, true), L(6, 21.5f, true), L(6, 25.0f, true), L(6, 16.0f, true), L(6, 28.0f, true), L(6, 30.0f, true), L(7, 38.5f, true),   // 1-10
-            L(6, 26.0f), L(7, 41.5f), L(7, 50.0f), L(8, 58.0f), L(8, 50.0f), L(7, 46.0f), L(7, 56.0f), L(8, 66.0f), L(8, 56.0f), L(8, 57.8f),   // 11-20
-            L(8, 57.2f), L(8, 66.5f), L(9, 74.3f), L(9, 82.5f), L(8, 64.5f), L(8, 70.7f), L(8, 67.7f), L(9, 76.1f), L(9, 82.6f), L(9, 89.1f),   // 21-30
-            L(8, 67.9f), L(9, 75.4f), L(9, 87.7f), L(9, 75.0f), L(9, 75.9f), L(8, 72.7f), L(9, 81.7f), L(9, 88.7f), L(9, 95.6f), L(8, 72.7f),   // 31-40
+            // 11-13 easy after the first ad; then the lessons that stood on 12-18, two levels later
+            L(6, 26.0f), L(6, 28.0f), L(7, 33.2f), L(7, 38.3f), L(7, 46.2f), L(8, 53.5f), L(8, 46.2f), L(7, 42.5f), L(7, 51.7f), L(8, 60.9f),   // 11-20
+            L(8, 52.8f), L(8, 61.4f), L(9, 68.6f), L(9, 76.2f), L(8, 52.4f), L(8, 59.4f), L(8, 65.5f), L(9, 71.2f), L(9, 77.8f), L(9, 84.4f),   // 21-30
+            L(8, 64.7f), L(9, 72.3f), L(9, 84.6f), L(9, 72.7f), L(9, 74.0f), L(8, 71.2f), L(9, 80.5f), L(9, 87.8f), L(9, 95.1f), L(8, 72.7f),   // 31-40
             L(8, 73.6f), L(9, 81.9f), L(9, 95.5f), L(9, 81.8f), L(9, 82.9f), L(9, 79.4f), L(9, 89.5f), L(9, 97.2f), L(10, 104.9f), L(10, 131.0f),   // 41-50
             L(9, 80.2f), L(9, 87.5f), L(9, 83.5f), L(9, 93.5f), L(10, 101.1f), L(10, 108.6f), L(9, 82.3f), L(9, 89.8f), L(9, 85.6f), L(9, 96.0f),   // 51-60
             L(9, 84.0f), L(9, 93.1f), L(10, 108.1f), L(9, 92.1f), L(9, 92.9f), L(9, 88.4f), L(9, 99.7f), L(10, 108.2f), L(10, 116.9f), L(9, 87.1f),   // 61-70
@@ -250,8 +293,15 @@ namespace QueensPuzzle
         // random boards, 8x8 to 11x11: wall rejects ~5 of 100, start ~27 (peak slots ~11), steps ~8
         // (milestones ~0), seconds per step none — it only guards against a kind of board the
         // generator does not make today.
+        // Re-set 24 Nov 2026, when TimeRater began to price the X marks where they are made: the same
+        // boards spread their seconds a little differently over the queens, so wall 2.7 → 2.95 and
+        // start 1.5 → 1.55 (peak 1.65 → 1.7) reject the same shares as before (3 / 28 / 11 of 100)
+        // and give the same verdict on 98 of 100 boards.
+        // Re-set again 26 Nov 2026, when a trick began to be paid for once (its X marks carried to the queens after
+        // it): the trick queen now holds the whole price, so the heaviest queen stands higher — wall 2.95 → 3.05,
+        // start and peak start unchanged; same shares rejected, the same verdict on 94 of 100 boards.
         [Tooltip("Wall reject: the heaviest queen may take at most this many times the average queen's seconds.")]
-        public float maxWall = 2.7f;
+        public float maxWall = 3.05f;
         [Tooltip("Grinder reject: a use of a trick must be worth at least this many seconds (as on a 10x10 board).")]
         public float minSecondsPerStep = 8.5f;
         [Tooltip("Marathon reject: at most this many uses of a trick in the whole solve.")]
@@ -259,8 +309,8 @@ namespace QueensPuzzle
         public int milestoneMaxSteps = 20;
         [Tooltip("Levels must open gently: the first third of the queens may take at most this many times " +
                  "what an even spread of the board's seconds would put there.")]
-        public float maxStart = 1.5f;
-        public float peakMaxStart = 1.65f;
+        public float maxStart = 1.55f;
+        public float peakMaxStart = 1.7f;
 
         /// <summary>The gate fields above as plain data — what the pool builder consumes.</summary>
         public GenerationGates Gates => new GenerationGates
@@ -279,15 +329,48 @@ namespace QueensPuzzle
         {
             var t = SlotAt(level);
             t.tricks = TrickRuleAt(level);
+            // The first lesson level of a trick: part of the level's time is the trick being new, not the board.
+            // The level still takes what the list says; the board asked for is lighter by that part.
+            float first = FirstSecondsAt(level, t.tricks);
+            if (first > 0 && first < t.targetSeconds * 0.5f)
+            {
+                t.firstSeconds = first;
+                t.targetSeconds -= first;
+                t.minSeconds -= first;
+                t.maxSeconds -= first;
+                t.boardSeconds = t.targetSeconds / t.placeFactor;
+            }
             t.hard = IsHard(level);
             t.drawn = IsDrawnPlace(level) && !t.hard && !t.tricks.lesson && !t.dog;
             return t;
         }
 
+        /// <summary>
+        /// The real seconds a meeting with a trick costs on top of the board, by which meeting it is for the player
+        /// (1 = the first level that needs it) and how many queens of the level need it. THE one rule for it — the
+        /// plan (a lesson's levels) and the built levels (counted as they really come) both ask here.
+        /// </summary>
+        public float NewTrickSeconds(Trick trick, int meeting, int uses)
+        {
+            if (trickOpenings == null || meeting < 1 || uses < 1) return 0f;
+            foreach (var o in trickOpenings)
+                if (o.trick == trick)
+                    return meeting == 1 ? o.firstSeconds : meeting - 1 <= o.earlyLevels ? o.earlySeconds * uses : 0f;
+            return 0f;
+        }
+
+        /// <summary>The real seconds a level takes on top of its board because it is one of the first meetings with a
+        /// trick: by the plan, a lesson's three levels are the trick's meetings 1, 2 and 3.</summary>
+        public float FirstSecondsAt(int level, in TrickRule rule)
+        {
+            if (!rule.lesson) return 0f;
+            return NewTrickSeconds(rule.teach, rule.stage, Math.Max(1, rule.minUses));
+        }
+
         /// <summary>What a level asks of its board's tricks, from <see cref="trickOpenings"/>.</summary>
         public TrickRule TrickRuleAt(int level)
         {
-            var r = new TrickRule();
+            var r = new TrickRule { maxOthers = -1 };
             if (trickOpenings == null) return r;
             int lessonAt = -1;
             for (int i = 0; i < trickOpenings.Length; i++)
@@ -303,6 +386,9 @@ namespace QueensPuzzle
             r.stage = level - l.level + 1;
             r.minUses = lessonMinUses != null && lessonMinUses.Length >= r.stage ? lessonMinUses[r.stage - 1] : 1;
             r.maxUses = lessonMaxUses != null && lessonMaxUses.Length >= r.stage ? lessonMaxUses[r.stage - 1] : 0;
+            r.maxOthers = lessonMaxOthers != null && lessonMaxOthers.Length >= r.stage ? lessonMaxOthers[r.stage - 1] : -1;
+            foreach (var o in trickOpenings)
+                if (o.trick != l.trick && o.level <= level && o.level > level - lessonYoungFor) r.young |= 1 << (int)o.trick;
             if (r.stage == 3 && l.proveUses > 0) r.minUses = l.proveUses;
             if (r.stage == 1)   // the new trick alone: nothing that opened lately beside it
                 foreach (var o in trickOpenings)

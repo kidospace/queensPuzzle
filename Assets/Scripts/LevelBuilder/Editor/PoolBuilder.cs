@@ -341,7 +341,7 @@ namespace QueensPuzzle
                   .Append((int)t.role).Append(' ').Append(t.dog ? 1 : 0).Append(' ')
                   .Append(t.tricks.forbidden).Append(' ').Append(t.tricks.lesson ? 1 : 0).Append(' ').Append((int)t.tricks.teach).Append(' ')
                   .Append(t.tricks.stage).Append(' ').Append(t.tricks.minUses).Append(' ').Append(t.tricks.maxUses).Append(' ')
-                  .Append(t.drawn ? 1 : 0).Append('\n');
+                  .Append(t.drawn ? 1 : 0).Append(' ').Append(F(t.firstSeconds)).Append(' ').Append(t.tricks.maxOthers).Append(' ').Append(t.tricks.young).Append('\n');
             if (opt.drawings != null)
                 foreach (var d in opt.drawings)
                     sb.Append("drawing ").Append(d.number).Append(' ').Append(d.size).Append(' ').Append(d.secondsFrom).Append(' ').Append(d.secondsTo).Append(' ')
@@ -380,8 +380,11 @@ namespace QueensPuzzle
                         {
                             forbidden = int.Parse(p[10]), lesson = p[11] == "1", teach = (Trick)int.Parse(p[12]),
                             stage = int.Parse(p[13]), minUses = int.Parse(p[14]), maxUses = int.Parse(p[15]),
+                            maxOthers = p.Length > 18 ? int.Parse(p[18]) : -1,   // a job packed before this field: no limit
+                            young = p.Length > 19 ? int.Parse(p[19]) : 0,
                         },
                         drawn = p[16] == "1",
+                        firstSeconds = p.Length > 17 ? PF(p[17]) : 0f,
                     });
                 else if (p[0] == "drawing")
                     drawings.Add(new StencilFiller.Drawing

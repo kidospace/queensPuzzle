@@ -39,8 +39,20 @@ namespace QueensPuzzle
                 case Trick.Subset3:               return r.subsetLineToRegion3Uses + r.subsetRegionToLine3Uses;
                 case Trick.Choke:                 return r.regionChokeUses + r.lineChokeUses;
                 case Trick.Fish:                  return r.fishUses;
+                case Trick.ColourClosed:          return r.colourClosedUses;
             }
             return 0;
+        }
+
+        /// <summary>What stands beside a lesson's trick on its board: the uses of the other tricks the rule
+        /// calls young (<see cref="TrickRule.young"/> — opened lately, still being learnt). A trick the player
+        /// has had for long is not counted, nor a plain line with one place left.</summary>
+        public static int OtherUses(in WeightRater.Report r, in TrickRule rule)
+        {
+            int n = 0;
+            foreach (var k in AllTricks)
+                if (k != rule.teach && k != Trick.LineSingle && (rule.young & (1 << (int)k)) != 0) n += Uses(r, k);
+            return n;
         }
 
         static readonly Trick[] AllTricks = (Trick[])System.Enum.GetValues(typeof(Trick));
@@ -61,6 +73,11 @@ namespace QueensPuzzle
                 int n = Uses(rep, rule.teach);
                 if (n < rule.minUses) return $"needs {rule.teach} ×{rule.minUses}, has {n}";
                 if (rule.maxUses > 0 && n > rule.maxUses) return $"{rule.teach} at most ×{rule.maxUses}, has {n}";
+                if (rule.maxOthers >= 0)
+                {
+                    int others = OtherUses(rep, rule);
+                    if (others > rule.maxOthers) return $"lesson of {rule.teach}: at most {rule.maxOthers} uses of other new tricks beside it, has {others}";
+                }
             }
             return null;
         }
