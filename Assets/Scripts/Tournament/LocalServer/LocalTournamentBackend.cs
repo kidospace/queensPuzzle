@@ -240,7 +240,7 @@ namespace qp {
             _state.baseScore = usual;
             _state.acceptedIds.Clear();
             _state.rivals = RivalGroup.Build(usual, RivalsBlob.OwnerOf(_userId), ProfileManager.Name,
-                                             level, _state.setKind, first, out var built);
+                                             level, _state.setKind, first, _state.FinishedSoFar + 1, out var built);
             // No rivals file could be read (each failure was reported where it happened). Open
             // nothing, and do not try again until the next launch: every sync would otherwise load
             // and reject the same files again, and report it again, twice a minute.

@@ -88,15 +88,25 @@ namespace qp {
         const int JoinWithinMinutes = 5;
 
         // ---- what they wear ---------------------------------------------------------------
-        // Every rival has an avatar and a plain frame, like any new player. On top of that, this
-        // many of the group wear something that has to be won — in step with how it is won: a
-        // premium frame takes a first place, a name skin a podium, a badge a week's streak.
-        // Counts, not chances, for the reason the renamed ones are a count: a table where nobody
-        // happens to wear anything says there is nothing to win.
+        // Every rival has an avatar and a plain frame, like any new player. On top of that, some
+        // of the group wear something that has to be won.
+        //
+        // HOW MANY: as if every rival had played as many tournaments as the player has. A premium
+        // frame takes a first place, a name skin a podium, a badge a week's streak — so each of
+        // these is the chance, per tournament or per week, that a player in a table of twenty
+        // gets one, and the share of the group that has one by now follows from it (_wearers).
+        // A new player meets a table with little on it; a veteran meets veterans.
+        //
+        // A count and not a chance per rival, for the reason the renamed ones are a count, and
+        // never less than one: a table where nobody wears anything says there is nothing to win.
+        //
+        // And they lean to the top of the table: these are things strong players win, so the
+        // rivals built to finish high are the likely ones to have them (see _some).
 
-        const int PremiumFrames = 1;
-        const int NameSkins = 3;
-        const int Badges = 5;
+        const float FrameChance = 0.05f;        // a first place: one in twenty, per tournament
+        const float NameSkinChance = 0.15f;     // a podium: three in twenty, per tournament
+        const float BadgeChance = 0.30f;        // a full seven-day streak, per week played
+        const float WeeksPerTournament = 2f / 7f;   // a tournament is two days
 
         /// <summary>What a group was built from — reported with its result.</summary>
         public struct Built {
@@ -127,20 +137,22 @@ namespace qp {
         /// <param name="firstEver">The player's first tournament, which is always Easy: their
         /// usual score is still an estimate, and this is not the moment for the week the prize is
         /// nearly gone.</param>
+        /// <param name="nth">Which tournament this is for the player, 1-based: how long the
+        /// rivals have been playing too, which is what decides how much they wear.</param>
         public static List<LocalRival> Build(int myScore, uint myOwner, string myName, int myLevel,
-                                             Kind last, bool firstEver, out Built built) {
+                                             Kind last, bool firstEver, int nth, out Built built) {
             // Taken and released in the same breath, so the whole lifetime is one method. The
             // recordings and the name lists are read here and nowhere else: everything chosen is
             // copied out below, and the ~280 KB and ~70 KB behind them are not wanted again for
             // another 48 hours.
             RivalsBlob.Load();
             RivalNames.Load();
-            try { return _build(myScore, myOwner, myName, myLevel, last, firstEver, out built); }
+            try { return _build(myScore, myOwner, myName, myLevel, last, firstEver, nth, out built); }
             finally { RivalsBlob.Unload(); RivalNames.Unload(); }
         }
 
         static List<LocalRival> _build(int myScore, uint myOwner, string myName, int myLevel,
-                                       Kind last, bool firstEver, out Built built) {
+                                       Kind last, bool firstEver, int nth, out Built built) {
             built = new Built { kind = Kind.Unknown, fileSource = "" };   // nothing drawn unless built
             var rivals = new List<LocalRival>(Size);
             if (RivalsBlob.Count == 0) {
@@ -173,9 +185,10 @@ namespace qp {
             string country = Country.Code;
             var renamed = _whoRenamed(myLevel, slots, rnd);
             // Who wears what was won. Not the last slot: the dead account opened the game once.
-            var premiumFrame = _some(PremiumFrames, slots - 1, rnd);
-            var nameSkin = _some(NameSkins, slots - 1, rnd);
-            var badge = _some(Badges, slots - 1, rnd);
+            int wearers = slots - 1;
+            var premiumFrame = _some(_wearers(wearers, FrameChance, nth), wearers, rnd);
+            var nameSkin = _some(_wearers(wearers, NameSkinChance, nth), wearers, rnd);
+            var badge = _some(_wearers(wearers, BadgeChance, nth * WeeksPerTournament), wearers, rnd);
 
             for (int i = 0; i < slots; i++) {
                 bool isLast = i == slots - 1;
@@ -288,14 +301,37 @@ namespace qp {
             return flags;
         }
 
-        /// <summary><paramref name="count"/> flags out of <paramref name="size"/>, shuffled — so
-        /// what they mark is spread over the table and not stacked at its top.</summary>
+        /// <summary>How many of <paramref name="size"/> players have won a thing by now, when
+        /// each try at it succeeds with <paramref name="chance"/> and they have had
+        /// <paramref name="tries"/> of them. At least one.</summary>
+        static int _wearers(int size, float chance, float tries) {
+            float share = 1f - Mathf.Pow(1f - chance, Mathf.Max(0f, tries));
+            return Mathf.Clamp(Mathf.RoundToInt(size * share), 1, size);
+        }
+
+        /// <summary>
+        /// <paramref name="count"/> flags out of <paramref name="size"/>, drawn with a lean to the
+        /// front. The group is built from the strongest target down, so the front is the top of
+        /// the final table.
+        ///
+        /// A slot's weight is its distance from the end, squared: of nineteen, the top five take
+        /// about six draws in ten and the bottom five about one in forty. A lean and not a rule —
+        /// the leader is not always the one in the premium frame, and someone mid-table can be.
+        /// </summary>
         static bool[] _some(int count, int size, System.Random rnd) {
             var flags = new bool[Mathf.Max(0, size)];
-            for (int i = 0; i < flags.Length && i < count; i++) flags[i] = true;
-            for (int i = flags.Length - 1; i > 0; i--) {
-                int j = rnd.Next(i + 1);
-                (flags[i], flags[j]) = (flags[j], flags[i]);
+            for (int n = 0; n < count && n < flags.Length; n++) {
+                double total = 0;
+                for (int i = 0; i < flags.Length; i++) if (!flags[i]) total += (double)(flags.Length - i) * (flags.Length - i);
+                double roll = rnd.NextDouble() * total;
+                int pick = -1;
+                for (int i = 0; i < flags.Length; i++) {
+                    if (flags[i]) continue;
+                    pick = i;                                   // the last free one, if rounding runs past the end
+                    roll -= (double)(flags.Length - i) * (flags.Length - i);
+                    if (roll < 0) break;
+                }
+                flags[pick] = true;
             }
             return flags;
         }
