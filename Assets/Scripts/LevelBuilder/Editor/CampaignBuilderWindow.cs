@@ -57,6 +57,36 @@ namespace QueensPuzzle
         [SerializeField] bool withPlaceFactor = true;
         static readonly string[] UnitNames = { "Player at this level (× place factor)", "Board itself (no factor)" };
         float[] targetBoard, builtBoard, factors;   // board seconds (0 = no level) and each level's place factor
+        float[] firstReal;                          // real seconds the CURVE adds to a level on top of its board: the first lesson level of a trick
+        float[] builtFirst;                         // the same for the BUILT set: the level where the built levels really first need a trick
+        string[] builtFirstNote;                    // which trick that is
+        LevelTarget[] slots;                        // what the curve asks of each level (null = no curve); a level's seconds come from it
+
+        // MEASURED: what players really took on each level — a third line beside the targets and the built
+        // boards. It comes from a file the reports repo writes (pawdoku-reports: npm run measured), which
+        // says in its head which shipped level set, which app version and which dates it was measured on:
+        // { "set", "version", "platform", "from", "to", "made", "what", "levels": [ { "level", "secs", "n" } ] }
+        // secs = the middle first-try win time, in the player's own seconds at that level.
+        [System.Serializable] class MeasuredLevel { public int level; public float secs; public int n; }
+        [System.Serializable] class MeasuredFile { public string set, version, platform, from, to, made, what; public MeasuredLevel[] levels; }
+        [SerializeField] string measuredPath = "";
+        // "hide", not "show": a window that was open before this field existed gets false, and the line must show by default
+        [SerializeField] bool hideMeasured;
+        bool showMeasured => !hideMeasured;
+        // NonSerialized: Unity would otherwise fill this with an empty object on every reload (levels == null)
+        [System.NonSerialized] MeasuredFile measuredFile;
+        bool HasMeasured => measuredFile != null && measuredFile.levels != null;
+        int[] measured, measuredN;                  // per level of the graph, in the chosen unit; 0 = not measured
+        Vector3[][] measuredStrips;                 // the line, broken where levels were not measured
+
+        void LoadMeasured(string path)
+        {
+            measuredFile = null;
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return;
+            try { measuredFile = JsonUtility.FromJson<MeasuredFile>(System.IO.File.ReadAllText(path)); }
+            catch (System.Exception e) { Debug.LogWarning($"[Campaign Builder] measured file not read: {e.Message}"); }
+            if (measuredFile != null && measuredFile.levels == null) measuredFile = null;
+        }
 
         // screen-space cache, rebuilt when data, checkboxes or rect changes
         Vector3[] targetLine, builtLine;
@@ -196,6 +226,24 @@ namespace QueensPuzzle
             bool st = EditorGUILayout.ToggleLeft("Targets", showTargets, GUILayout.Width(70));
             bool sb = EditorGUILayout.ToggleLeft("Built levels", showBuilt, GUILayout.Width(90));
             if (st != showTargets || sb != showBuilt) { showTargets = st; showBuilt = sb; cacheStale = true; }
+            EditorGUILayout.EndHorizontal();
+
+            // the measured line: what players really took, from a file the reports repo writes
+            EditorGUILayout.BeginHorizontal();
+            bool sm = EditorGUILayout.ToggleLeft("Measured", showMeasured, GUILayout.Width(80));
+            if (sm != showMeasured) { hideMeasured = !sm; ApplyUnit(); }   // the scale may have to grow for it
+            if (GUILayout.Button("Import measured…", GUILayout.Width(130)))
+            {
+                string dir = string.IsNullOrEmpty(measuredPath) ? "" : System.IO.Path.GetDirectoryName(measuredPath);
+                string picked = EditorUtility.OpenFilePanel("Measured level times (from pawdoku-reports)", dir, "json");
+                if (!string.IsNullOrEmpty(picked)) { measuredPath = picked; LoadMeasured(picked); ApplyUnit(); }
+                GUIUtility.ExitGUI();
+            }
+            if (!HasMeasured && !string.IsNullOrEmpty(measuredPath)) LoadMeasured(measuredPath);
+            EditorGUILayout.LabelField(!HasMeasured ? "no measured file"
+                : $"{measuredFile.set} · {measuredFile.platform} {measuredFile.version} · {measuredFile.from} – {measuredFile.to} · {measuredFile.levels.Length} levels · {measuredFile.what}",
+                EditorStyles.miniLabel);
+            if (HasMeasured && GUILayout.Button("✕", GUILayout.Width(22))) { measuredPath = ""; measuredFile = null; ApplyUnit(); }
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
@@ -635,6 +683,10 @@ namespace QueensPuzzle
             targetBoard = config != null ? new float[n] : null;
             builtBoard = new float[n];
             factors = new float[n];
+            firstReal = new float[n];
+            builtFirst = new float[n];
+            builtFirstNote = new string[n];
+            slots = config != null ? new LevelTarget[n] : null;
             roles = new byte[n];
             lessons = new byte[n];
             drawnMarks = new byte[n];
@@ -649,8 +701,10 @@ namespace QueensPuzzle
                     if (config != null)
                     {
                         var t = config.GetTarget(from + i);
+                        slots[i] = t;
                         targetBoard[i] = t.boardSeconds;
                         factors[i] = t.placeFactor;
+                        firstReal[i] = t.firstSeconds;
                         roles[i] = (byte)t.role;
                         lessons[i] = (byte)(t.tricks.lesson ? t.tricks.stage : 0);
                         hardMarks[i] = t.hard;
@@ -662,7 +716,37 @@ namespace QueensPuzzle
                 }
             }
             finally { EditorUtility.ClearProgressBar(); }
+            FindBuiltFirsts();
             ApplyUnit();
+        }
+
+        // The built line shows what is IN the built levels. A trick's first-time seconds are therefore put on the level
+        // where the built set first needs that trick — found by going through the built levels from level 1 — and not
+        // on the level where the curve (which may have been re-planned since) now puts the lesson.
+        void FindBuiltFirsts()
+        {
+            if (config == null || config.trickOpenings == null) return;
+            // the built levels from level 1: which meeting with each trick every level is for the player
+            var met = new System.Collections.Generic.Dictionary<Trick, int>();
+            for (int level = 1; level <= to; level++)
+            {
+                var lvl = AssetDatabase.LoadAssetAtPath<LevelData>($"{OutputFolder}/{level}.asset");
+                if (lvl == null) continue;
+                var rep = PoolBuildRunner.ReportOf(lvl);
+                foreach (var o in config.trickOpenings)
+                {
+                    if (o.firstSeconds <= 0f && o.earlySeconds <= 0f) continue;
+                    int uses = CampaignCurve.Uses(rep, o.trick);
+                    if (uses <= 0) continue;
+                    met.TryGetValue(o.trick, out int before);
+                    int meeting = before + 1; met[o.trick] = meeting;
+                    float add = config.NewTrickSeconds(o.trick, meeting, uses);
+                    if (add <= 0f || level < from) continue;
+                    builtFirst[level - from] += add;
+                    builtFirstNote[level - from] = (builtFirstNote[level - from] == null ? "" : builtFirstNote[level - from] + ", ")
+                        + $"{o.trick} meeting {meeting}" + (uses > 1 ? $" ×{uses}" : "");
+                }
+            }
         }
 
         // The drawn numbers in the chosen unit (see withPlaceFactor), and the scale that fits them.
@@ -670,16 +754,40 @@ namespace QueensPuzzle
         {
             if (builtBoard == null) return;
             int n = builtBoard.Length;
+            // After a script reload the board seconds are still here but the slots are not (Unity keeps plain
+            // arrays, not these). Ask the curve again rather than draw the lines in the wrong unit.
+            if (config != null && (slots == null || slots.Length != n))
+            {
+                slots = new LevelTarget[n];
+                for (int i = 0; i < n; i++) slots[i] = config.GetTarget(dataFrom + i);
+            }
             targets = targetBoard != null ? new int[n] : null;
             built = new int[n];
             maxSeconds = 1;
             for (int i = 0; i < n; i++)
             {
-                float f = withPlaceFactor ? factors[i] : 1f;
-                if (targets != null) { targets[i] = Mathf.RoundToInt(targetBoard[i] * f); maxSeconds = Mathf.Max(maxSeconds, targets[i]); }
-                built[i] = Mathf.RoundToInt(builtBoard[i] * f);
+                // In the player's seconds a level's number comes from the curve itself (LevelTarget.LevelSeconds:
+                // the board at its place in the game + what a new trick adds) — never worked out here.
+                // In board seconds only the board is drawn.
+                bool level = withPlaceFactor && slots != null && i < slots.Length;
+                if (targets != null) { targets[i] = Mathf.RoundToInt(level ? (float)slots[i].AskedLevelSeconds : targetBoard[i]); maxSeconds = Mathf.Max(maxSeconds, targets[i]); }
+                float bf = builtFirst != null && i < builtFirst.Length ? builtFirst[i] : 0f;   // what the BUILT set teaches here, not the plan
+                built[i] = builtBoard[i] <= 0f ? 0 : Mathf.RoundToInt(level ? (float)slots[i].LevelSeconds(builtBoard[i], bf) : builtBoard[i]);
                 maxSeconds = Mathf.Max(maxSeconds, built[i]);
             }
+            // measured: what players really took, in real seconds, exactly as the file says — in EITHER unit.
+            // It is the truth, so nothing here may move it: no place factor, no new-trick seconds. In board
+            // seconds the other lines drop to the board's own and this one stays where the players put it.
+            measured = new int[n]; measuredN = new int[n];
+            if (HasMeasured)
+                foreach (var m in measuredFile.levels)
+                {
+                    int i = m.level - dataFrom;
+                    if (i < 0 || i >= n || m.secs <= 0f) continue;
+                    measured[i] = Mathf.Max(1, Mathf.RoundToInt(m.secs));
+                    measuredN[i] = m.n;
+                    if (showMeasured) maxSeconds = Mathf.Max(maxSeconds, measured[i]);
+                }
             cacheStale = true;   // invalidate screen cache
             Repaint();
         }
@@ -701,6 +809,7 @@ namespace QueensPuzzle
             var blue = pro ? new Color(0.22f, 0.53f, 0.90f) : new Color(0.16f, 0.47f, 0.84f);
             var orange = pro ? new Color(0.95f, 0.62f, 0.20f) : new Color(0.88f, 0.52f, 0.10f);
             var red = pro ? new Color(0.90f, 0.40f, 0.40f) : new Color(0.82f, 0.23f, 0.23f);
+            var violet = MeasuredColor(pro);
 
             EditorGUI.DrawRect(plot, pro ? new Color(0, 0, 0, 0.18f) : new Color(1, 1, 1, 0.5f));
 
@@ -732,6 +841,7 @@ namespace QueensPuzzle
             }
             Strip(builtLine, orange);
             Strip(targetLine, blue);
+            if (measuredStrips != null) foreach (var m in measuredStrips) Strip(m, violet);   // on top: it is what happened
 
             GL.Begin(GL.QUADS);
             GL.Color(red);
@@ -820,6 +930,8 @@ namespace QueensPuzzle
             DrawGraphHover(plot, ink, blue, orange, red);
         }
 
+        static Color MeasuredColor(bool pro) => pro ? new Color(0.78f, 0.52f, 0.98f) : new Color(0.55f, 0.27f, 0.80f);
+
         void DrawGraphHover(Rect plot, Color ink, Color blue, Color orange, Color red)
         {
             if (built == null || built.Length == 0 || !plot.Contains(Event.current.mousePosition)) return;
@@ -835,11 +947,19 @@ namespace QueensPuzzle
             EditorGUI.DrawRect(new Rect(x - 1f, plot.yMin, 2f, plot.height), new Color(marker.r, marker.g, marker.b, 0.28f));
             if (showBuilt) { var p = ToScreen(plot, i, n, built[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), orange); }
             if (hasTarget) { var p = ToScreen(plot, i, n, targets[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), milestone ? red : blue); }
+            bool hasMeasured = showMeasured && measured != null && i < measured.Length && measured[i] > 0;
+            if (hasMeasured) { var p = ToScreen(plot, i, n, measured[i]); EditorGUI.DrawRect(new Rect(p.x - 4f, p.y - 4f, 8f, 8f), MeasuredColor(EditorGUIUtility.isProSkin)); }
 
             string text = $"Level {level}"
                 + (hasTarget ? $"  |  target {targets[i]} s" : "")
                 + (showBuilt ? $"  |  built {built[i]} s" : "")
+                + (hasMeasured ? $"  |  measured {measured[i]} s ({measuredN[i]} players"
+                    + (withPlaceFactor && showBuilt && built[i] > 0 ? $", {(measured[i] >= built[i] ? "+" : "")}{Mathf.RoundToInt(100f * (measured[i] - built[i]) / built[i])}% vs built" : "") + ")" : "")
                 + (factors != null && i < factors.Length ? $"  |  factor ×{factors[i]:0.00}" + (withPlaceFactor ? " (in)" : " (out)") : "")
+                + (hasTarget && firstReal != null && i < firstReal.Length && firstReal[i] > 0f
+                    ? $"  |  the curve counts +{firstReal[i]:0} s for a trick still new" + (withPlaceFactor ? " (in target)" : " (not in target)") : "")
+                + (showBuilt && builtFirst != null && i < builtFirst.Length && builtFirst[i] > 0f
+                    ? $"  |  built set, still new here: {builtFirstNote[i]}: +{builtFirst[i]:0} s" + (withPlaceFactor ? " (in built)" : " (not in built)") : "")
                 + (milestone ? "  |  milestone" : "")
                 + TrickNote(level);
             var style = new GUIStyle(EditorStyles.helpBox)
@@ -890,6 +1010,21 @@ namespace QueensPuzzle
             cacheStale = false;
             targetLine = showTargets && targets != null ? Polyline(plot, targets) : null;
             builtLine = showBuilt ? Polyline(plot, built) : null;
+
+            // the measured line: one strip per run of measured levels, so a gap in the data is a gap in the line
+            var strips = new System.Collections.Generic.List<Vector3[]>();
+            if (showMeasured && measured != null)
+            {
+                var run = new System.Collections.Generic.List<Vector3>();
+                for (int i = 0; i <= measured.Length; i++)
+                {
+                    if (i < measured.Length && measured[i] > 0) { run.Add(ToScreen(plot, i, measured.Length, measured[i])); continue; }
+                    if (run.Count == 1) run.Add(run[0] + new Vector3(1f, 0f, 0f));   // a lone level still shows
+                    if (run.Count > 0) strips.Add(run.ToArray());
+                    run.Clear();
+                }
+            }
+            measuredStrips = strips.ToArray();
 
             // milestone dots ride the target line, or the built line when targets are hidden
             var on = showTargets && targets != null ? targets : showBuilt ? built : null;
