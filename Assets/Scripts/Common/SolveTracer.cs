@@ -17,9 +17,12 @@ namespace QueensPuzzle
     {
         public const int MaxDepth = 4;
 
-        public static TraceNode[] Build(int n, int[] region, int[] solution)
+        /// <param name="revealedRows">Rows whose queen is on the board when the level opens (LevelData.revealedRows):
+        /// the trace starts from them, as the player does and as the rating does. Null / empty = an empty board.</param>
+        public static TraceNode[] Build(int n, int[] region, int[] solution, int[] revealedRows = null)
         {
             var board = new Board(n, region, solution, new List<TraceNode>());
+            if (revealedRows != null) foreach (int row in revealedRows) board.SeedQueen(row * n + solution[row]);
             board.Run(-1, 0, guided: true);
             return board.Nodes.ToArray();
         }

@@ -670,6 +670,9 @@ namespace QueensPuzzle.EditorTools
             _time = TimeRater.Rate(_level.size, _level.regions, _level.solutionColumns, _report.Value, _level.revealedRows);
             _seconds = Mathf.RoundToInt((float)_time.seconds);
             _level.weight = _report.Value.weight;
+            // …and the solve steps start from the revealed queens too
+            _trace = SolveTracer.Build(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
+            _selectedStep = -1;
             if (EditorUtility.IsPersistent(_level)) EditorUtility.SetDirty(_level);
             Repaint();
         }
@@ -711,6 +714,15 @@ namespace QueensPuzzle.EditorTools
             attacked = new bool[n * n];
             highlight = new HashSet<int>();
             var trace = _trace;
+
+            // the queens the level opens with are on the board before the first step
+            if (_level.revealedRows != null)
+                foreach (int row in _level.revealedRows)
+                {
+                    int seeded = row * n + _level.solutionColumns[row];
+                    queens[seeded] = true;
+                    MarkAttacked(seeded, attacked);
+                }
 
             var path = new List<int>();
             for (int cur = step; cur >= 0 && cur < trace.Length; cur = trace[cur].parent) path.Add(cur);
@@ -1244,7 +1256,7 @@ namespace QueensPuzzle.EditorTools
             _report = lvl != null ? WeightRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows) : (WeightRater.Report?)null;
             _time = lvl != null ? TimeRater.Rate(lvl.size, lvl.regions, lvl.solutionColumns, _report.Value, lvl.revealedRows) : default;
             _seconds = Mathf.RoundToInt((float)_time.seconds);
-            _trace = lvl != null ? SolveTracer.Build(lvl.size, lvl.regions, lvl.solutionColumns) : null;
+            _trace = lvl != null ? SolveTracer.Build(lvl.size, lvl.regions, lvl.solutionColumns, lvl.revealedRows) : null;
             _importText = lvl != null ? LevelToGridText(lvl) : "";
             _paintRegions = null;   // re-seed the paint grid from the new level on next use
             _selectedStep = -1;
@@ -1279,7 +1291,7 @@ namespace QueensPuzzle.EditorTools
             _time = TimeRater.Rate(_level.size, _level.regions, _level.solutionColumns, rep, _level.revealedRows);
             _seconds = Mathf.RoundToInt((float)_time.seconds);
             _level.weight = rep.weight;
-            _trace = SolveTracer.Build(_level.size, _level.regions, _level.solutionColumns);
+            _trace = SolveTracer.Build(_level.size, _level.regions, _level.solutionColumns, _level.revealedRows);
             if (AssetDatabase.Contains(_level)) { EditorUtility.SetDirty(_level); AssetDatabase.SaveAssets(); }
             _selectedStep = -1;
             _status = $"Rechecked: ~{_seconds} s ({rep.technique}) — {_trace.Length} solve steps.";
