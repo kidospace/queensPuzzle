@@ -355,11 +355,32 @@ namespace qp {
             else MBAdCurtain.Instance.FadeOut();
         }
 
-        // Exponential backoff (2^n s, capped), per MAX's recommended retry pattern.
+        static bool Online => Common.InternetConnection.Instance == null || Common.InternetConnection.Instance.HasInternet;
+
+        const float MaxWaitForNetSec = 60f;
+
+        // A load failed → wait, then load again. The whole retry rule is here (the first load of
+        // an ad never comes this way — it always goes out at once).
+        //   Online  → exponential backoff (2^n s, capped), per MAX's recommended retry pattern.
+        //   Offline → wait for the connection instead, so a reconnect loads at once. The failure
+        //             says nothing about the ad servers, so the backoff starts over. At most
+        //             MaxWaitForNetSec, in case the connection check itself is wrong.
+        // `retry` is the format's own failure counter, `load` its load call. (A coroutine cannot
+        // take a ref, so the counter is updated here and the coroutine only waits and loads.)
         static void RetryLoad(ref int retry, Action load) {
-            retry++;
-            float delay = Mathf.Pow(2f, Mathf.Min(MaxRetryPow, retry));
-            if (_runner != null) _runner.RunAfter(delay, load);
+            if (_runner == null) return;
+            bool online = Online;
+            retry = online ? retry + 1 : 0;
+            _runner.StartCoroutine(RetryLoadCo(online, retry, load));
+        }
+
+        static IEnumerator RetryLoadCo(bool online, int retry, Action load) {
+            if (online) yield return new WaitForSecondsRealtime(Mathf.Pow(2f, Mathf.Min(MaxRetryPow, retry)));
+            else {
+                float giveUpAt = Time.realtimeSinceStartup + MaxWaitForNetSec;
+                yield return new WaitUntil(() => Online || Time.realtimeSinceStartup >= giveUpAt);
+            }
+            load();
         }
 
         // Tiny coroutine host for retry delays and DontDestroyOnLoad ownership.
@@ -368,9 +389,6 @@ namespace qp {
             // the screen — a kill before that only means a few bids are reported once more
             void OnApplicationPause(bool paused) { if (paused) SaveLoadedCounts(); }
             void OnApplicationQuit() => SaveLoadedCounts();
-
-            public void RunAfter(float seconds, Action action) => StartCoroutine(After(seconds, action));
-            IEnumerator After(float s, Action a) { yield return new WaitForSeconds(s); a?.Invoke(); }
 
             public void RunAfterFrames(int frames, Action action) => StartCoroutine(AfterFrames(frames, action));
             IEnumerator AfterFrames(int f, Action a) { for (int i = 0; i < f; i++) yield return null; a?.Invoke(); }
