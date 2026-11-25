@@ -292,7 +292,13 @@ namespace qp {
 
         // Everything under the panel is blocked while it's up: uGUI via the EventSystem
         // (IMGUI doesn't go through it, so we stay clickable), the GP board via InputLocks.
+        // What build this is — read once from build-info.json (Build Center writes it into every build).
+        static string _buildText = "build: …";
+
         void OnEnable() {
+            BuildInfo.Load(info => _buildText = info == null
+                ? $"build: {Application.version} (no build info — Editor)"
+                : $"build: {info.versionName} ({info.versionCode}) {info.mode} | commit {info.CommitShort} | {info.branch} | {info.builtAt}");
             if (MBGameplay.instance != null) MBGameplay.instance.InputLocks++;
             _blockedEventSystem = EventSystem.current;
             if (_blockedEventSystem != null) _blockedEventSystem.enabled = false;
@@ -314,6 +320,7 @@ namespace qp {
             GUILayout.Label($"DEBUG | level {AppData.LevelIdx + 1}/{LevelLoader.LevelCount} {LevelLoader.CampaignLevelSetId} | attempts {AppData.LevelAttempts.Value} | bones lost {AppData.LastPlayData.bonesLost} | firebase {FirebaseState()}");
             if (GUILayout.Button("Close", GUILayout.Height(44), GUILayout.Width(100))) Close();
             GUILayout.EndHorizontal();
+            GUILayout.Label(_buildText);
             _scroll = GUILayout.BeginScrollView(_scroll);
 
             GUILayout.Label($"Firebase events: {(Analytics.EventsOn ? "ON" : "OFF — debug mode")}");
