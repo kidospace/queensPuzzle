@@ -20,9 +20,9 @@ namespace qp {
     /// </summary>
     public sealed class MBSkinCell : MonoBehaviour {
 
-        /// <summary>How much of a locked item shows through. 1 = not dimmed at all: the lock in
-        /// the corner is what says it is locked, and the item itself is seen as it really looks.</summary>
-        const float LockedAlpha = 1f;
+        /// <summary>How much of a locked item shows through. Dimmed on top of the lock icon, so
+        /// locked items are told from open ones at a glance. 1 = not dimmed at all.</summary>
+        const float LockedAlpha = 0.5f;
 
         Image _icon;
         TMP_Text _label;
