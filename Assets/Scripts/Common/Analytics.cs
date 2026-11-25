@@ -446,6 +446,16 @@ namespace qp {
 #endif
         }
 
+        /// <summary>A/B test: this player's group was drawn (once per test, for good).</summary>
+        public static void ABActivate(string test, string group) {
+            CrashLog($"[ab] {test} = {group}");
+#if !IGNORE_FIREBASE
+            Send("ab_activate", new Firebase.Analytics.Parameter("ab_test", test), new Firebase.Analytics.Parameter("ab_group", group));
+#else
+            Send("ab_activate");
+#endif
+        }
+
         // TEMP — review prepare timing probe, read via BigQuery. REMOVE after the measurement.
         public static void ReviewPrepareTime(int ms, bool prepared) {
             CrashLog($"[review] prepare took {ms} ms (prepared={prepared})");

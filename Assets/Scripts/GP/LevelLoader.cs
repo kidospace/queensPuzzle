@@ -203,10 +203,24 @@ namespace qp {
             }
         }
 
+        // A/B of level sets (the packs differ from level 6): a player in the test keeps their group at
+        // every level; a player not in it joins only before level 6.
+        public const string LevelsTest = "levels_v4";
+
+        static string PackResource() {
+            string group = ABTest.Group(LevelsTest);
+            if (group == null && AppData.LevelIdx.Value <= 4)
+                group = ABTest.Group(LevelsTest, new[] { "levels", "levels_ab" });
+            return "Levels/" + (group ?? "levels");
+        }
+
+        /// <summary>Debug panel: open the pack again (after the A/B group was forced).</summary>
+        public static void ReloadPack() => _pack = null;
+
         static bool EnsurePack() {
             if (_pack != null) return true;
 
-            var ta = Resources.Load<TextAsset>("Levels/levels");
+            var ta = Resources.Load<TextAsset>(PackResource());
             if (ta == null) {
                 Common.CDebug.LogError("[LevelLoader] Resources/Levels/levels.bytes not found - run Export Levels.");
                 return false;

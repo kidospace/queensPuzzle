@@ -343,6 +343,14 @@ namespace qp {
             if (Button("Restore bones")) { AppData.LastPlayData.bonesLost = 0; AppData.LastPlayData.Save(); }
 
             GUILayout.Space(16);
+            string abGroup = ABTest.Group(LevelLoader.LevelsTest);
+            GUILayout.Label($"A/B {LevelLoader.LevelsTest}: {abGroup ?? "not in the test"} · playing {LevelLoader.CampaignLevelSetId}");
+            if (Button($"FORCE {(abGroup == "levels_ab" ? "levels" : "levels_ab")}")) {
+                ABTest.Force(LevelLoader.LevelsTest, abGroup == "levels_ab" ? "levels" : "levels_ab");
+                LevelLoader.ReloadPack();
+            }
+
+            GUILayout.Space(16);
             _timePanel();
 
             GUILayout.Space(16);
