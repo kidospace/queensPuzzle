@@ -1,3 +1,4 @@
+#if UNITY_ANDROID
 using System.IO;
 using System.Xml;
 using Common.BuildCenter;
@@ -95,3 +96,4 @@ namespace QueensPuzzle
         }
     }
 }
+#endif
