@@ -90,6 +90,8 @@ namespace qp {
                 changed = true;
             }
 
+            if (_dressUnskinned()) changed = true;
+
             var accepted = _applyWins(req, ref changed);
 
             // Only when something actually moved. A sync with no new win, in a tournament that is
@@ -311,6 +313,27 @@ namespace qp {
             return accepted;
         }
 
+        /// <summary>
+        /// Dress whoever was saved wearing nothing: a group or a closed table from a version
+        /// before rivals wore anything (1.5.6 and older), carried over an update. Without this
+        /// every row draws the default look until the next tournament. Drawn once and saved, so
+        /// each rival keeps the same look; true when anything was dressed.
+        /// </summary>
+        bool _dressUnskinned() {
+            bool dressed = false;
+            foreach (var rival in _state.rivals) {
+                if (rival.skins != null && rival.skins.Count > 0) continue;
+                rival.skins = RivalGroup.DressPlain();
+                dressed |= rival.skins.Count > 0;
+            }
+            foreach (var row in _state.closedTable) {
+                if (row.isMe || (row.skins != null && row.skins.Count > 0)) continue;
+                row.skins = RivalGroup.DressPlain();
+                dressed |= row.skins.Count > 0;
+            }
+            return dressed;
+        }
+
         // ---- the tables --------------------------------------------------------------------
 
         /// <summary>
@@ -415,7 +438,13 @@ namespace qp {
 
             Feed(id);
             Feed(isFinal ? "final" : "live");
-            foreach (var row in rows) { Feed(row.name); Feed(row.score.ToString()); }
+            foreach (var row in rows) {
+                Feed(row.name); Feed(row.score.ToString());
+                // What they wear is on screen too: without it a table whose rivals were only
+                // just dressed (see _dressUnskinned) would keep its etag and never reach the client.
+                if (row.skins != null)
+                    foreach (var skin in row.skins) { Feed(skin.slot ?? ""); Feed(skin.item ?? ""); }
+            }
             return hash.ToString("x8");
         }
     }

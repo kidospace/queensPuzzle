@@ -347,6 +347,11 @@ namespace qp {
             return skins;
         }
 
+        /// <summary>What a rival with nothing won wears — for one saved before rivals wore
+        /// anything (see LocalTournamentBackend._dressUnskinned).</summary>
+        public static List<SkinRef> DressPlain() =>
+            _dress(new System.Random(Guid.NewGuid().GetHashCode()), false, false, false);
+
         // One item of the slot at random, among the free ones or among the ones that are won.
         // A slot with none of that kind adds nothing, and the row draws its default.
         static void _wear(List<SkinRef> skins, string slotId, bool free, System.Random rnd) {
