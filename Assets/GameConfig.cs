@@ -15,8 +15,14 @@ namespace qp {
         public static int StartShowReviveAtLevel = 5;
 
         // Level-start "X% pass on their first try" popup shows from this level on (1-based) —
-        // the opening levels stay clean, and 9 is where the real data starts dipping below 90%.
+        // the opening levels stay clean. TODO: re-check this number against the real first-try
+        // data from time to time (it moves whenever the opening levels change).
         public static int StartShowFirstTryAtLevel = 9;
+
+        // In-game reactions (ReactionDirector: unstuck, comeback, streak, clean) fire from this
+        // level on (1-based). 1-3 are tiny guided boards, 4-7 the first one-step lesson and a
+        // rest; 8 opens line→region, where players first really stop and think.
+        public static int StartShowReactionsAtLevel = 8;
 
         // Granted when the player finishes a rewarded ad.
         public static int BoosterAddedAfterRewarded = 1;

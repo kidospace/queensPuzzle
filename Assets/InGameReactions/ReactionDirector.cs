@@ -24,14 +24,13 @@ namespace qp {
 
         enum EKind { None, Unstuck, Comeback, Streak }
 
-        const int MinLevel = 10;
         const float StuckFactor = 4f, StuckMin = 15f, StuckMax = 60f;
         const float FastFactor = 0.5f, FastMin = 2f, FastMax = 6f;
         const float DefaultPace = 8f;      // assumed pace until the session has measured one
         const float IgnoreGapOver = 120f;  // absurd gaps don't teach the average
         const float PlayDelay = 0.25f;     // after the move's own sound/haptic — reads as a response
 
-        int _level;
+        int _levelIdx;                     // 0-based, as AppData.LevelIdx
         float _avgGap = -1f;               // running average of gaps between correct actions
         float _progressAnchor;             // stuck clock: now - anchor = time without progress
         float _lastCorrectAt = -1f;        // previous correct action, for pace + streak gaps
@@ -43,7 +42,7 @@ namespace qp {
         IInGameReactionFX[] _fx;           // scene effects, collected by interface on first use
 
         public void OnLevelStart(int levelIdx, float now) {
-            _level = levelIdx;
+            _levelIdx = levelIdx;
             _progressAnchor = now;
             _lastCorrectAt = -1f;
             _fastStreak = 0;
@@ -106,7 +105,7 @@ namespace qp {
         bool _isStuck(float now) =>
             now - _progressAnchor >= Mathf.Clamp(_pace() * StuckFactor, StuckMin, StuckMax);
 
-        bool _gateOpen() => _level >= MinLevel;
+        bool _gateOpen() => _levelIdx + 1 >= GameConfig.StartShowReactionsAtLevel;
 
         float _pace() => _avgGap > 0f ? _avgGap : DefaultPace;
 
